@@ -1,0 +1,779 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            var dimensions = {width:500,height:500,offset:{x:0,y:0},zoom:1};
+            document.title = 'Snake Attack';
+            var updateFPSTime = 0;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = [];
+            var keys = [];
+            var canvas = document.createElement('canvas');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin: 0px;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('img');
+                img.src = imgs[n];
+                document.body.appendChild(img);
+                img.style = 'display: none;';
+                imgs[n] = img;
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            function roundRect(x,y,width,height,round) {
+                _canvas.moveTo(x+round,y);
+                _canvas.lineTo(x+width-round,y);
+                _canvas.arc(x+width-round,y+round,round,270*Math.PI/180,0);
+                _canvas.lineTo(x+width,y+height-round);
+                _canvas.arc(x+width-round,y+height-round,round,0,90*Math.PI/180);
+                _canvas.lineTo(x+round,y+height);
+                _canvas.arc(x+round,y+height-round,round,90*Math.PI/180,180*Math.PI/180);
+                _canvas.lineTo(x,y+round);
+                _canvas.arc(x+round,y+round,round,Math.PI,270*Math.PI/180);
+            }
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                down: false
+            }
+            var _math = {
+                random: function(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1) ) + min;
+                },
+                distanceTo: function(x1,y1,x2,y2) {
+                    return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+                },
+                sortNumbers: function(arr) {
+                    return arr.sort(function(a, b){return a-b});
+                },
+                isOddOrEven: function(num) {
+                    var response = 'even';
+                    var mysplit = (''+num).split('');
+                    if(mysplit[mysplit.length-1] == 1 || mysplit[mysplit.length-1] == 3  || mysplit[mysplit.length-1] == 5 || mysplit[mysplit.length-1] == 7 || mysplit[mysplit.length-1] == 9) {
+                        response = 'odd';
+                    }
+                    return response;
+                },
+                average: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    while(num < arr.length) {
+                        num2 = num2 + arr[num];
+                        num = num + 1;
+                    }
+                    return num2/arr.length;
+                },
+                averageWeighted: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    var num3 = 0;
+                    while(num < arr.length) {
+                        num3 += arr[num];
+                        num2 += arr[num]*arr[num+1];
+                        num += 2;
+                    }
+                    return num2/num3;
+                }
+            }
+            var _physics = {
+                circlesTouching: function(x1,y1,r1,x2,y2,r2) {
+                    var response = false;
+                    if(_math.distanceTo(x1,y1,x2,y2)<=r1+r2) {
+                        response = true;
+                    }
+                    return response;
+                },
+                circleTouchingPolygon: function(x,y,r,poly) {
+                    var response = false;
+                    var num = 0;
+                    while(num < poly.length-1) {
+                        if(_physics.circleOnLine(x,y,r,poly[num][0],poly[num][1],poly[num+1][0],poly[num+1][1])) {
+                            response = true;
+                        }
+                        num = num + 1;
+                    }
+                    return response;
+                },
+                distanceFromPointToLine: function(x, y, x1, y1, x2, y2) {
+                    var A = x - x1;
+                    var B = y - y1;
+                    var C = x2 - x1;
+                    var D = y2 - y1;
+                    var dot = A * C + B * D;
+                    var len_sq = C * C + D * D;
+                    var param = -1;
+                    if (len_sq != 0) {
+                        param = dot / len_sq;
+                    }
+                    var xx, yy;
+                    if (param < 0) {
+                        xx = x1;
+                        yy = y1;
+                    } else if (param > 1) {
+                        xx = x2;
+                        yy = y2;
+                    } else {
+                        xx = x1 + param * C;
+                        yy = y1 + param * D;
+                    }
+                    var dx = x - xx;
+                    var dy = y - yy;
+                    return Math.sqrt(dx * dx + dy * dy);
+                },
+                circleOnLine: function(cx,cy,cr,x1,y1,x2,y2) {
+                    var response = false;
+                    if(cr>this.distanceFromPointToLine(cx,cy,x1,y1,x2,y2)) {
+                        response = true;
+                    }
+                    return response;
+                },
+                propertiesOfLine: function(x1,y1,x2,y2) {
+                    var slope = (y2-y1)/(x2-x1);
+                    var yint = y1-(x1*slope);
+                    return [slope,yint];
+                },
+                rectsTouching: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    var response = false;
+                    if(((x1>=x3&&x1<=x4)||(x2>=x3&&x2<=x4)||(x1<=x3&&x2>=x4))&&((y1>=y3&&y1<=y4)||(y2>=y3&&y2<=y4)||(y1<=y3&&y2>=y4))) {
+                        response = true;
+                    }
+                    return response;
+                },
+                pointInBox: function(px,py,x,y,w,h) {
+                    var response = false;
+                    if(px>=x&&px<=x+w&&py>=y&&py<=y+h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                linesIntersect: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    var m1 = _physics.propertiesOfLine(x1,y1,x2,y2)[0];
+                    var b1 = _physics.propertiesOfLine(x1,y1,x2,y2)[1];
+                    var m2 = _physics.propertiesOfLine(x3,y3,x4,y4)[0];
+                    var b2 = _physics.propertiesOfLine(x3,y3,x4,y4)[1];
+                    var response = false;
+                    if(m2 != m1&&m1!='Nan'&&m1!='Infinity'&&m2!='Nan'&&m2!='Infinity') {
+                        response = [(b1-b2)/(m2-m1),m1*(b1-b2)/(m2-m1)+b1];
+                    }
+                    if(m1=='Nan'||m1=='Infinity') {
+                        response = [x1,_physics.xPointOnLine(x1,x3,y3,x4,y4)];
+                    }
+                    if(m2=='Nan'||m2=='Infinity') {
+                        response = [x3,_physics.xPointOnLine(x3,x1,y1,x2,y2)];
+                    }
+                    if((m2=='Nan'||m2=='Infinity')&&(m1=='Nan'||m1=='Infinity')&&x1!=x3) {
+                        response = false;
+                    }
+                    if(x1==x3&&y1==y3&&x2==x4&&y2==y4) {
+                        response = true;
+                    }
+                    return response;
+                },
+                lineSegmentsIntersect: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    var response = false;
+                    var sortedx1 = _math.sortNumbers([x1,x2]);
+                    var sortedx2 = _math.sortNumbers([x3,x4]);
+                    var sortedy1 = _math.sortNumbers([y1,y2]);
+                    var sortedy2 = _math.sortNumbers([y3,y4]);
+                    if(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)!=true) {
+                        if(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)!=false) {
+                            if(_physics.pointInBox(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[0],_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[1],sortedx1[0],sortedy1[0],sortedx1[1]-sortedx1[0],sortedy1[1]-sortedy1[0])&&_physics.pointInBox(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[0],_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[1],sortedx2[0],sortedy2[0],sortedx2[1]-sortedx2[0],sortedy2[1]-sortedy2[0])) {
+                                response = [_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[0],_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[1]];
+                            }
+                        }
+                    } else {
+                        response = true;
+                    }
+                    return response;
+                },
+                xPointOnLine: function(x,x1,y1,x2,y2) {
+                    var props = _physics.propertiesOfLine(x1,y1,x2,y2);
+                    return props[0]*x+props[1];
+                },
+                yPointOnLine: function(y,x1,y1,x2,y2) {
+                    var props = _physics.propertiesOfLine(x1,y1,x2,y2);
+                    return (y-props[1])/props[0];
+                },
+                checkPolygonsCollided: function(poly1,poly2) {
+                    var response = false;
+                    var num = 0;
+                    while(num < poly1.length-1) {
+                        var num2 = 0;
+                        while(num2 < poly2.length-1) {
+                            if(_physics.lineSegmentsIntersect(poly1[num][0],poly1[num][1],poly1[num+1][0],poly1[num+1][1],poly2[num2][0],poly2[num2][1],poly2[num2+1][0],poly2[num2+1][1])) {
+                                response = true;
+                            }
+                            num2 = num2 +1;
+                        }
+                        num = num + 1;
+                    }
+                    return response;
+                },
+                drawPolygon: function(poly,xoff,yoff) {
+                    var num = 0;
+                    _canvas.moveTo(poly[0][0]+xoff,poly[0][1]+yoff);
+                    while(num < poly.length) {
+                        _canvas.lineTo(poly[num][0]+xoff,poly[num][1]+yoff);
+                        num = num + 1;
+                    }
+                },
+                changePolygon: function(poly,xoff,yoff) {
+                    var num = 0;
+                    var poly2 = poly;
+                    while(num < poly.length) {
+                        poly2[num][0] = poly[num][0] + xoff;
+                        poly2[num][1] = poly[num][1] + yoff;
+                        num = num + 1;
+                    }
+                    return poly2;
+                },
+                pointInPolygon: function(px,py,poly) {
+                    var response = false;
+                    var count = 0;
+                    var num = 0;
+                    while(num < poly.length - 1) {
+                        var int = linesIntersect(px,py,px+1,py,poly[num][0],poly[num][1],poly[num+1][0],poly[num+1][1]);
+                        var sortedy = _math.sortNumbers([poly[num][1],poly[num+1][1]]);
+                        if(int[0]>=px&&int[1]>=sortedy[0]&&int[1]<=sortedy[1]) {
+                            count = count + 1;
+                        }
+                        num = num + 1;
+                    }
+                    if(_math.isOddOrEven(count)=='odd') {
+                        response = true;
+                    }
+                    return response;
+                },
+                rotatePolygon: function(poly,degrees,origin) {
+                    var num = 0;
+                    while(num < poly.length) {
+                        poly[num] = _physics.rotate(origin[0],origin[1],poly[num][0],poly[num][1],degrees);
+                        num = num + 1;
+                    }
+                },
+                rotate: function(cx, cy, x, y, angle) {
+                    var radians = (Math.PI / 180) * angle,
+                        cos = Math.cos(radians),
+                        sin = Math.sin(radians),
+                        nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                        ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                    return [nx, ny];
+                },
+                directionToPoint: function(x1,y1,x2,y2) {
+                    return -(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI)+180;
+                },
+                movePoint: function(px,py,distance,direction) {
+                    var x = px;
+                    var y = py;
+                    x += distance * Math.sin(direction*Math.PI/180);
+                    y -= distance * Math.cos(direction*Math.PI/180);
+                    return [x,y];
+                },
+                distanceToMovePoint: function(distance,direction) {
+                    return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+                }
+            }
+            function doAll() {try{
+                var d = new Date();
+                var t = d.getTime();
+                if(t-updateFPSTime>1000) {
+                    fps = 1/((t-lastTime)/1000);
+                    updateFPSTime = t;
+                }
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                ac();
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+            }catch(err){window.alert(err.message)}}
+
+            setInterval(doAll,20);
+
+            function ac() {
+                _canvas.shadowBlur = 0;
+                if(page=='menu') {
+                    menu();
+                } else if(page=='game') {
+                    game();
+                }
+            }
+            function game() {
+                gameZoom = Math.min(1/Math.min(0.5+(snake.length-200)/2000,3),1);
+                if(keys[49]) {
+                    snake.addLength+=10;
+                }
+                if(keys[50]) {
+                    snake.addLength-=10;
+                }
+                if(snake.length>snake.getLength()) {
+                    snake.segments.unshift([_mouse.x/gameZoom-(250/gameZoom-250),_mouse.y/gameZoom-(250/gameZoom-250)]);
+                }
+                snake.update();
+                drawBackground(10/gameZoom,10/gameZoom,'rgb(90,220,70)','rgb(100,240,70)',250-250/(1/gameZoom),250-250/(1/gameZoom));
+                snake.draw({interval:100,pattern:['rgb(0,0,255)','rgb(0,0,100)']},gameZoom,250-250/(1/gameZoom),250-250/(1/gameZoom));
+                drawGameFlowerShadows();
+                drawGameFlowers();
+                _canvas.fillStyle = 'black';
+                _canvas.font = '20px Comic Sans MS';
+                _canvas.fillText("Score: "+(snake.length-200),10,30);
+                _canvas.fillText("FPS: "+Math.round(fps),10,60);
+            }
+            function drawBackground(width,height,color1,color2,xoffset,yoffset) {
+                var xoff = xoffset%(500/width*2);
+                var yoff = yoffset%(500/height*2);
+                var x = -2;
+                while(x < width+2) {
+                    var y = -2;
+                    while(y < height+2) {
+                        var n = y/2;
+                        if(Math.round(x/2)==x/2) {
+                            n = (y+1)/2;
+                        }
+                        var drawStyle = 'color';
+                        var img;
+                        if(Math.round(n)==n) {
+                            if(typeof color1=='number') {
+                                drawStyle = 'image';
+                                img = color1;
+                            } else {
+                                _canvas.fillStyle = color1;
+                            }
+                        } else {
+                            if(typeof color2=='number') {
+                                drawStyle = 'image';
+                                img = color2;
+                            } else {
+                                _canvas.fillStyle = color2;
+                            }
+                        }
+                        if(drawStyle=='color') {
+                            _canvas.fillRect(x*500/width+xoff,y*500/height+yoff,500/width,500/height);
+                        } else if(drawStyle=='image') {
+                            _canvas.drawImage(imgs[img],x*500/width+xoff,y*500/height+yoff,500/width,500/height);
+                        }
+                        y++;
+                    }
+                    x++;
+                }
+            }
+            function drawGameFlowerShadows() {
+                var n = 0;
+                while(n < flowers.length) {
+                    flowers[n].rotate++;
+                    var flower = JSON.parse(JSON.stringify(flowers[n]));
+                    flower.stemx = flower.flowerx = (flower.x+10)*gameZoom+250-250/(1/gameZoom);
+                    flower.stemy = flower.flowery = (flower.y+10)*gameZoom+250-250/(1/gameZoom);
+                    flower.petalradius = 10*gameZoom;
+                    flower.middleradius = 10*gameZoom;
+                    flower.petalcolor = 'rgba(0,0,0,0.5)';
+                    flower.stemcolor = 'rgba(0,0,0,0.5)';
+                    flower.middlecolor = 'rgba(0,0,0,0.5)';
+                    flower.nostem = true;
+                    if(flower.stemx>-100&&flower.stemx<600&&flower.stemy>-100&&flower.stemy<600)
+                        drawFlower(flower);
+                    n++;
+                }
+            }
+            function drawGameFlowers() {
+                var n = 0;
+                while(n < flowers.length) {
+                    flowers[n].rotate++;
+                    var flower = JSON.parse(JSON.stringify(flowers[n]));
+                    flower.stemx = flower.flowerx = (flower.x+25)*gameZoom+250-250/(1/gameZoom);
+                    flower.stemy = flower.flowery = (flower.y+25)*gameZoom+250-250/(1/gameZoom);
+                    flower.petalradius = 10*gameZoom;
+                    flower.middleradius = 10*gameZoom;
+                    flower.nostem = true;
+                    drawFlower(flower);
+                    n++;
+                }
+            }
+            function reset() {
+                snake.length = 200;
+                var n = 0;
+                while(n < 2) {
+                    snake.segments.push([250,250]);
+                    snake.segments.push([251,251]);
+                    n++;
+                }
+                flowers = [];
+                n = 0;
+                while(n < 20) {
+                    flowers.push({petalcolor:'hsl('+(_math.random(0,15)*15+180)+',100%,50%)',x:_math.random(-10,20)*50,y:_math.random(-10,20)*50,rotate:_math.random(0,360)});
+                    n++;
+                }
+            }
+            var snake = {
+                draw: function(data,zoom,xoffset,yoffset) {
+                    if(this.segments.length>1) {
+                        var n = 1;
+                        var drawSegments = [];
+                        _canvas.lineCap = 'round';
+                        var d = data.interval;
+                        var arr = [[this.segments[0][0],this.segments[0][1]]];
+                        while(n < this.segments.length) {
+                            var distance1 = _math.distanceTo(this.segments[n][0],this.segments[n][1],arr[arr.length-1][0],arr[arr.length-1][1]);
+                            var distance2 = Math.min(d,distance1);
+                            if(distance1==distance2) {
+                                d -= distance2;
+                                arr.push([this.segments[n][0],this.segments[n][1]]);
+                                if(n+1==this.segments.length) {
+                                    drawSegments.unshift(arr);
+                                }
+                                n++;
+                            } else {
+                                var direction = -90-_physics.directionToPoint(arr[arr.length-1][0],arr[arr.length-1][1],this.segments[n][0],this.segments[n][1]);
+                                var move = _physics.distanceToMovePoint(distance2,direction);
+                                arr.push([arr[arr.length-1][0]+move[0],arr[arr.length-1][1]+move[1]]);
+                                drawSegments.unshift(arr);
+                                arr = [[arr[arr.length-1][0],arr[arr.length-1][1]]];
+                                d = data.interval;
+                            }
+                        }
+                        n = 0;
+                        while(n < drawSegments.length) {
+                            _canvas.strokeStyle = data.pattern[(drawSegments.length-n)%data.pattern.length];
+                            var l = 0;
+                            var n2 = 1;
+                            while(n2 < drawSegments[n].length) {
+                                l += _math.distanceTo(drawSegments[n][n2][0],drawSegments[n][n2][1],drawSegments[n][n2-1][0],drawSegments[n][n2-1][1]);
+                                n2++;
+                            }
+                            n2 = 1;
+                            while(n2 < drawSegments[n].length) {
+                                var w = (n+(drawSegments.length-n2)/drawSegments[n].length)/drawSegments.length*20;
+                                _canvas.lineWidth = (Math.max(w,0)+5)*zoom;
+                                if(Math.round(l)<data.interval) {
+                                    _canvas.lineWidth = 5*zoom;
+                                }
+                                _canvas.beginPath();
+                                _canvas.moveTo(drawSegments[n][n2-1][0]*zoom+xoffset,drawSegments[n][n2-1][1]*zoom+yoffset);
+                                _canvas.lineTo(drawSegments[n][n2][0]*zoom+xoffset,drawSegments[n][n2][1]*zoom+yoffset);
+                                _canvas.stroke();
+                                n2++;
+                            }
+                            n++;
+                        }
+                        if(!data.noEyes) {
+                            var direction = -90+_physics.directionToPoint(this.segments[1][0],this.segments[1][1],this.segments[0][0],this.segments[0][1]);
+                            var p = [this.segments[0][0]*zoom+xoffset,this.segments[0][1]*zoom+yoffset];
+                            var p1 = _physics.rotate(p[0],p[1],p[0]-5*zoom,p[1],direction);
+                            var p2 = _physics.rotate(p[0],p[1],p[0]+5*zoom,p[1],direction);
+                            var p3 = _physics.rotate(p[0],p[1],p[0]-5*zoom,p[1]+3*zoom,direction);
+                            var p4 = _physics.rotate(p[0],p[1],p[0]+5*zoom,p[1]+3*zoom,direction);
+                            _canvas.fillStyle = 'white';
+                            _canvas.beginPath();
+                            _canvas.arc(p1[0],p1[1],5*zoom,0,360);
+                            _canvas.fill();
+                            _canvas.beginPath();
+                            _canvas.arc(p2[0],p2[1],5*zoom,0,360);
+                            _canvas.fill();
+                            _canvas.fillStyle = 'black';
+                            _canvas.beginPath();
+                            _canvas.arc(p3[0],p3[1],2*zoom,0,360);
+                            _canvas.fill();
+                            _canvas.beginPath();
+                            _canvas.arc(p4[0],p4[1],2*zoom,0,360);
+                            _canvas.fill();
+                        }
+                    }
+                },
+                update: function() {
+                    var l = Math.round(this.addLength/50);
+                    l += (l>0)?1:(l<0)?-1:0;
+                    this.addLength -= l;
+                    this.length += l;
+                    while(this.getLength()>this.length) {
+                        l = this.segments.length-1;
+                        var p1 = [this.segments[l][0],this.segments[l][1]];
+                        var p2 = [this.segments[l-1][0],this.segments[l-1][1]];
+                        var distance = Math.min(this.getLength()-this.length+1,_math.distanceTo(p1[0],p1[1],p2[0],p2[1]));
+                        var direction = -90-_physics.directionToPoint(p1[0],p1[1],p2[0],p2[1]);
+                        var move = _physics.distanceToMovePoint(distance,direction);
+                        this.segments[l][0] += move[0];
+                        this.segments[l][1] += move[1];
+                        this.deleteExtraSegments();
+                    }
+                    this.deleteExtraSegments();
+                },
+                deleteExtraSegments: function() {
+                    var n = 1;
+                    while(n < this.segments.length) {
+                        if(Math.floor(_math.distanceTo(this.segments[n][0],this.segments[n][1],this.segments[n-1][0],this.segments[n-1][1]))==0) {
+                            this.segments.splice(n,1);
+                        } else {
+                            n++;
+                        }
+                    }
+                },
+                segments: [],
+                length: 200,
+                addLength: 0,
+                getLength: function() {
+                    var n = 1;
+                    var response = 0;
+                    while(n < this.segments.length) {
+                        response += _math.distanceTo(this.segments[n][0],this.segments[n][1],this.segments[n-1][0],this.segments[n-1][1]);
+                        n++;
+                    }
+                    return response;
+                }
+            };
+            function menu() {
+                var move = _physics.distanceToMovePoint(menuAnimation,menuMoveDirection);
+                drawBackground(10,15,'rgb(90,210,70)','rgb(100,240,70)',move[0],move[1]);
+                if(_math.random(0,5)==0) {
+                    var x,y;
+                    if(_math.random(0,3)==0) {
+                        x = 700;
+                        y = _math.random(-200,700);
+                    } else if(_math.random(0,2)==0) {
+                        x = -200;
+                        y = _math.random(-200,700);
+                    } else if(_math.random(0,1)==0) {
+                        x = _math.random(-200,700);
+                        y = -200;
+                    } else {
+                        x = _math.random(-200,700);
+                        y = 700;
+                    }
+                    var pr = 10;
+                    var pn = 6;
+                    if(_math.random(0,2)==0) {
+                        pr = 8;
+                        pn = 7;
+                    }
+                    x = Math.round(x/50)*50+(move[0]%50)-25;
+                    y = Math.round(y/66.6)*66.6+(move[1]%66.6)-16.6;
+                    menuFlowers.push({
+                        stemx: x,
+                        stemy: y,
+                        flowerx: x,
+                        flowery: y-50,
+                        middleradius: 10,
+                        petalradius: pr,
+                        petalcolor: 'hsl('+(_math.random(0,15)*15+180)+',100%,50%)',
+                        petalnum: pn,
+                        r: _math.random(0,100)/50
+                    });
+                }
+                var n = 0;
+                while(n < menuFlowers.length) {
+                    move = _physics.distanceToMovePoint(1,menuMoveDirection);
+                    menuFlowers[n].flowerx+=move[0];
+                    menuFlowers[n].flowery+=move[1];
+                    menuFlowers[n].stemx+=move[0];
+                    menuFlowers[n].stemy+=move[1];
+                    menuFlowers[n].rotate = menuAnimation*menuFlowers[n].r;
+                    menuFlowers[n].flowerx += Math.sin(menuAnimation/20*2*menuFlowers[n].r)*5;
+                    var shadow = JSON.parse(JSON.stringify(menuFlowers[n]));
+                    shadow.stemcolor = 'rgba(0,0,0,0.5)';
+                    shadow.middlecolor = 'rgba(0,0,0,0.5)';
+                    shadow.petalcolor = 'rgba(0,0,0,0.5)';
+                    shadow.flowerx -= 25;
+                    drawFlower(shadow);
+                    n++;
+                }
+                var n = 0;
+                while(n < menuFlowers.length) {
+                    drawFlower(menuFlowers[n]);
+                    menuFlowers[n].flowerx -= Math.sin(menuAnimation/20*2*menuFlowers[n].r)*5;
+                    if(menuFlowers[n].stemx>700||menuFlowers[n].stemx<-200||menuFlowers[n].stemy>700||menuFlowers[n].stemy<-200) {
+                        menuFlowers.splice(n,1);
+                    } else {
+                        var d = false;
+                        var n2 = 0;
+                        while(n2 < menuFlowers.length) {
+                            var x1 = Math.round(menuFlowers[n].stemx/50)*50;
+                            var y1 = Math.round(menuFlowers[n].stemy/50)*50;
+                            var x2 = Math.round(menuFlowers[n2].stemx/50)*50;
+                            var y2 = Math.round(menuFlowers[n2].stemy/50)*50;
+                            if(n!=n2&&(x1==x2&&(y1==y2||y1==y2-50))) {
+                                d = true;
+                            }
+                            n2++;
+                        }
+                        if(d) {
+                            menuFlowers.splice(n,1);
+                        } else {
+                            n++;
+                        }
+                    }
+                }
+                _canvas.fillStyle = 'black';
+                var text = "Snake Attack".split('');
+                n = 0;
+                while(n < text.length) {
+                    var t = [];
+                    var n2 = 0;
+                    while(n2 < n) {
+                        t.push(text[n2]);
+                        n2++;
+                    }
+                    t = t.join('');
+                    _canvas.font = '60px Comic Sans MS';
+                    var x = _canvas.measureText(t).width;
+                    _canvas.fillText(text[n],60+x,100+Math.sin(menuAnimation/10+n)*3);
+                    n++;
+                }
+                menuAnimation++;
+                roundRect(140,190,150,100,25);
+                _canvas.fillStyle = 'rgba(0,0,0,0.5)';
+                _canvas.fill();
+                _canvas.lineWidth = 5;
+                _canvas.strokeStyle = 'black';
+                _canvas.lineCap = 'round';
+                var fill = _canvas.createLinearGradient(175,200,175,300);
+                fill.addColorStop(0,'rgb(0,255,0)');
+                fill.addColorStop(1,'rgb(0,100,0)');
+                if(_mouse.InBox(175,200,150,100)&&_mouse.down) {
+                    fill = _canvas.createLinearGradient(175,200,175,300);
+                    fill.addColorStop(1,'rgb(0,255,0)');
+                    fill.addColorStop(0,'rgb(0,100,0)');
+                }
+                _canvas.fillStyle = fill;
+                _canvas.beginPath();
+                roundRect(175,200,150,100,25);
+                _canvas.fill();
+                _canvas.stroke();
+                _canvas.beginPath();
+                _canvas.moveTo(212,220);
+                _canvas.lineTo(295,250);
+                _canvas.stroke();
+                _canvas.beginPath();
+                _canvas.moveTo(295,250);
+                _canvas.lineTo(212,280);
+                _canvas.stroke();
+                _canvas.beginPath();
+                _canvas.moveTo(212,280);
+                _canvas.lineTo(212,220);
+                _canvas.stroke();
+                if(_mouse.ClickInBox(175,200,150,100)) {
+                    page = 'game';
+                    reset();
+                }
+            }
+            function drawFlower(arr) {
+                var stemcolor = arr.stemcolor===undefined?'rgb(0,255,0)':arr.stemcolor;
+                var stemx = arr.stemx;
+                var stemy = arr.stemy;
+                var flowerx = arr.flowerx;
+                var flowery = arr.flowery;
+                var rotate = arr.rotate===undefined?0:arr.rotate;
+                var petalnum = arr.petalnum===undefined?6:arr.petalnum;
+                var petalradius = arr.petalradius;
+                var petalcolor = arr.petalcolor===undefined?'rgb(255,0,255)':arr.petalcolor;
+                var middleradius = arr.middleradius;
+                var middlecolor = arr.middlecolor===undefined?'rgb(255,255,0)':arr.middlecolor;
+                var petaldistance = arr.petaldistance===undefined?middleradius:arr.petaldistance;
+                if(!arr.nostem) {
+                    _canvas.strokeStyle = stemcolor;
+                    _canvas.beginPath();
+                    _canvas.moveTo(stemx,stemy);
+                    _canvas.lineTo(flowerx,flowery);
+                    _canvas.stroke();
+                }
+                var n = 0;
+                while(n < petalnum) {
+                    var r = n/petalnum*360+rotate;
+                    var p1 = [flowerx,flowery];
+                    var p2 = [flowerx,flowery-petalradius-petaldistance];
+                    var p = _physics.rotate(p1[0],p1[1],p2[0],p2[1],r);
+                    _canvas.fillStyle = petalcolor;
+                    _canvas.beginPath();
+                    _canvas.arc(p[0],p[1],petalradius,0,360);
+                    _canvas.fill();
+                    n++;
+                }
+                _canvas.fillStyle = middlecolor;
+                _canvas.beginPath();
+                _canvas.arc(flowerx,flowery,middleradius,0,360);
+                _canvas.fill();
+            }
+            var menuAnimation = 0;
+            var menuMoveDirection = _math.random(0,360);
+            var page = 'menu';
+            var gameZoom = 1;
+            var menuFlowers = [];
+            var n = 0;
+            while(n < 20) {
+                var x = _math.random(-200,700);
+                var y = _math.random(-200,700);
+                var pr = 10;
+                var pn = 6;
+                if(_math.random(0,2)==0) {
+                    pr = 8;
+                    pn = 7;
+                }
+                x = Math.round(x/50)*50-25;
+                y = Math.round(y/66.6)*66.6-16.6;
+                menuFlowers.push({
+                    stemx: x,
+                    stemy: y,
+                    flowerx: x,
+                    flowery: y-50,
+                    middleradius: 10,
+                    petalradius: pr,
+                    petalcolor: 'hsl('+(_math.random(0,15)*15+180)+',100%,50%)',
+                    petalnum: pn,
+                    r: _math.random(0,100)/50
+                });
+                n++;
+            }
+            var flowers = [];
+        </script>
+    </body>
+</html>

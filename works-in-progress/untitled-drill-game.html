@@ -1,0 +1,485 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.title = "Drilling Rush";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var loads = 0;
+            var loadingScreen = true;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = ['https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/5877e543-014c-4b8b-b6c2-37397c0c0c90/d4fon0w-e0dd98b0-c091-4ca9-8fa6-89cbdd07d117.jpg/v1/fill/w_894,h_894,q_70,strp/seamless_dirt_ground_texture_by_hhh316_d4fon0w-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9OTAwIiwicGF0aCI6IlwvZlwvNTg3N2U1NDMtMDE0Yy00YjhiLWI2YzItMzczOTdjMGMwYzkwXC9kNGZvbjB3LWUwZGQ5OGIwLWMwOTEtNGNhOS04ZmE2LTg5Y2JkZDA3ZDExNy5qcGciLCJ3aWR0aCI6Ijw9OTAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.PxB_mjQ_Fspgd7jAtdFa9fY-faEZldwBLq5m1oKDeLw','https://cdnb.artstation.com/p/assets/images/images/010/604/427/large/nick-rossi-gam322-nrossi-m11-lava.jpg?1525288374','https://art.pixilart.com/1c5821fa6d554c6.png','https://cdn.britannica.com/78/170778-131-D35E060F/Reflections-diamond.jpg'];
+            var audios = [];
+            if(audios.length+imgs.length==0) {
+                loadingScreen = false;
+            }
+            var keys = [];
+            var keysdown = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin:0px;overflow:hidden;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+                keysdown[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                down: false
+            }
+            var _math = {
+                random: function(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1) ) + min;
+                },
+                distanceTo: function(x1,y1,x2,y2) {
+                    return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+                }
+            }
+            function doAll() {
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                if(!loadingScreen) {
+                    program();
+                } else {
+                    _canvas.font = "40px Arial";
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Loading "+Math.floor(loads/(audios.length+imgs.length)*100)+"%",500,200);
+                    _canvas.fillStyle = 'green';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(400,250,loads/(audios.length+imgs.length)*200,50);
+                    _canvas.strokeRect(400,250,200,50);
+                    if(!navigator.onLine) {
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("No Internet",500,450);
+                    }
+                    if(loads==audios.length+imgs.length) {
+                        _canvas.strokeRect(437,350,125,50);
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("PLAY",500,390);
+                        _canvas.fillStyle = 'rgb(0,0,0,0.5)';
+                        if(_mouse.InBox(437,350,125,50)) {
+                            _canvas.fillRect(437,350,125,50);
+                            if(_mouse.click) {
+                                loadingScreen = false;
+                            }
+                        }
+                    }
+                }
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+                keysdown = [];
+            }
+            window.setInterval(doAll,20);
+            function program() {
+                game.update();
+            }
+            function sign(n) {
+                if(n>0) {
+                    return 1;
+                } else if(n<0) {
+                    return -1;
+                }
+                return 0;
+            }
+            var game = {
+                reset: function() {
+                    this.particles.particles = [];
+                    this.turn = 0;
+                    this.player.maxHealth = 10;
+                    this.player.health = this.player.maxHealth;
+                    this.player.x = Math.floor(this.board.w/2);
+                    this.player.y = Math.floor(this.board.h/2);
+                    this.board.blocks = [];
+                    this.board.background = [];
+                    var x = 0;
+                    while(x < this.board.w) {
+                        this.board.background.push([]);
+                        var y = 0;
+                        while(y < this.board.h) {
+                            if(x!=this.player.x||y!=this.player.y) {
+                                this.board.newBlock(x,y);
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                },
+                moveSpeed: 0.1,
+                turn: 0,
+                update: function() {
+                    this.particles.update();
+                    if(this.moving[0]==0&&this.moving[1]==0) {
+                        this.player.update();
+                    } else {
+                        var m = this.moving;
+                        m[0] += sign(m[0])*this.moveSpeed;
+                        m[1] += sign(m[1])*this.moveSpeed;
+                        if(Math.abs(m[0])>=1||Math.abs(m[1])>=1) {
+                            var move = [sign(m[0]),sign(m[1])];
+                            var blocksToMove = this.entitiesToMove();
+                            var n = 0;
+                            while(n < blocksToMove.length) {
+                                var block = this.board.blocks[blocksToMove[n]];
+                                block.x += move[0];
+                                block.y += move[1];
+                                n++;
+                            }
+                            this.player.x += move[0];
+                            this.player.y += move[1];
+                            this.moving = [0,0];
+                            var drilledBlock = this.entityInSpace(this.player.x,this.player.y);
+                            if(drilledBlock!==undefined) {
+                                this.drilled(drilledBlock);
+                                this.board.blocks.splice(this.entityInSpace(this.player.x,this.player.y,true),1);
+                            }
+                        }
+                    }
+                    this.draw(300,50,400,400);
+                    this.particles.draw();
+                },
+                keys: [39,37,38,40],
+                draw: function(x,y,w,h) {
+                    _canvas.save();
+                    _canvas.beginPath();
+                    _canvas.rect(x-1,y-1,w+2,h+2);
+                    _canvas.clip();
+                    var blockWidth = w/this.board.w;
+                    var blockHeight = h/this.board.h;
+                    var blocksToMove = this.entitiesToMove();
+                    var m = this.moving;
+                    var n = 0;
+                    while(n < this.board.blocks.length) {
+                        var block = this.board.blocks[n];
+                        if(block.x>=0&&block.y>=0&&block.x<this.board.w&&block.y<this.board.h) {
+                            this.board.background[block.x][block.y] = block.type;
+                        }
+                        var animation = false;
+                        if(m[0]!=0||m[1]!=0) {
+                            if(block.type=='player'||blocksToMove.indexOf(n)!=-1) {
+                                animation = true;
+                            }
+                        }
+                        if(animation) {
+                            this.drawEntity(block,(block.x+m[0])*blockWidth+x,(block.y+m[1])*blockHeight+y,blockWidth,blockHeight);
+                        } else {
+                            this.drawEntity(block,block.x*blockWidth+x,block.y*blockHeight+y,blockWidth,blockHeight);
+                        }
+                        n++;
+                    }
+                    var playerCors = [(this.player.x+m[0])*blockWidth+x,(this.player.y+m[1])*blockHeight+y,blockWidth,blockHeight];
+                    if(m[0]!=0||m[1]!=0) {
+                        var drillSide = [[playerCors[0],playerCors[2]],[playerCors[1],playerCors[3]]];
+                        var drillBlock = this.entityInSpace(this.player.x+sign(m[0]),this.player.y+sign(m[1]));
+                        if(m[0]!=0) {
+                            drillSide[0] = playerCors[0]+blockWidth/2+blockWidth/2*sign(m[0]);
+                        } else {
+                            drillSide[1] = playerCors[1]+blockHeight/2+blockHeight/2*sign(m[1]);
+                        }
+                        var n = 0;
+                        while(n < 5) {
+                            var cors = JSON.parse(JSON.stringify(drillSide));
+                            if(typeof cors[0]=='object') {
+                                cors[0] = cors[0][0]+cors[0][1]*Math.random();
+                            } else {
+                                cors[1] = cors[1][0]+cors[1][1]*Math.random();
+                            }
+                            this.particles.addDrillParticle(cors[0],cors[1],drillBlock,m);
+                            n++;
+                        }
+                    }
+                    _canvas.save();
+                    _canvas.beginPath();
+                    _canvas.rect(playerCors[0],playerCors[1],playerCors[2],playerCors[3]);
+                    _canvas.clip();
+                    _canvas.fillStyle = 'black';
+                    _canvas.fillRect(0,0,1000,500);
+                    var x2 = 0;
+                    while(x2 < this.board.background.length) {
+                        var y2 = 0;
+                        while(y2 < this.board.background[x2].length) {
+                            this.drawBackground(this.board.background[x2][y2],x2*blockWidth+x,y2*blockHeight+y,blockWidth,blockHeight);
+                            y2++;
+                        }
+                        x2++;
+                    }
+                    _canvas.restore();
+                    this.player.draw(x,y,w,h);
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 2;
+                    _canvas.strokeRect(x,y,w,h);
+                    _canvas.restore();
+                },
+                board: {
+                    w: 4,
+                    h: 4,
+                    blocks: [],
+                    background: [],
+                    newBlock: function(x,y) {
+                        var block = {x:x,y:y,type:'dirt'}
+                        if(Math.random()<0.1) {
+                            block.type = 'lava';
+                            block.damage = Math.floor(game.turn/15)+1;
+                        }
+                        if(Math.random()<0.1) {
+                            block.type = 'repair';
+                        }
+                        this.blocks.push(block);
+                    }
+                },
+                drawBackground: function(t,x,y,w,h) {
+                    if(t==undefined) {
+                        t = 'dirt';
+                    }
+                    _canvas.globalAlpha = 0.5;
+                    this.drawEntity({type:t},x,y,w,h);
+                    _canvas.globalAlpha = 1;
+                },
+                drawEntity: function(e,x,y,w,h) {
+                    if(e.type=='player') {
+                        _canvas.drawImage(imgs[2],x,y,w,h);
+                    } else if(e.type=='dirt') {
+                        _canvas.drawImage(imgs[0],x,y,w,h);
+                    } else if(e.type=='lava') {
+                        _canvas.drawImage(imgs[1],x,y,w,h);
+                    } else if(e.type=='repair') {
+                        _canvas.drawImage(imgs[0],x,y,w,h);
+                        _canvas.drawImage(imgs[3],x,y,w,h);
+                    }
+                    this.drawStats(e,x,w,y,h);
+                },
+                drawStats: function(stats,x,w,y,h) {
+                    var offset = 0;
+                    if(stats.damage!==undefined) {
+                        _canvas.font = w/4+'px Arial';
+                        var w2 = _canvas.measureText(stats.damage).width;
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillRect(x+w-w2-w*0.1875,y+h-h*0.375,w2+w*0.125,h*0.3125);
+                        _canvas.fillStyle = 'red';
+                        _canvas.fillText(stats.damage,x+w-w2-w*0.125,y+h-h*0.125);
+                        offset += w2;
+                    }
+                    if(stats.health!==undefined) {
+                        _canvas.font = w/4+'px Arial';
+                        var w2 = _canvas.measureText(stats.health+'/'+stats.maxHealth).width;
+                        offset += w2;
+                        w2 = offset;
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillRect(x+w-w2-w*0.1875,y+h-h*0.375,w2+w*0.125,h*0.3125);
+                        _canvas.fillStyle = 'lime';
+                        _canvas.fillText(stats.health+'/'+stats.maxHealth,x+w-w2-w*0.125,y+h-h*0.125);
+                    }
+                },
+                entityInSpace: function(x,y,getId) {
+                    var n = 0;
+                    while(n < this.board.blocks.length) {
+                        var b = this.board.blocks[n];
+                        if(b.x==x&&b.y==y) {
+                            if(getId) {
+                                return n;
+                            } else {
+                                return b;
+                            }
+                        }
+                        n++;
+                    }
+                },
+                entitiesToMove: function() {
+                    var list = [];
+                    var p = this.player;
+                    var s = sign;
+                    var m = this.moving;
+                    var n = 0;
+                    while(n < game.board.blocks.length) {
+                        var b = game.board.blocks[n];
+                        if((s(b.x-p.x)!=s(m[0])&&b.y==p.y&&s(m[0])!=0)||(s(b.y-p.y)!=s(m[1])&&b.x==p.x&&s(m[1])!=0)) {
+                            list.push(n);
+                        }
+                        n++;
+                    }
+                    return list;
+                },
+                move: function(x,y) {
+                    var x2 = this.player.x+x;
+                    var y2 = this.player.y+y;
+                    if(x2>=0&&y2>=0&&x2<this.board.w&&y2<this.board.h) {
+                        this.turn++;
+                        this.moving = [this.moveSpeed*x,this.moveSpeed*y];
+                        if(x>0) {
+                            this.board.newBlock(-1,this.player.y);
+                        } else if(y>0) {
+                            this.board.newBlock(this.player.x,-1);
+                        } else if(x<0) {
+                            this.board.newBlock(this.board.w,this.player.y);
+                        } else if(y<0) {
+                            this.board.newBlock(this.player.x,this.board.h);
+                        }
+                    }
+                },
+                drilled: function(block) {
+                    if(block.damage!=undefined) {
+                        this.player.health -= block.damage;
+                    }
+                },
+                player: {
+                    x: 0,
+                    y: 0,
+                    health: 0,
+                    maxHealth: 0,
+                    update: function() {
+                        if(keysdown[game.keys[0]]) {
+                            //right
+                            game.move(1,0);
+                        } else if(keysdown[game.keys[1]]) {
+                            //left
+                            game.move(-1,0)
+                        } else if(keysdown[game.keys[2]]) {
+                            //up
+                            game.move(0,-1)
+                        } else if(keysdown[game.keys[3]]) {
+                            //down
+                            game.move(0,1);
+                        }
+                        this.health = Math.min(this.health,this.maxHealth);
+                    },
+                    draw: function(x,y,w,h) {
+                        var m = game.moving;
+                        var blockWidth = w/game.board.w;
+                        var blockHeight = h/game.board.h;
+                        game.drawEntity(this,(this.x+m[0])*blockWidth+x,(this.y+m[1])*blockHeight+y,blockWidth,blockHeight);
+                    },
+                    type: 'player'
+                },
+                particles: {
+                    update: function() {
+                        var n = 0;
+                        while(n < this.particles.length) {
+                            var particle = this.particles[n];
+                            particle.x += particle.xmove;
+                            particle.y += particle.ymove;
+                            if(particle.drag!==undefined) {
+                                particle.xmove *= particle.drag;
+                                particle.ymove *= particle.drag;
+                            }
+                            if(particle.alpha!==undefined) {
+                                particle.alpha -= particle.decay;
+                                if(particle.alpha<=0) {
+                                    this.particles.splice(n,1);
+                                    n--;
+                                }
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.particles.length) {
+                            var particle = this.particles[n];
+                            _canvas.fillStyle = particle.color;
+                            if(particle.alpha!==undefined) {
+                                _canvas.globalAlpha = particle.alpha;
+                            }
+                            _canvas.beginPath();
+                            _canvas.arc(particle.x,particle.y,particle.size,0,2*Math.PI);
+                            _canvas.fill();
+                            _canvas.globalAlpha = 1;
+                            n++;
+                        }
+                    },
+                    addDrillParticle: function(x,y,drillBlock,m) {
+                        var type = drillBlock.type;
+                        var particle = {x:x,y:y,drag:0.98,alpha:1,decay:0.05};
+                        particle.size = 4*Math.random()+1;
+                        if(drillBlock.type=='dirt') {
+                            particle.color = 'rgb(153, 102, 51)';
+                        } else {
+                            particle.color = 'red';
+                        }
+                        particle.xmove = -sign(m[0])*(2*Math.random()+1)+Math.random()-0.5;
+                        particle.ymove = -sign(m[1])*(2*Math.random()+1)+Math.random()-0.5;
+                        this.particles.push(particle);
+                    },
+                    particles: []
+                },
+                moving: [0,0]
+            }
+            game.reset();
+        </script>
+    </body>
+</html>

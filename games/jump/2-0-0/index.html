@@ -1,0 +1,865 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Jump 2';
+            var dimensions = {width:1000,height:500};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            canvas.oncontextmenu = function(event) {
+                event.preventDefault();
+                Mouse.right = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            var loads = 0;
+            var loaded = true;
+            var intro = 0;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function font(size) {
+                ctx.font = size+'px Arial';
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function button(x,y,w,h,text,script,fontSize,borderRadius,color='black',lineWidth=3) {
+                ctx.lineWidth = lineWidth;
+                ctx.strokeStyle = color;
+                if(borderRadius===undefined) {
+                    ctx.strokeRect(x,y,w,h);
+                } else {
+                    roundRect(x,y,w,h,borderRadius);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = color;
+                if(fontSize===undefined) {
+                    font(1000);
+                    var width = ctx.measureText(text).width;
+                    font(Math.min(h-10,(w-10)/width*1000));
+                } else {
+                    font(fontSize);
+                }
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text,x+w/2,y+h/2);
+                if(Mouse.inBox(x,y,w,h)) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(borderRadius===undefined) {
+                        ctx.fillRect(x,y,w,h);
+                    } else {
+                        roundRect(x,y,w,h,borderRadius);
+                        ctx.fill();
+                    } 
+                    if(Mouse.click&&menuTransition==0) {
+                        script();
+                    }
+                }
+            }
+            function roundRect(x,y,w,h,r) {
+                ctx.beginPath();
+                ctx.moveTo(x+r,y);
+                ctx.lineTo(x+w-r,y);
+                ctx.arc(x+w-r,y+r,r,1.5*Math.PI,0);
+                ctx.lineTo(x+w,y+h-r);
+                ctx.arc(x+w-r,y+h-r,r,0,0.5*Math.PI);
+                ctx.lineTo(x+r,y+h);
+                ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                ctx.lineTo(x,y+r);
+                ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                ctx.closePath();
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/500,s/500);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,500,500);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/500,s/500);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '30px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(47.5,272.5,405*percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%40;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',250,250);
+                    ctx.restore();
+                    loadAnimation += 0.5;
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(word.endsWith('LONGWORDFORONECOIN')) {
+                    word = '';
+                    data.coins++;
+                }
+                if(page=='menu') {
+                    menu.update();
+                } else if(page=='game') {
+                    game.tick();
+                }
+                time++;
+            }
+
+            var menu = {
+                page: 'titlePage',
+                update: function() {
+                    if(this.page=='titlePage'||this.page=='selectPlayType') {
+                        this.character.update();
+                        ctx.fillStyle = 'rgb(180,255,255)';
+                        ctx.fillRect(0,0,1000,500);
+
+                        this.character.draw();
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                        ctx.fillRect(300,0,400,500);
+                        font(60);
+                        ctx.fillStyle = 'black';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('JUMP 2',500,70);
+                        button(20,20,50,50,'',function(){menu.page='settings';},40,10);
+
+                        font(30);
+                        ctx.textAlign = 'right';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText(data.coins,950,30);
+                        ctx.fillText(data.gems,950,70);
+                        //ctx.drawImage(imgs[0],955,53,30,30);
+                        //ctx.drawImage(imgs[1],955,13,30,30);
+                        //gems and coins
+
+                        ctx.fillStyle = 'black';
+                        ctx.textAlign = 'center';
+                        font(30+Math.sin(time/60)*2);
+                        ctx.fillText('Your Character:',150,300);
+                    }
+                    if(this.page=='titlePage') {
+                        button(390,140,220,70,'Play',function(){menu.page='selectPlayType';},40,10);
+                        button(390,230,220,70,'Shop',function(){menu.page='shop';},40,10);
+                        button(340,320,300,70,'Achievements',function(){menu.page='achievements';},40,10);
+                        button(390,410,220,70,'Credits',function(){menu.page='credits';},40,10);
+                    } else if(this.page=='selectPlayType') {
+                        button(390,140,220,70,'Infinite',function(){menuTransition = 1;},40,10);
+                        button(390,230,220,70,'Missions',function(){menu.page='missions';},40,10);
+                        button(390,410,220,70,'Back',function(){menu.page='titlePage';},40,10);
+                        if(menuTransition>0) {
+                            ctx.globalAlpha = menuTransition/20;
+                            ctx.fillStyle = 'rgb(0,0,0)';
+                            ctx.fillRect(0,0,1000,500);
+                            ctx.globalAlpha = 1;
+                            menuTransition++;
+                            if(menuTransition>20) {
+                                page = 'game';
+                                game.reset();
+                            }
+                        }
+                    } else if(this.page=='credits') {
+                        font(60);
+                        ctx.fillStyle = 'black';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('Credits:',500,60);
+                        font(40);
+                        ctx.fillText('Programming: John Butler',500,160);
+                        ctx.fillText('Music: Kate Butler',500,230);
+                        ctx.fillText('Art & Design: Kate Butler',500,300);
+                        button(390,410,220,70,'Back',function(){menu.page='titlePage';},40,10);
+                    } else if(this.page=='shop') {
+                        button(390,410,220,70,'Back',function(){menu.page='titlePage';},40,10);
+                    } else if(this.page=='achievements') {
+                        button(390,410,220,70,'Back',function(){menu.page='titlePage';},40,10);
+                    } else if(this.page=='settings') {
+                        button(390,410,220,70,'Back',function(){menu.page='titlePage';},40,10);
+                    }
+                },
+                character: {
+                    xmove: 0,
+                    ymove: 0,
+                    x: 150,
+                    y: 390,
+                    update: function() {
+                        this.x += this.xmove;
+                        this.y += this.ymove;
+                        //move
+
+                        this.ymove += 0.07;
+                        //gravity
+
+                        this.xmove *= 0.75;
+                        this.ymove *= 0.98;
+                        //damping
+
+                        if(this.y>390) {
+                            this.y = 390;
+                            this.ymove = 0;
+                            if(Keys.keys[game.keys.up]) {
+                                this.ymove = -5;
+                            }
+                        }
+                        if(this.ymove<0&&Keys.keys[game.keys.up]) {
+                            this.ymove -= 0.04;
+                        }
+                        if(Keys.keys[game.keys.left]) {
+                            this.xmove -= 0.7;
+                        }
+                        if(Keys.keys[game.keys.right]) {
+                            this.xmove += 0.7;
+                        }
+                        if(this.x < 0) {
+                            this.x += 1000;
+                        }
+                        if(this.x > 1000) {
+                            this.x -= 1000;
+                        }
+                    },
+                    draw: function() {
+                        ctx.fillStyle = 'rgb(150,100,50)';
+                        ctx.fillRect(0,401,1000,99);
+                        ctx.fillStyle = 'rgb(100,200,100)';
+                        ctx.beginPath();
+                        ctx.moveTo(1000,400);
+                        ctx.lineTo(0,400);
+                        var n = 0;
+                        while(n <= 100) {
+                            ctx.lineTo(n*10,n%2*10+410);
+                            n++;
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        //draw ground
+
+                        game.drawChar(this.x-10,this.y-10,20,20,this.xmove,this.ymove);
+                        game.drawChar(this.x-1010,this.y-10,20,20,this.xmove,this.ymove);
+                        game.drawChar(this.x+990,this.y-10,20,20,this.xmove,this.ymove);
+                        //draw character
+                    }
+                }
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.objects.update();
+                    this.player.update();
+                    this.cam.update();
+                    this.background.update();
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(150,0,700,500);
+                    ctx.clip();
+                    ctx.translate(150,-this.cam.y+400);
+
+                    this.background.draw();
+                    //background
+
+                    this.player.draw();
+                    this.objects.draw();
+
+                    ctx.restore();
+
+                    if(menuTransition>0) {
+                        ctx.globalAlpha = menuTransition/20;
+                        ctx.fillStyle = 'rgb(0,0,0)';
+                        ctx.fillRect(0,0,1000,500);
+                        ctx.globalAlpha = 1;
+                        menuTransition--;
+                    }
+                },
+                background: {
+                    objects: [],
+                    mountains: [],
+                    update: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            o.x += o.xmove;
+                            o.y += o.ymove;
+                            if(o.x>1050) {
+                                o.x = -350;
+                            }
+                            if(o.x<-350) {
+                                o.x = 1050;
+                            }
+                            if(o.y>game.cam.y+1000) {
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                        }
+                    },
+                    draw: function() {
+                        ctx.fillStyle = this.skyColor(-game.cam.y/50000);
+                        ctx.fillRect(0,-400+game.cam.y,700,500);
+                        //sky
+                        
+                        ctx.save();
+                        ctx.translate(0,50+game.cam.y);
+                        this.drawMountains();
+                        ctx.restore();
+                        //mountains
+
+                        for(var o of this.objects) {
+                            if(o.type=='cloud') {
+                                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                                ctx.beginPath();
+                                for(var c of o.circles) {
+                                    ctx.moveTo(c.x+o.x,c.y-c.r+o.y);
+                                    ctx.arc(c.x+o.x,c.y+o.y,c.r,0,2*Math.PI);
+                                }
+                                ctx.fill();
+                            }
+                        }
+                        //objects
+
+                        ctx.fillStyle = 'rgb(150,100,50)';
+                        ctx.fillRect(0,0,700,500);
+                        ctx.fillStyle = 'rgb(100,200,100)';
+                        ctx.beginPath();
+                        ctx.moveTo(700,0);
+                        ctx.lineTo(0,0);
+                        var n = 0;
+                        while(n <= 70) {
+                            ctx.lineTo(n*10,n%2*10+10);
+                            n++;
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        //ground
+                    },
+                    skyColor: function(h) {
+                        return 'rgb('+(180*(1-h*2.2))+','+(255*(1-h*1.7))+','+(255*(1-h))+')';
+                    },
+                    generateBackgroundLayer: function(y) {
+                        this.objects.push(this.generateCloud(y));
+                    },
+                    generateCloud: function(y) {
+                        var circles = [];
+                        for(var n=0;n<Math.random()*3+3;n++) {
+                            circles.push({x:Math.random()*200-100,y:Math.random()*200-100,r:Math.random()*50+25});
+                        }
+                        var xmove = (Math.random()/2+0.5)*(Math.floor(Math.random()*2)*2-1);
+                        return {type:'cloud',x:Math.random()*1400-350,y:y,circles:circles,xmove:xmove,ymove:0};
+                    },
+                    drawMountains: function() {
+                        for(var n=0;n<this.mountains.length;n++) {
+                            var mountain = this.mountains[n];
+                            ctx.save();
+                            ctx.translate(0,-game.cam.y/(2-n/2)/50);
+                            ctx.fillStyle = ['rgb(100,100,100)','rgb(125,125,125)','rgb(150,150,150)'][n];
+                            ctx.beginPath();
+                            ctx.moveTo(0,1000);
+                            for(var point of mountain) {
+                                ctx.lineTo(point.x,point.y);
+                            }
+                            ctx.lineTo(1000,1000);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    },
+                    generateMountains: function() {
+                        this.mountains = [];
+                        for(var n=0;n<3;n++) {
+                            var mountain = [];
+                            var y = n*-50;
+                            var x = 0;
+                            mountain.push({x:x,y:y});
+                            var n2 = 0;
+                            while(x<=1000) {
+                                n2++;
+                                x += Math.random()*75+10;
+                                y += (Math.random()*40+10)*(n2%2==0?1:-1);
+                                mountain.push({x:x,y:y});
+                            }
+                            this.mountains.unshift(mountain);
+                        }
+                    }
+                },
+                cam: {
+                    y: 0,
+                    update: function() {
+                        this.y = Math.min(this.y,game.player.y+200);
+                        if(this.y<0) {
+                            this.y -= 0.05;
+                        }
+                    }
+                },
+                reset: function() {
+                    this.height = 0;
+                    this.maxHieght = 0;
+                    this.objects.objects = [];
+                    this.player.x = 350;
+                    this.player.y = -this.player.h;
+                    this.player.xmove = 0;
+                    this.player.ymove = 0;
+                    this.player.trail = [];
+                    this.cam.x = 0;
+                    this.cam.y = 0;
+                    this.background.generateMountains();
+                },
+                drawChar: function(x,y,w,h,xmove,ymove,skin) {
+                    xmove = Math.max(Math.min(xmove,5),-5);
+                    ymove = Math.max(Math.min(ymove,5),-5);
+
+                    ctx.save();
+                    ctx.translate(x,y);
+                    ctx.scale(w/20,h/20);
+
+                    this.drawBody(skin);
+                    //body
+
+                    ctx.save();
+                    ctx.translate(xmove,ymove);
+
+                    this.drawEyes(skin);
+
+                    ctx.restore();
+                    //eyes
+
+                    ctx.restore();
+                },
+                drawBody: function(skin) {
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(0,0,20,20);
+                },
+                drawEyes: function(skin) {
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(6.5,7,2,0,2*Math.PI);
+                    ctx.arc(13.5,7,2,0,2*Math.PI);
+                    ctx.fill();
+                },
+                keys: {
+                    left: 37,
+                    right: 39,
+                    up: 38,
+                    down: 40
+                },
+                player: {
+                    x: 0,
+                    y: 0,
+                    xmove: 0,
+                    ymove: 0,
+                    w: 20,
+                    h: 20,
+                    skin: 0,
+                    trail: [],
+                    trailLength: 15,
+                    update: function() {
+                        if(Math.abs(this.ymove)>5) {
+                            this.trail.push({x:this.x+this.w/2+this.xmove,y:this.y+this.h/2+this.ymove});
+                        } else {
+                            this.trail.shift();
+                        }
+                        if(this.trail.length>this.trailLength) {
+                            this.trail.shift();
+                        }
+
+                        this.xmove *= 0.75;
+                        this.ymove *= 0.98;
+                        //damping
+
+                        if(this.x < 0) {
+                            this.x += 700;
+                        }
+                        if(this.x > 700) {
+                            this.x -= 700;
+                        }
+                        //move through walls
+
+                        var touchingPlatformsBefore = [];
+                        for(var n=0;n<2;n++) {
+                            var x = [0,-1,1];
+                            touchingPlatformsBefore = touchingPlatformsBefore.concat(game.objects.touchingPlatform(this.x+x[n]*700,this.y,this.w,this.h));
+                        }
+                        this.x += this.xmove;
+                        this.y += this.ymove;
+                        //move
+
+                        if(this.y>-this.h) {
+                            this.y = -this.h;
+                            this.ymove = 0;
+                        }
+                        //collide with ground
+
+                        var touchingPlatforms = [];
+                        for(var n=0;n<2;n++) {
+                            var x = [0,-1,1];
+                            touchingPlatforms = touchingPlatforms.concat(game.objects.touchingPlatform(this.x+x[n]*700,this.y,this.w,this.h));
+                        }
+                        var onPlatform = this.y===-20;
+                        if(touchingPlatforms.length>0&&touchingPlatformsBefore.length==0&&this.ymove>0) {
+                            onPlatform = true;
+                        }
+                        for(var n=0;n<touchingPlatforms.length;n++) {
+                            var platform = game.objects.objects[touchingPlatforms[n]];
+                            if(platform.platformType=='bounce') {
+                                this.ymove = -18;
+                                platform.bounced = 20;
+                            }
+                        }
+                        for(var n=0;n<touchingPlatforms.length;n++) {
+                            if(onPlatform) break;
+                            for(var n2=-1;n2<1;n2++) {
+                                if(onPlatform) break;
+                                onPlatform = game.objects.abovePlatform(this.x+n2*700,this.y,this.w,this.h,touchingPlatforms[n]);
+                            }
+                        }
+                        if((touchingPlatforms.length>0&&this.ymove<0)||onPlatform) {
+                            if(Keys.keys[game.keys.up]) {
+                                this.ymove = Math.min(this.ymove,-5);
+                            }
+                            //jump
+                        }
+                        if(onPlatform) {
+                            this.ymove = Math.min(this.ymove,0);
+                            var movedOnPlatform = false;
+                            for(var id of touchingPlatforms) {
+                                var platform = game.objects.objects[id];
+                                if(platform.platformType=='move'&&!movedOnPlatform) {
+                                    this.x += platform.move;
+                                    movedOnPlatform = true;
+                                }
+                                this.y = platform.y-this.h;
+                            }
+                            //on platform
+                        } else {
+                            this.ymove += 0.07;
+                            //gravity
+                        }
+                        if(this.ymove<0&&Keys.keys[game.keys.up]) {
+                            this.ymove -= 0.04;
+                        }
+                        //fall slightly slower if up key is held
+
+                        if(Keys.keys[game.keys.right]) {
+                            this.xmove += 0.7;
+                        }
+                        if(Keys.keys[game.keys.left]) {
+                            this.xmove -= 0.7;
+                        }
+                        //move left and right
+
+                        if(Keys.keys[32]) {
+                            this.ymove = -14;    
+                        }
+
+                    },
+                    draw: function() {
+                        if(this.trail.length>0) {
+                            var alpha = this.trail.length/this.trailLength/3;
+                            ctx.fillStyle = 'rgba(0,0,255,'+alpha+')';
+                            ctx.beginPath();
+                            ctx.moveTo(this.trail[0].x,this.trail[0].y);
+                            for(var n=1;n<this.trail.length;n++) {
+                                var point = this.trail[n];
+                                var lastPoint = this.trail[n-1];
+                                var dir = dirTo(lastPoint.x,lastPoint.y,point.x,point.y);
+                                var dist = n/this.trailLength*10;
+                                var cor = rotate(point.x,point.y,point.x+dist,point.y,-dir);
+                                ctx.lineTo(cor[0],cor[1]);
+                            }
+                            for(var n=this.trail.length-1;n>0;n--) {
+                                var point = this.trail[n];
+                                var lastPoint = this.trail[n-1];
+                                var dir = dirTo(lastPoint.x,lastPoint.y,point.x,point.y);
+                                var dist = n/this.trailLength*10;
+                                var cor = rotate(point.x,point.y,point.x-dist,point.y,-dir);
+                                ctx.lineTo(cor[0],cor[1]);
+                            }
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                        for(var n=-700;n<700;n+=700) {
+                            game.drawChar(this.x+n,this.y,this.w,this.h,this.xmove,this.ymove,this.skin);
+                        }
+                    },
+                    trail: []
+                },
+                objects: {
+                    objects: [],
+                    lastSpawnY: 0,
+                    update: function() {
+                        while(this.lastSpawnY>game.cam.y-1000) {
+                            this.lastSpawnY -= 100;
+                            this.addPlatformLevel(this.lastSpawnY);
+                        }
+                        for(n in this.objects) {
+                            var o = this.objects[n];
+                            o.id = n;
+                            if(o.type=='platform'&&o.platformType=='move') {
+                                o.x += o.move;
+                                o.switchTime--;
+                                if(o.switchTime<=0) {
+                                    o.switchTime = o.switchTimeReset;
+                                    o.move *= -1;
+                                }
+                            }
+                            if(o.platformType=='bounce') {
+                                if(o.bounced) {
+                                    o.bounced--;
+                                }
+                            }
+                            if(o.type=='platform'&&o.y>game.cam.y+500) {
+                                this.objects.splice(n,1);
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            if(o.type=='platform') {
+                                ctx.lineWidth = 3;
+                                ctx.lineCap = 'round';
+                                ctx.strokeStyle = 'black';
+                                if(o.platformType=='bounce') {
+                                    ctx.strokeStyle = 'purple';
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x,o.y);
+                                    ctx.quadraticCurveTo(o.x+o.w/2,o.y-o.bounced*2,o.x+o.w,o.y);
+                                    ctx.stroke();
+                                } else {
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x,o.y);
+                                    ctx.lineTo(o.x+o.w,o.y);
+                                    ctx.stroke();
+                                }
+                            }
+                        }
+                    },
+                    add: function(objects) {
+                        this.objects = this.objects.concat(objects);
+                    },
+                    touchingPlatform: function(x,y,w,h) {
+                        var touching = [];
+                        for(var o of this.objects) {
+                            if(o.type!='platform') continue;
+                            if(x+w<o.x||x>o.x+o.w) continue;
+                            if(y+h<o.y||y>o.y) continue;
+                            touching.push(o.id);
+                        }
+                        return touching;
+                    },
+                    abovePlatform: function(x,y,w,h,id) {
+                        var o = this.objects[id];
+                        if(o.type!='platform') return false;
+                        if(x+w<o.x||x>o.x+o.w) return false;
+                        if(y+h*0.9>o.y) return false;
+                        return true;
+                    },
+                    addPlatformLevel: function(y) {
+                        if(Math.random()<0.5) {
+                            this.add(this.createPlatform(Math.random()*300,y,Math.random()*50+50,2));
+                            var w = Math.random()*50+50;
+                            this.add(this.createPlatform(450+Math.random()*250,y,w,2));
+                        } else {
+                            this.add(this.createPlatform(250+Math.random()*200,y,Math.random()*50+75,1));
+                        }
+                        game.background.generateBackgroundLayer(y);
+                    },
+                    createPlatform: function(x,y,w,num) {
+                        var platforms = [];
+                        var p = {x:x,y:y,w:w};
+                        p.type = 'platform';
+                        p.platformType = 'normal';
+                        if(Math.random()<0.1) {
+                            p.platformType = 'bounce';
+                            p.bounced = 0;
+                        } else if(Math.random()<0.2&&num==1) {
+                            p.platformType = 'move';
+                            p.move = (Math.random()+0.5)*(Math.floor(Math.random()*2)*2-1);
+                            p.switchTimeReset = Math.random()*100+200;
+                            p.switchTime = p.switchTimeReset;
+                        }
+                        platforms.push(JSON.parse(JSON.stringify(p)));
+                        p.x -= 700;
+                        platforms.push(JSON.parse(JSON.stringify(p)));
+                        p.x += 1400;
+                        platforms.push(JSON.parse(JSON.stringify(p)));
+                        return platforms;
+                    }
+                }
+            }
+
+            var data = {
+                coins: 0,
+                gems: 0
+            }
+
+            var word = '';
+            var page = 'menu';
+            var time = 0;
+            var menuTransition = 0;
+        </script>
+    </body>
+</html>

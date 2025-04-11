@@ -1,0 +1,12 @@
+combineTypes = {
+    "crossbow den": ["arrow den"],
+    "launcher": ["bomb tower","arrow den"],
+    "stables": ["barracks","arrow den"],
+    "icicle den": ["ice mage","arrow den"],
+    "canon": ["bomb tower"],
+    "factory": ["barracks","bomb tower"],
+    "fire mage": ["ice mage","bomb tower"],
+    "garisson": ["barracks"],
+    "necromancer": ["ice mage","barracks"],
+    "pagomancer": ["ice mage"]
+}

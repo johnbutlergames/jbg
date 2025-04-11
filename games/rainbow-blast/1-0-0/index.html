@@ -1,0 +1,281 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.title = "Rainbow Blast";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var loads = 0;
+            var loadingScreen = true;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = [];
+            var audios = [];
+            if(audios.length+imgs.length==0) {
+                loadingScreen = false;
+            }
+            var keys = [];
+            var keysdown = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin:0px;overflow:hidden;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+                keysdown[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('contextmenu',function(event) {
+                event.preventDefault();
+                _mouse.rightClick = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                rightClick: false,
+                down: false
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function doAll() {
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                if(!loadingScreen) {
+                    program();
+                } else {
+                    _canvas.font = "40px Arial";
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Loading "+Math.floor(loads/(audios.length+imgs.length)*100)+"%",500,200);
+                    _canvas.fillStyle = 'green';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(400,250,loads/(audios.length+imgs.length)*200,50);
+                    _canvas.strokeRect(400,250,200,50);
+                    if(!navigator.onLine) {
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("No Internet",500,450);
+                    }
+                    if(loads==audios.length+imgs.length) {
+                        _canvas.strokeRect(437,350,125,50);
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("PLAY",500,390);
+                        _canvas.fillStyle = 'rgb(0,0,0,0.5)';
+                        if(_mouse.InBox(437,350,125,50)) {
+                            _canvas.fillRect(437,350,125,50);
+                            if(_mouse.click) {
+                                loadingScreen = false;
+                            }
+                        }
+                    }
+                }
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+                _mouse.rightClick = false;
+                keysdown = [];
+            }
+
+            //start the program
+            window.setInterval(doAll,20);
+
+            function program() {
+                var n = 0;
+                while(n < bots.length) {
+                    var b = bots[n];
+                    b.x += b.xmove;
+                    b.y += b.ymove;
+                    if(b.x<0) {
+                        b.x = 0;
+                    }
+                    if(b.y<0) {
+                        b.y = 0;
+                    }
+                    if(b.x>1000) {
+                        b.x = 1000;
+                    }
+                    if(b.y>500) {
+                        b.y = 500;
+                    }
+                    var n2 = 0;
+                    while(n2 < bots.length) {
+                        if(n2!=n) {
+                            var b2 = bots[n2];
+                            if(distTo(b2.x,b2.y,b.x,b.y)<10) {
+                                var penetrationDistance = distTo(b2.x,b2.y,b.x,b.y)-10;
+                                var dir = dirTo(b.x,b.y,b2.x,b2.y);
+                                var move = distToMove(penetrationDistance/2,dir);
+                                b.x += move[0];
+                                b.y += move[1];
+                                b2.x -= move[0];
+                                b2.y -= move[1];
+                                /*b.xmove *= -1;
+                                b.ymove *= -1;
+                                b2.xmove *= -1;
+                                b2.ymove *= -1;*/
+                            }
+                        }
+                        n2++;
+                    }
+                    b.xmove *= 0.8;
+                    b.ymove *= 0.8;
+                    b.blink = false;
+                    b.blinkLevel--;
+                    if(b.blinkLevel <= 0) {
+                        b.blinkLevel = b.reset;
+                        b.blink = true;
+                    }
+                    if(b.blinkLevel <= 3&&false) {
+                        _canvas.fillRect(b.x-5,b.y-5,10,10);
+                    }
+                    var n2 = 0;
+                    var botsInRadius = 0;
+                    while(n2 < bots.length) {
+                        var b2;
+                        if(n!=n2) {
+                            b2 = bots[n2];
+                        } else {
+                            b2 = {x:_mouse.x,y:_mouse.y,blink:_mouse.down};
+                        }
+                        var dist = distTo(b2.x,b2.y,b.x,b.y);
+                        if((dist<=b.radius&&n!==n2)||(dist<mouseRadius&&n==n2)) {
+                            var r = b.radius;
+                            if(n==n2) {
+                                r = mouseRadius;
+                            }
+                            botsInRadius++;
+                            if(b2.blink) {
+                                b.blinkLevel-=(r-dist)/10;
+                                var dir = dirTo(b.x,b.y,b2.x,b2.y);
+                                if(n!=n2) {
+                                    //dir += 20;
+                                }
+                                var move = distToMove((r-dist)/50,dir);
+                                b.xmove += move[0];
+                                b.ymove += move[1];
+                            }
+                        }
+                        n2++;
+                    }
+                    var botX = Math.floor(b.x/10);
+                    var botY = Math.floor(b.y/10);
+                    _canvas.fillStyle = 'hsla('+(300-botsInRadius*5)+',100%,50%,0.5)';
+                    if(b.blink>0.1&&false) {
+                        _canvas.fillStyle = 'black';
+                    }
+                    /*_canvas.beginPath();
+                    _canvas.arc(b.x,b.y,5,0,2*Math.PI);
+                    _canvas.fill();*/
+                    _canvas.fillRect(b.x-5,b.y-5,10,10);
+                    n++;
+                }
+                if(keysdown[76]) {
+                    l /= 2;
+                    if(l<112) {
+                        l = 1000;
+                    }
+                    reset(l);
+                }
+            }
+            var bots = [];
+            function reset(num) {
+                bots = [];
+                var n = 0;
+                while(n < num) {
+                    var bot = {};
+                    bot.blink = false;
+                    bot.radius = 50;
+                    bot.xmove = 0;
+                    bot.ymove = 0;
+                    bot.x = Math.random()*1000;
+                    bot.y = Math.random()*500;
+                    bot.reset = 50;
+                    bot.blinkLevel = Math.random()*bot.reset;
+                    bots.push(bot);
+                    n++;
+                }
+            }
+            var l = 1000;
+            reset(1000);
+            var mouseRadius = 100;
+        </script>
+    </body>
+</html>

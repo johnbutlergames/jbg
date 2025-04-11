@@ -1,0 +1,438 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Gift Match";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+        }
+
+        var menu = {
+            page: "new game",
+            switchPage: "new game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            score: 0,
+            update: function () {
+                this.objects.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                this.objects.draw();
+            },
+            reset: function () {
+                this.score = 0;
+                this.level.reset();
+            },
+            objects: {
+                objects: [
+                    {
+                        type: "present",
+                        shape: "rectangle",
+                        x: 700,
+                        y: 450,
+                        w: 100,
+                        h: 100,
+                        bodyColor: "rgb(242,50,50)",
+                        accent: {
+                            color: "rgb(255,150,0)",
+                            type: "stripes",
+                            angle: 30,
+                            thickness: 10,
+                            spacing: 25,
+                            offset: 0
+                        },
+                        ribbon: {
+                            color: "rgb(255,0,0)",
+                            borderColor: "rgb(200,0,0)",
+                            thickness: 15,
+                            directionOrder: ["vertical", "horizontal"],
+                            bowPosition: "center"
+                        }
+                    },
+                    {
+                        type: "present",
+                        shape: "circle",
+                        x: 300,
+                        y: 450,
+                        w: 100,
+                        h: 100,
+                        bodyColor: "rgb(242,50,50)",
+                        accent: {
+                            color: "rgb(255,150,0)",
+                            type: "dots",
+                            sizes: [5, 10],
+                            spacing: 22
+                        },
+                        ribbon: {
+                            color: "rgb(255,0,0)",
+                            borderColor: "rgb(200,0,0)",
+                            thickness: 15,
+                            directionOrder: ["vertical", "horizontal"],
+                            bowPosition: "top"
+                        }
+                    }
+                ],
+                update: function () {
+
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+
+                    if (o.type == "present") this.drawPresent(o);
+
+                    ctx.restore();
+                },
+                drawPresent: function (o) {
+                    this.drawPresentBody(o);
+                    this.drawPresentAccent(o);
+                    this.drawPresentRibbons(o);
+                    this.drawPresentBodyBorder(o);
+                },
+                drawPresentAccent: function (o) {
+                    if (!o.accent) return;
+                    ctx.save();
+                    this.drawPresentBodyShape(o);
+                    ctx.clip();
+
+                    if (o.accent.type == "stripes") {
+                        this.drawStripesAccent(o);
+                    } else if (o.accent.type == "dots") {
+                        this.drawDotsAccent(o);
+                    }
+
+                    ctx.restore();
+                },
+                drawStripesAccent: function (o) {
+                    var size = Math.max(o.w, o.h);
+                    var radialSize = size * 2;
+                    var step = o.accent.spacing;
+                    var lowerBound = o.accent.offset % (step * 2) - size / 2 - step * 2;
+                    var upperBound = size / 2 + step;
+
+                    ctx.strokeStyle = o.accent.color;
+                    ctx.lineWidth = o.accent.thickness;
+                    ctx.translate(size / 2, size / 2);
+                    ctx.rotate(o.accent.angle * Math.PI / 180);
+                    for (var y = lowerBound; y < upperBound; y += step) {
+                        ctx.beginPath();
+                        ctx.moveTo(-radialSize, y);
+                        ctx.lineTo(radialSize, y);
+                        ctx.stroke();
+                    }
+                },
+                drawDotsAccent: function (o) {
+                    ctx.fillStyle = o.accent.color;
+                    var step = o.accent.spacing;
+                    for (var x = 0, xCount = 0; x < o.w + step; x += step, xCount++) {
+                        for (var y = 0, yCount = 0; y < o.h + step; y += step, yCount++) {
+                            var size = o.accent.sizes[(xCount + yCount) % 2];
+                            ctx.beginPath();
+                            ctx.arc(x, y, size, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    }
+                },
+                drawPresentRibbons: function (o) {
+                    if (!o.ribbon) return;
+                    ctx.save();
+                    this.drawPresentBodyShape(o);
+                    ctx.clip();
+
+                    var b = o.ribbon.thickness;
+                    var borderThickness = 3;
+
+                    var directions = o.ribbon.directionOrder;
+                    for (var direction of directions) {
+                        if (direction == "horizontal") {
+                            ctx.fillStyle = o.ribbon.borderColor;
+                            ctx.fillRect(0, o.h / 2 - b / 2 - borderThickness, o.w, b + borderThickness * 2);
+                            ctx.fillStyle = o.ribbon.color;
+                            ctx.fillRect(0, o.h / 2 - b / 2, o.w, b);
+                        } else if (direction == "vertical") {
+                            ctx.fillStyle = o.ribbon.borderColor;
+                            ctx.fillRect(o.w / 2 - b / 2 - borderThickness, 0, b + borderThickness * 2, o.h);
+                            ctx.fillStyle = o.ribbon.color;
+                            ctx.fillRect(o.w / 2 - b / 2, 0, b, o.h);
+                        }
+                    }
+
+                    ctx.restore();
+
+                    this.drawPresentBow(o);
+                },
+                drawPresentBow: function (o) {
+                    var borderThickness = 300 / o.ribbon.thickness;
+                    if (o.ribbon.bowPosition == "center") {
+                        ctx.save();
+                        ctx.translate(o.w / 2, o.h / 2);
+                        ctx.scale(o.ribbon.thickness / 100, o.ribbon.thickness / 100);
+                        this.drawPresentBowInPosition(o, borderThickness);
+                        ctx.restore();
+                    } else {
+                        var directionIndex = ["top", "right", "bottom", "left"].indexOf(o.ribbon.bowPosition)
+                        var rotate = directionIndex * 90;
+                        dimension = ["h", "w", "h", "w"][directionIndex];
+                        var size = Math.max(o.w, o.h);
+                        ctx.save();
+                        ctx.translate(o.w / 2, o.h / 2);
+                        ctx.rotate(rotate * Math.PI / 180);
+                        ctx.translate(0, -o[dimension] / 2);
+                        ctx.beginPath();
+                        ctx.rect(-size / 2, -size, size, size);
+                        ctx.clip();
+                        ctx.scale(o.ribbon.thickness / 100, o.ribbon.thickness / 100);
+                        this.drawPresentBowInPosition(o, borderThickness);
+                        ctx.restore();
+                    }
+                },
+                drawPresentBowInPosition: function (o, borderThickness) {
+                    ctx.fillStyle = o.ribbon.color;
+                    ctx.strokeStyle = o.ribbon.borderColor;
+                    ctx.lineWidth = borderThickness;
+                    ctx.lineJoin = "round";
+
+                    ctx.beginPath();
+                    ctx.moveTo(-20, 0);
+                    ctx.lineTo(-175, -150);
+                    ctx.lineTo(-50, -200);
+                    ctx.lineTo(20, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(20, 0);
+                    ctx.lineTo(175, -150);
+                    ctx.lineTo(50, -200);
+                    ctx.lineTo(-20, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 80, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                },
+                drawPresentBody: function (o) {
+                    ctx.fillStyle = o.bodyColor;
+                    this.drawPresentBodyShape(o);
+                    ctx.fill();
+                },
+                drawPresentBodyBorder: function (o) {
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 3;
+                    ctx.lineJoin = "round";
+                    ctx.lineCap = "round";
+                    this.drawPresentBodyShape(o);
+                    ctx.stroke();
+                },
+                drawPresentBodyShape: function (o) {
+                    ctx.beginPath();
+                    if (o.shape == "rectangle") {
+                        ctx.rect(0, 0, o.w, o.h);
+                    } else {
+                        ctx.arc(o.w / 2, o.h / 2, o.w / 2, 0, 2 * Math.PI);
+                    }
+                }
+            },
+            level: {
+                update: function () {
+
+                },
+                draw: function () {
+
+                },
+                reset: function () {
+                    this.newLevel();
+                },
+                newLevel: function () {
+                    game.objects.objects = [];
+                    for (var n = 0; n < 20; n++) {
+                        game.objects.objects.push(this.generateRandomPresent());
+                    }
+                },
+                generateRandomPresent: function () {
+                    var colorScheme = colorSchemes[Math.floor(Math.random()*colorSchemes.length)];
+                    var accentScheme = colorSchemes[Math.floor(Math.random()*colorSchemes.length)];
+                    var ribbonScheme = colorSchemes[Math.floor(Math.random()*colorSchemes.length)];
+
+                    var o = {};
+                    o.type = "present";
+                    o.x = Math.random() * 1400;
+                    o.y = Math.random() * 900;
+                    o.w = Math.random() * 200 + 100;
+                    o.h = Math.random() * 200 + 100;
+                    o.shape = Math.random() < 0.2 ? "circle" : "rectangle";
+                    if (o.shape == "circle") {
+                        o.w = Math.min(o.w, o.h);
+                        o.h = o.w;
+                    }
+                    o.bodyColor = colorScheme.bodyColor;
+                    if (Math.random() < 0.1 && false) {
+                        o.accent = false;
+                    } else {
+                        o.accent = {};
+                        o.accent.type = Math.random() < 0.5 ? "dots" : "stripes";
+                        o.accent.color = accentScheme.accentColor;
+                    }
+                    if (o.accent) {
+                        if (o.accent.type == "dots") {
+                            o.accent.sizes = [Math.random() * 5 + 5];
+                            o.accent.sizes.push(o.accent.sizes[0] * (1.5 + Math.random()));
+                            o.accent.spacing = Math.random() * 20 + 30;
+                        } else if (o.accent.type == "stripes") {
+                            o.accent.angle = Math.random() * 360;
+                            o.accent.thickness = Math.random() * 30 + 5;
+                            o.accent.spacing = Math.random() * 5 + 5 + o.accent.thickness * 2;
+                            o.accent.offset = Math.random() * o.accent.spacing;
+                        }
+                    }
+                    o.ribbon = {};
+                    o.ribbon.directionOrder = ["horizontal", "vertical"];
+                    if (Math.random() < 0.5) o.ribbon.directionOrder.unshift(o.ribbon.directionOrder.pop());
+                    o.ribbon.color = ribbonScheme.accentColor;
+                    o.ribbon.borderColor = ribbonScheme.borderColor;
+                    o.ribbon.thickness = 10 + Math.random() * 10;
+                    o.ribbon.bowPosition = ["left", "right", "bottom", "top", "center"][Math.floor(Math.random() * 5)];
+                    return o;
+                }
+            }
+        }
+
+        var colorSchemes = [
+            {
+                name: "red",
+                bodyColor: "rgb(242,50,50)",
+                accentColor: "rgb(255,0,0)",
+                borderColor: "rgb(200,0,0)"
+            },
+            {
+                name: "orange",
+                bodyColor: "rgb(242,130,50)",
+                accentColor: "rgb(255,150,0)",
+                borderColor: "rgb(200,100,0)"
+            },
+            {
+                name: "yellow",
+                bodyColor: "rgb(242,242,50)",
+                accentColor: "rgb(255,255,0)",
+                borderColor: "rgb(200,200,0)"
+            },
+            {
+                name: "green",
+                bodyColor: "rgb(50,242,50)",
+                accentColor: "rgb(0,255,0)",
+                borderColor: "rgb(0,200,0)"
+            },
+            {
+                name: "blue",
+                bodyColor: "rgb(50,50,242)",
+                accentColor: "rgb(0,0,255)",
+                borderColor: "rgb(0,0,200)"
+            },
+            {
+                name: "purple",
+                bodyColor: "rgb(242,50,242)",
+                accentColor: "rgb(255,0,255)",
+                borderColor: "rgb(200,0,200)"
+            }
+        ];
+    </script>
+</body>
+
+</html>

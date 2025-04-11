@@ -1,0 +1,1804 @@
+games = [
+    "Gravity Drill",
+    "Dont Shrink",
+    "Jump",
+    "Circles",
+    "Snake Simulator",
+    "Dodge",
+    "Hamburger",
+    "Car Simulator",
+    "Magic Typing",
+    "Plotless Story Generator",
+    "Random Art Generator",
+    "Translator",
+    "3d Simulator",
+    "Image Scrambler",
+    "Slide Puzzle",
+    "Ai Car Driving",
+    "Numbermind",
+    "Chess",
+    "Physics Simulator",
+    "Robot B33po",
+    "Pathfinder",
+    "Minesweeper",
+    "Embedded Triangles",
+    "Slime Mold Simulation",
+    "Cascading Data",
+    "Rainbow Blast",
+    "Blasty Ball",
+    "Constellations",
+    "Color Blind",
+    "Snake",
+    "Tic Tac Toe",
+    "Opposite Day",
+    "Ghost Town",
+    "Kaleidoscope",
+    "Snowman Builder",
+    "Fireworks",
+    "Coin Dash",
+    "Ping Pong",
+    "Solar System Simulator",
+    "Unscramble",
+    "Mini Golf",
+    "Logic Tanks",
+    "Sandbox",
+    "Polygon Defense",
+    "Geometric Clock",
+    "2048",
+    "Ramp It Up",
+    "Spiral",
+    "Night And Day",
+    "Mountain Parallax",
+    "Fire Simulation",
+    "Emergence",
+    "Jello Gun",
+    "Snake Adventure",
+    "Swoop",
+    "The Labyrinth",
+    "Shoot Em Up",
+    "Growth",
+    "Gym Daddy",
+    "Atom",
+    "Morse Code",
+    "Escape The Horde",
+    "Micro Factory",
+    "Clicks Per Minute",
+    "Gift Match",
+    "Battle Blocks",
+    "Opposite Day 2",
+    "Sorting Algorithms",
+    "Day"
+]
+popularity = [
+    "Opposite Day 2",
+    "Opposite Day",
+    "Snowman Builder",
+    "Unscramble",
+    "Gift Match",
+    "Escape The Horde",
+    "Coin Dash",
+    "Blasty Ball",
+    "Jump",
+    "Logic Tanks",
+    "2048",
+    "Snake Adventure",
+    "Day",
+    "Clicks Per Minute",
+    "Ramp It Up",
+    "Snake",
+    "Mini Golf",
+    "Dont Shrink",
+    "Gym Daddy",
+    "Battle Blocks",
+    "Minesweeper",
+    "Solar System Simulator",
+    "Polygon Defense",
+    "Swoop",
+    "Ghost Town",
+    "Hamburger",
+    "Color Blind",
+    "Numbermind",
+    "Car Simulator",
+    "Sorting Algorithms",
+    "Circles",
+    "Rainbow Blast",
+    "Ping Pong",
+    "Slide Puzzle",
+    "Sandbox",
+    "Physics Simulator",
+    "Gravity Drill",
+    "Shoot Em Up",
+    "Dodge",
+    "Emergence",
+    "Fire Simulation",
+    "Chess",
+    "3d Simulator",
+    "Tic Tac Toe",
+    "Geometric Clock",
+    "Night And Day",
+    "The Labyrinth",
+    "Fireworks",
+    "Pathfinder",
+    "Image Scrambler",
+    "Growth",
+    "Jello Gun",
+    "Morse Code",
+    "Spiral",
+    "Kaleidoscope",
+    "Constellations",
+    "Ai Car Driving",
+    "Mountain Parallax",
+    "Snake Simulator",
+    "Embedded Triangles",
+    "Slime Mold Simulation",
+    "Cascading Data",
+    "Atom",
+    "Translator",
+    "Magic Typing",
+    "Plotless Story Generator",
+    "Random Art Generator",
+    "Robot B33po"
+]
+tags = {
+    "2048": [
+        "single-player",
+        "logic",
+        "number",
+        "block",
+        "infinite"
+    ],
+    "gravity-drill": [
+        "single-player",
+        "logic",
+        "block",
+        "levels",
+        "static",
+        "collectables"
+    ],
+    "dont-shrink": [
+        "single-player",
+        "skill",
+        "infinite",
+        "reflexes",
+        "static"
+    ],
+    "jump": [
+        "single-player",
+        "skill",
+        "platformer",
+        "infinite",
+        "scrolling",
+        "jbg-cube",
+        "enemies",
+        "collectables"
+    ],
+    "circles": [
+        "single-player",
+        "miscellaneous",
+        "platformer",
+        "infinite",
+        "scrolling",
+        "collectables"
+    ],
+    "snake-simulator": [
+        "single-player",
+        "miscellaneous",
+        "snake",
+        "static"
+    ],
+    "dodge": [
+        "single-player",
+        "skill",
+        "levels",
+        "static",
+        "enemies"
+    ],
+    "hamburger": [
+        "single-player",
+        "miscellaneous",
+        "scrolling",
+        "food",
+        "word",
+        "text"
+    ],
+    "car-simulator": [
+        "single-player",
+        "miscellaneous",
+        "driving",
+        "car",
+        "city",
+        "scrolling"
+    ],
+    "magic-typing": [
+        "single-player",
+        "miscellaneous",
+        "word",
+        "text",
+        "static"
+    ],
+    "plotless-story-generator": [
+        "single-player",
+        "miscellaneous",
+        "word",
+        "text",
+        "static"
+    ],
+    "random-art-generator": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "translator": [
+        "single-player",
+        "miscellaneous",
+        "word",
+        "text",
+        "static"
+    ],
+    "3d-simulator": [
+        "single-player",
+        "miscellaneous",
+        "3d",
+        "static"
+    ],
+    "image-scrambler": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "slide-puzzle": [
+        "single-player",
+        "logic",
+        "static",
+        "block",
+        "infinite"
+    ],
+    "ai-car-driving": [
+        "single-player",
+        "miscellaneous",
+        "driving",
+        "static",
+        "sandbox"
+    ],
+    "numbermind": [
+        "single-player",
+        "logic",
+        "number",
+        "static",
+        "infinite"
+    ],
+    "chess": [
+        "multiplayer",
+        "strategy",
+        "static",
+        "infinite"
+    ],
+    "physics-simulator": [
+        "single-player",
+        "miscellaneous",
+        "static",
+        "sandbox"
+    ],
+    "robot-b33po": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "pathfinder": [
+        "single-player",
+        "miscellaneous",
+        "static",
+        "sandbox"
+    ],
+    "minesweeper": [
+        "single-player",
+        "logic",
+        "number",
+        "static",
+        "infinite"
+    ],
+    "embedded-triangles": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "slime-mold-simulation": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "cascading-data": [
+        "single-player",
+        "miscellaneous",
+        "static",
+        "non-interactive"
+    ],
+    "rainbow-blast": [
+        "single-player",
+        "miscellaneous",
+        "sandbox",
+        "static"
+    ],
+    "blasty-ball": [
+        "multiplayer",
+        "skill",
+        "aiming",
+        "static",
+        "ai-opponent",
+        "collectables"
+    ],
+    "constellations": [
+        "single-player",
+        "miscellaneous",
+        "non-interactive",
+        "static"
+    ],
+    "color-blind": [
+        "single-player",
+        "skill",
+        "word",
+        "timed",
+        "reflexes",
+        "static",
+        "infinite"
+    ],
+    "snake": [
+        "single-player",
+        "skill",
+        "static",
+        "collectables"
+    ],
+    "tic-tac-toe": [
+        "multiplayer",
+        "logic",
+        "closed",
+        "ai-opponent"
+    ],
+    "opposite-day": [
+        "single-player",
+        "skill",
+        "platformer",
+        "scrolling",
+        "jbg-cube",
+        "levels"
+    ],
+    "ghost-town": [
+        "single-player",
+        "skill",
+        "timed",
+        "festive",
+        "scrolling",
+        "infinite",
+        "enemies",
+        "collectables"
+    ],
+    "kaleidoscope": [
+        "single-player",
+        "miscellaneous",
+        "static",
+        "non-interactive"
+    ],
+    "snowman-builder": [
+        "single-player",
+        "skill",
+        "aiming",
+        "festive",
+        "static",
+        "sandbox",
+        "infinite"
+    ],
+    "fireworks": [
+        "single-player",
+        "miscellaneous",
+        "festive",
+        "static",
+        "sandbox"
+    ],
+    "coin-dash": [
+        "single-player",
+        "skill",
+        "platformer",
+        "scrolling",
+        "levels",
+        "collectables"
+    ],
+    "ping-pong": [
+        "multiplayer",
+        "skill",
+        "ai-opponent",
+        "static",
+        "infinite"
+    ],
+    "solar-system-simulator": [
+        "single-player",
+        "miscellaneous",
+        "scrolling",
+        "sandbox"
+    ],
+    "unscramble": [
+        "single-player",
+        "skill",
+        "word",
+        "static",
+        "reflexes",
+        "infinite"
+    ],
+    "mini-golf": [
+        "single-player",
+        "skill",
+        "aiming",
+        "scrolling",
+        "infinite"
+    ],
+    "logic-tanks": [
+        "single-player",
+        "logic",
+        "static",
+        "levels",
+        "enemies"
+    ],
+    "sandbox": [
+        "single-player",
+        "miscellaneous",
+        "sandbox",
+        "static"
+    ],
+    "polygon-defense": [
+        "single-player",
+        "strategy",
+        "infinite",
+        "scrolling",
+        "tycoon",
+        "enemies"
+    ],
+    "geometric-clock": [
+        "single-player",
+        "miscellaneous",
+        "number",
+        "non-interactive",
+        "static"
+    ],
+    "ramp-it-up": [
+        "single-player",
+        "skill",
+        "platformer",
+        "levels",
+        "static"
+    ],
+    "spiral": [
+        "single-player",
+        "miscellaneous",
+        "non-interactive",
+        "static"
+    ],
+    "night-and-day": [
+        "single-player",
+        "miscellaneous",
+        "non-interactive",
+        "static"
+    ],
+    "mountain-parallax": [
+        "single-player",
+        "miscellaneous",
+        "non-interactive",
+        "scrolling"
+    ],
+    "fire-simulation": [
+        "single-player",
+        "miscellaneous",
+        "sandbox",
+        "static"
+    ],
+    "emergence": [
+        "single-player",
+        "miscellaneous",
+        "non-interactive",
+        "static"
+    ],
+    "jello-gun": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "snake-adventure": [
+        "single-player",
+        "skill",
+        "scrolling",
+        "infininte",
+        "collectables"
+    ],
+    "swoop": [
+        "single-player",
+        "skill",
+        "scrolling",
+        "infinite",
+        "collectables"
+    ],
+    "the-labyrinth": [
+        "single-player",
+        "skill",
+        "scrolling",
+        "infinite"
+    ],
+    "shoot-em-up": [
+        "single-player",
+        "skill",
+        "aiming",
+        "scrolling",
+        "infinite",
+        "enemies"
+    ],
+    "growth": [
+        "single-player",
+        "miscellaneous",
+        "static",
+        "sandbox",
+        "plant"
+    ],
+    "gym-daddy": [
+        "single-player",
+        "tycoon",
+        "static",
+        "skill",
+        "strategy"
+    ],
+    "atom": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "morse-code": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "escape-the-horde": [
+        "single-player",
+        "skill",
+        "scrolling",
+        "levels"
+    ],
+    "micro-factory": [
+        "single-player",
+        "logic",
+        "scrolling",
+        "levels",
+        "sandbox"
+    ],
+    "clicks-per-minute": [
+        "single-player",
+        "skill",
+        "static"
+    ],
+    "gift-match": [
+        "single-player",
+        "skill",
+        "static",
+        "festive"
+    ],
+    "battle-blocks": [
+        "single-player",
+        "skill",
+        "strategy",
+        "scrolling",
+        "levels"
+    ],
+    "opposite-day-2": [
+        "single-player",
+        "skill",
+        "platformer",
+        "scrolling",
+        "jbg-cube",
+        "levels"
+    ],
+    "sorting-algorithms": [
+        "single-player",
+        "miscellaneous",
+        "static"
+    ],
+    "day": [
+        "single-player",
+        "skill",
+        "platformer",
+        "scrolling",
+        "jbg-cube",
+        "levels"
+    ],
+}
+playlists = {
+    "Single Player": [
+        "Gravity Drill",
+        "Dont Shrink",
+        "Jump",
+        "Circles",
+        "Snake Simulator",
+        "Dodge",
+        "Hamburger",
+        "Car Simulator",
+        "Magic Typing",
+        "Plotless Story Generator",
+        "Random Art Generator",
+        "Translator",
+        "Image Scrambler",
+        "3d Simulator",
+        "Slide Puzzle",
+        "Ai Car Driving",
+        "Numbermind",
+        "Physics Simulator",
+        "Robot B33po",
+        "Pathfinder",
+        "Minesweeper",
+        "Embedded Triangles",
+        "Slime Mold Simulation",
+        "Cascading Data",
+        "Rainbow Blast",
+        "Constellations",
+        "Color Blind",
+        "Snake",
+        "Opposite Day",
+        "Ghost Town",
+        "Kaleidoscope",
+        "Snowman Builder",
+        "Fireworks",
+        "Coin Dash",
+        "Solar System Simulator",
+        "Unscramble",
+        "Mini Golf",
+        "Logic Tanks",
+        "Sandbox",
+        "Polygon Defense",
+        "Geometric Clock",
+        "2048",
+        "Ramp It Up",
+        "Spiral",
+        "Night And Day",
+        "Mountain Parallax",
+        "Fire Simulation",
+        "Emergence",
+        "Jello Gun",
+        "Snake Adventure",
+        "Swoop",
+        "The Labyrinth",
+        "Shoot Em Up",
+        "Growth",
+        "Gym Daddy",
+        "Atom",
+        "Morse Code",
+        "Escape The Horde",
+        "Micro Factory",
+        "Clicks Per Minute",
+        "Gift Match",
+        "Battle Blocks",
+        "Opposite Day 2",
+        "Sorting Algorithms",
+        "Day"
+    ],
+    "Multiplayer": [
+        "Chess",
+        "Blasty Ball",
+        "Tic Tac Toe",
+        "Ping Pong"
+    ],
+    "Miscellaneous": [
+        "Circles",
+        "Snake Simulator",
+        "Hamburger",
+        "Car Simulator",
+        "Magic Typing",
+        "Plotless Story Generator",
+        "Random Art Generator",
+        "Translator",
+        "Image Scrambler",
+        "3d Simulator",
+        "Ai Car Driving",
+        "Physics Simulator",
+        "Robot B33po",
+        "Pathfinder",
+        "Embedded Triangles",
+        "Slime Mold Simulation",
+        "Cascading Data",
+        "Rainbow Blast",
+        "Constellations",
+        "Kaleidoscope",
+        "Fireworks",
+        "Solar System Simulator",
+        "Sandbox",
+        "Geometric Clock",
+        "Spiral",
+        "Night And Day",
+        "Mountain Parallax",
+        "Fire Simulation",
+        "Emergence",
+        "Jello Gun",
+        "Growth",
+        "Atom",
+        "Morse Code",
+        "Sorting Algorithms"
+    ],
+    "Logic": [
+        "Gravity Drill",
+        "Slide Puzzle",
+        "Numbermind",
+        "Minesweeper",
+        "Tic Tac Toe",
+        "Logic Tanks",
+        "2048",
+        "Micro Factory"
+    ],
+    "Skill": [
+        "Dont Shrink",
+        "Jump",
+        "Dodge",
+        "Blasty Ball",
+        "Color Blind",
+        "Snake",
+        "Opposite Day",
+        "Ghost Town",
+        "Snowman Builder",
+        "Coin Dash",
+        "Ping Pong",
+        "Unscramble",
+        "Mini Golf",
+        "Ramp It Up",
+        "Snake Adventure",
+        "Swoop",
+        "The Labyrinth",
+        "Shoot Em Up",
+        "Gym Daddy",
+        "Escape The Horde",
+        "Clicks Per Minute",
+        "Gift Match",
+        "Battle Blocks",
+        "Opposite Day 2",
+        "Day"
+    ],
+    "Strategy": [
+        "Chess",
+        "Polygon Defense",
+        "Gym Daddy",
+        "Battle Blocks"
+    ],
+    "Word": [
+        "Plotless Story Generator",
+        "Translator",
+        "Color Blind",
+        "Unscramble",
+        "Hamburger",
+        "Magic Typing"
+    ],
+    "Number": [
+        "Numbermind",
+        "Minesweeper",
+        "Geometric Clock",
+        "2048"
+    ],
+    "Timed": [
+        "Color Blind",
+        "Ghost Town",
+        "Clicks Per Minute",
+        "Gift Match"
+    ],
+    "Platformer": [
+        "Jump",
+        "Circles",
+        "Opposite Day",
+        "Coin Dash",
+        "Ramp It Up",
+        "Opposite Day 2",
+        "Day"
+    ],
+    "Aiming": [
+        "Blasty Ball",
+        "Snowman Builder",
+        "Mini Golf",
+        "Shoot Em Up"
+    ],
+    "Driving": [
+        "Car Simulator",
+        "Ai Car Driving"
+    ],
+    "Festive": [
+        "Ghost Town",
+        "Snowman Builder",
+        "Fireworks",
+        "Gift Match"
+    ]
+}
+descriptions = {
+    "gravity-drill": "Change gravity to drill all the gems.",
+    "dont-shrink": "Time your clicks to maximize score.",
+    "jump": "Jump from platform to platform.",
+    "circles": "Explore your infinite random world.",
+    "dodge": "Dodge the squares.",
+    "hamburger": "Type your own burger.",
+    "car-simulator": "Drive around the city.",
+    "magic-typing": "It's just typing. Or is it?",
+    "plotless-story-generator": "Generate a story without a plot.",
+    "3d-simulator": "Explore your own 3D world.",
+    "image-scrambler": "Scramble images until they are unrecognizable.",
+    "slide-puzzle": "Slide the pieces to complete the puzzle.",
+    "ai-car-driving": "Train cars to drive around the track.",
+    "numbermind": "Can you guess the number?",
+    "chess": "Play the classic game of chess.",
+    "physics-simulator": "Create physics simulations.",
+    "pathfinder": "Draw a maze, then see it solved.",
+    "translator": "Encode and decode secret messages.",
+    "minesweeper": "Can you clear the minefield?",
+    "blasty-ball": "Blast the ball into your opponents goal.",
+    "snake-simulator": "Your very own snake.",
+    "random-art-generator": "Generate random art.",
+    "embedded-triangles": "Find a circle around every triangle.",
+    "slime-mold-simulation": "Watch the mold move around.",
+    "cascading-data": "It looks into the matrix.",
+    "rainbow-blast": "Drag cells together.",
+    "robot-b33po": "Very fun to listen to.",
+    "constellations": "Watch the mesmerizing constellations.",
+    "color-blind": "Match colors with words.",
+    "snake": "Eat the apples.",
+    "tic-tac-toe": "Play tic-tac-toe against a friend.",
+    "opposite-day": "It's opposite day!",
+    "ghost-town": "Trick or Treat! Watch out for ghosts!",
+    "kaleidoscope": "Move the mouse and watch the kaleidoscope.",
+    "snowman-builder": "Shoot snowballs to build snowmen.",
+    "fireworks": "Click and drag to shoot fireworks!",
+    "coin-dash": "Collect all the coins!",
+    "ping-pong": "Move your paddle to bounce the ball.",
+    "solar-system-simulator": "Simulate your own solar system.",
+    "unscramble": "Unscramble the words.",
+    "mini-golf": "Shoot the ball into the hole.",
+    "logic-tanks": "Shoot enemies and get to the portal!",
+    "sandbox": "Simulate sand, water, and even lava!",
+    "polygon-defense": "Defend your base from the polygons!",
+    "geometric-clock": "A fun way to pass the time.",
+    "2048": "Combine the blocks and get to 2048!",
+    "ramp-it-up": "Jump the spikes and reach the portal.",
+    "spiral": "Watch the mesmerizing spiral.",
+    "night-and-day": "Transition from day to night.",
+    "mountain-parallax": "Move the mouse and view the mountains.",
+    "fire-simulation": "Harness your inner arsonist.",
+    "emergence": "Watch life emerge and evolve.",
+    "jello-gun": "Shoot jello? Why not try it out?",
+    "snake-adventure": "Collect the apples.",
+    "swoop": "Fly the plane and collect the coins.",
+    "the-labyrinth": "Navigate the maze and avoid monsters.",
+    "shoot-em-up": "Shoot the enemies.",
+    "growth": "Evolve new plants.",
+    "gym-daddy": "Work out to become a gym daddy.",
+    "atom": "Simulate an atom.",
+    "morse-code": "Translate dots into morse code.",
+    "escape-the-horde": "Can you escape the zombies?",
+    "micro-factory": "Combine atoms in a micro factory",
+    "clicks-per-minute": "How many times can you click?",
+    "gift-match": "Find the matching gifts!",
+    "battle-blocks": "Place down blocks to defeat the enemies!",
+    "opposite-day-2": "It's Opposite Day, again!",
+    "sorting-algorithms": "Which one sorts the fastest?",
+    "day": "It's Day!"
+}
+versions = {
+    "2048": [
+        {
+            "version": "1.0.0",
+            "date": "10-7-2022",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "5-30-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        },
+        {
+            "version": "1.1.0",
+            "date": "7-23-2023",
+            "title": "Graphically Superior",
+            "description": "<ul><li>Added a better title screen:<ul><li>Title screen now has a starting animation.</li><li>Title screen has a cascading background.</li><li>Changed the play button to blue.</li><li>The play button now has haptic feedback when you click it, getting slightly smaller.</li><li>Added an animation for switching between pages.</li></ul></li><li>Patched some glitches in the animations during gameplay:<ul><li>A phantom block that would appear for a split second before a new block would spawn.</li><li>Special animations for higher blocks clipping when they start and stop.</li></ul></li><li>Added controls to restart game and go back to menu when playing.</li></ul>"
+        }
+    ],
+    "gravity-drill": [
+        {
+            "version": "1.0.0",
+            "date": "10-14-2020",
+            "title": "Initial Release"
+        }
+    ],
+    "dont-shrink": [
+        {
+            "version": "1.0.0",
+            "date": "10-16-2020",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "5-19-2022",
+            "title": "Hooray You Don't Lose The Game By Pressing Alt Tab!",
+            "description": "<ul><li>Changed the keybinds to only Space, X, and Click.</li><li>Added an animated background.</li><li>Added a tutorial.</li></ul>"
+        }
+    ],
+    "jump": [
+        {
+            "version": "1.0.0",
+            "date": "10-18-2020",
+            "title": "Initial Release"
+        }
+    ],
+    "circles": [
+        {
+            "version": "1.0.0",
+            "date": "10-16-2020",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "10-26-2022",
+            "title": "The Cameraman Can Move",
+            "description": "<ul><li>Added a dynamic camera.</li><li>Added a better intro.</li><li>Added keybind prompts.</li><li>Added background grid.</li><li>More types of circles:<ul><li>Transparent circles</li><li>Gradient circles</li><li>Greyscale circles</li><li>Eye circles</li></ul></li><li>Added collectables.</li><li>Changed movement system.</li><li>Changed frame rate to 60 fps (it used to be 30).</li></ul>"
+        }
+    ],
+    "snake-simulator": [
+        {
+            "version": "1.0.0",
+            "date": "10-16-2020",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "7-1-2023",
+            "title": "Redesigned",
+            "description": "<ul><li>Added 10x as many segments to the snake to increase resolution.</li><li>Added a dynamic camera that shifts slightly with mouse movement, expanding the area the snake can move around in.</li><li>Added a tiled background.</li><li>Changed snake movement pattern.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "dodge": [
+        {
+            "version": "1.0.0",
+            "date": "10-16-2020",
+            "title": "Initial Release"
+        }
+    ],
+    "hamburger": [
+        {
+            "version": "1.0.0",
+            "date": "11-23-2020",
+            "title": "Initial Release"
+        },
+        {
+            "version": "2.0.0",
+            "date": "10-30-2022",
+            "title": "It's Raining Tacos",
+            "description": "<ul><li>Turned into an interactive game.</li><li>Now when typing pieces of food fall from the sky onto a plate.</li><li>Added hamburger height meter.</li><li>Added Compost button to clear the hamburger.</li><li>Added images for every letter of the alphabet to make more unique hamburgers.</li></ul>"
+        },
+        {
+            "version": "2.0.1",
+            "date": "8-6-2023",
+            "title": "You Need To Type For This Game To Work",
+            "description": "<ul><li>Added a prompt to type something if the user hasn't typed anything after 5 seconds.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "car-simulator": [
+        {
+            "version": "1.0.0",
+            "date": "10-14-2020",
+            "title": "Initial Release"
+        },
+        {
+            "version": "2.0.0",
+            "date": "12-1-2021",
+            "title": "A Real City, With Real Color",
+            "description": "<ul><li>Gave the whole game a makeover.</li><li>Changed city generation:<ul><li>It now generates something that looks like a city</li><li>Added roads</li><li>Added trees</li><li>Buildings are now opaque instead of transparent</li><li>Added a border around the city.</li><li>Changed the background color to green.</li></ul></li><li>Added instructions.</li><li>Removed X and Y coordinates.</li><li>Added a frame rate tracker</li><li>Drifting:<ul><li>Hold Space to drift</li><li>Drifting leaves tire tracks</li></ul></li><li>Made the driving controls more user friendly.</li></ul>"
+        }
+    ],
+    "magic-typing": [
+        {
+            "version": "1.0.0",
+            "date": "10-12-2020",
+            "title": "Initial Release"
+        }
+    ],
+    "plotless-story-generator": [
+        {
+            "version": "1.0.0",
+            "date": "10-12-2020",
+            "title": "Initial Release"
+        }
+    ],
+    "random-art-generator": [
+        {
+            "version": "1.0.0",
+            "date": "11-24-2020",
+            "title": "Initial Release"
+        }
+    ],
+    "translator": [
+        {
+            "version": "1.0.0",
+            "date": "10-12-2020",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "11-21-2021",
+            "title": "I'm Lovin It",
+            "description": "<ul><li>Added McDonald's option and Scramble option.</li><li>Changed the styling to look better.</li></ul>"
+        }
+    ],
+    "3d-simulator": [
+        {
+            "version": "1.0.0",
+            "date": "1-4-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "12-28-2021",
+            "title": "Now In 3D",
+            "description": "<ul><li>Renamed from 2D Vision to 3D Simulator.</li><li>Added height to raytraced output to more accurately simulate a 3D world.</li><li>Added support for moving backwards.</li></ul>"
+        },
+        {
+            "version": "1.1.1",
+            "date": "5-30-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "image-scrambler": [
+        {
+            "version": "1.0.0",
+            "date": "1-6-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "12-31-2021",
+            "title": "Better Formatting",
+            "description": "<ul><li>Made controls look better.</li><li>Made the image scrambler run faster.</li><li>Removed the image smoothing option.</li></ul>"
+        }
+    ],
+    "slide-puzzle": [
+        {
+            "version": "1.0.0",
+            "date": "1-12-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "1-17-2022",
+            "title": "Better Formatting",
+            "description": "<ul><li>Added better controls.</li><li>Changed styling to look better.</li><li>Minimized instructions and made them clearer.</li></ul>"
+        }
+    ],
+    "ai-car-driving": [
+        {
+            "version": "b1.0.0",
+            "date": "2-12-2021",
+            "title": "Initial Beta Release"
+        }
+    ],
+    "numbermind": [
+        {
+            "version": "1.0.0",
+            "date": "2-18-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "12-4-2021",
+            "title": "Now With Style",
+            "description": "<ul><li>Added better instructions.</li><li>Added a background image.</li><li>Changed style of game to look better.</li></ul>"
+        },
+        {
+            "version": "b2.0.0",
+            "date": "7-7-2023",
+            "title": "Redesigned",
+            "description": "<ul><li>Redesigned the original game, converting from plain HTML5 to a standard canvas game.</li><li>Added a cool title screen</li><li>Added a moving background.</li><li>You now have one hint per game.</li><li>Added marking, allowing you to mark numbers in your guesses certain colors to aid your solving of the number.</li></ul>"
+        },
+        {
+            "version": "2.1.0",
+            "date": "7-11-2023",
+            "title": "Double Trouble",
+            "description": "<ul><li>Changed the way duplicate digits work:<ul><li>There now can only be at most one duplicate digit.</li><li>You now won't get a scenario where there are double doubles, a triplet, or the rare case of the whole number being the same digit.</li><li>Double digits are always directly next to each other in the number.</li><li>For instance: 2213, 1223, or 1322, but not 2132 or 2123.</li><li>When there is a double digit in the number, the guess evaluation bar will show the first two boxes merged.<li>The colors inside the merged boxes denote the status of specifically the double digits.</li></li></ul></li><li>Added a New Game button when you win.</li><li>Added a winning animation on the winning guess (sorry I copied Wordle).</li><li>Added a phrase that shows when you win, varying based on how many guesses it took you (sorry again Wordle).</li><li>Disabled using marks or the hint once you have won the game.</li><li>Fixed the hint so you can't accidentally use it on a number you've already marked (it was really annoying when it happened, trust me).</li><li>Fixed the glitch where when using the hint the mark type would automatically switch to unmark.</li><li>The scroll bar now fades in when it appears.</li></ul>"
+        }
+    ],
+    "chess": [
+        {
+            "version": "b1.0.0",
+            "date": "2-25-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "physics-simulator": [
+        {
+            "version": "1.0.0",
+            "date": "3-8-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "robot-b33po": [
+        {
+            "version": "1.0.0",
+            "date": "2-12-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "pathfinder": [
+        {
+            "version": "1.0.0",
+            "date": "3-29-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "7-2-2023",
+            "title": "Redesigned",
+            "description": "<ul><li>Added a visualization for the pathfinding.</li><li>Added an animation when placing and removing blocks.</li><li>When placing blocks and moving the mouse fast, there is no longer a gap in the wall you create.</li><li>Added a clear function.</li><li>Added instructions.</li><li>Added an S and F to the start and finish respectively.</li><li>Added support for the universal johnbutlergames intro.</li></ul>"
+        },
+        {
+            "version": "1.2.0",
+            "date": "8-7-2023",
+            "title": "Presets",
+            "description": "<ul><li>Added 10 presets, available with keys 0-9.</li><li>Added the ability to change the pathfinding speed with A and D.</li><li>Moved instructions to the left and made them look cleaner.</li><li>Added the ability to toggle instructions with I.</li><li>Patched the bug where you could move the start or finish outside of the viewport.</li><li>Patched the bug where you could put the start on the finish.</li><li>Added an easter egg.</li></ul>"
+        }
+    ],
+    "minesweeper": [
+        {
+            "version": "1.0.0",
+            "date": "4-15-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "embedded-triangles": [
+        {
+            "version": "1.0.0",
+            "date": "2-25-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "2.0.0",
+            "date": "8-7-2023",
+            "title": "Redesign",
+            "description": "<ul><li>Renamed from Inscribed Triangle Theory to Embedded Triangles.</li><li>There are now 3 triangles instead of one, each with their own color.</li><li>As the radius of a circle nears infinity, the color smoothly transitions from one side to the other.</li><li>The radius the mouse needs to be in to grab a point is bigger.</li><li>Points get bigger when the mouse is near to indicate they can be grabbed.</li><li>Fixed the glitch with points having the same x or y values with each other causing the circle to not render correctly.</li><li>Added instructions that fade away once you start moving points.</li><li>Added support for johnbutlergames universal intro.</li><li>Added an easter egg.</li></ul>"
+        }
+    ],
+    "slime-mold-simulation": [
+        {
+            "version": "1.0.0",
+            "date": "5-1-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "cascading-data": [
+        {
+            "version": "1.0.0",
+            "date": "5-7-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "7-12-2023",
+            "title": "Physics",
+            "description": "<ul><li>There are now physics:<ul><li>Hold the mouse down to push data away.</li><li>Data can collide with other data.</li></ul></li><li>Some of the data is now slightly blue.</li><li>The canvas now fits the page normally.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "rainbow-blast": [
+        {
+            "version": "1.0.0",
+            "date": "5-13-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "7-3-2023",
+            "title": "Redesigned",
+            "description": "<ul><li>Added a blur effect, making the simulation much more asthetically pleasing.</li><li>Added a Sidebar:<ul><li>Some instructions for how to use the mouse.</li><li>Some instructions for how to hide the sidebar.</li><li>Lots of sliders.</li></ul></li><li>Added Color Schemes:<ul><li>You can change the color scheme in the sidebar.</li><li>There are 7 available color schemes currently.</li></ul></li><li>Added Options:<ul><li>These are available in the sidebar.</li><li>You can slide the sliders to adjust them.</li><li>Mouse Strength: How strong the mouse pulls on cells when you hold it down.</li><li>Mouse Range: How hard the mouse pulls on cells in it's range.</li><li>Cell Attraction: How much the cells are pulled towards each other.</li><li>Cell Spin: Change this value to make clusters spin clockwise or counterclockwise.</li><li>Blob Size: How large the blobs are allowed to get before they spew out cells.</li><li>Cell Count: How many cells there are.</li></ul></li><li>Significant performance improvements, resulting in a doubled framerate.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "blasty-ball": [
+        {
+            "version": "1.0.0",
+            "date": "5-17-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "11-28-2021",
+            "title": "Skynet Comes Online",
+            "description": "<ul><li>Added AI:<ul><li>Three different difficulties: noob, Pro, and HACKER</li><li>Try to beat HACKER. It's actually impossible.</li></ul></li><li>Added power ups:<ul><li>Speedboost (move faster)</li><li>Clone (spawns another player on your side)</li><li>Power Boost (makes you shoot the ball really hard)</li><li>Size Boost (makes you big)</li><li>These power ups spawn in the four corner spawn points.</li></ul></li><li>Added a menu:<ul><li>You can change your options in the options menu.</li><li>You can change what type of round you want to play.</li><li>You can choose singleplayer or multiplayer.</li><li>Added a tutorial.</li></ul></li></ul>"
+        }
+    ],
+    "constellations": [
+        {
+            "version": "1.0.0",
+            "date": "5-30-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "color-blind": [
+        {
+            "version": "1.0.0",
+            "date": "6-20-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "2.0.0",
+            "date": "8-17-2023",
+            "title": "Redesigned",
+            "description": "<ul><li>Added an amazing animated intro.</li><li>Added a cool page transition effect.</li><li>The tutorial now automatically opens when you first play, with an option to skip it of course.</li><li>Added a much better color scheme:<ul><li>Buttons now have a border matching their color.</li><li>The colors match each other more, so the groups of different colored buttons no longer look ugly.</li><li>There are more colors as you progress farther into the game:<ul><li>It starts out with Red, Orange, Yellow, Green, Blue, and Purple.</li><li>White, Pink, Cyan, Brown, Teal, Gray, Beige, Maroon, Gold, and Black are added respectively every five levels.</li></ul></li></ul></li><li>There are now smooth animations when transitioning between levels.</li><li>There are now particle effects when clicking on buttons.</li><li>Now when you click on an incorrect button it gets smaller and turns grayscale.</li><li>Reworked the scoring system:<ul><li>You no longer get just one point for clicking the right button.</li><li>You get a base of 25 points plus more for clicking the correct button faster.</li><li>You get more points at higher levels.</li><li>There is now a cool animation of the time bar splitting up into cubes and zipping into the score counter.</li></ul></li><li>Reworked the lives system:<ul><li>You no longer lose the game after getting just one wrong click or timeout.</li><li>You now have 3 lives, and it's only game over once you use them all.</li><li>Lives are shown in the top left corner</li><li>Added a cool animation for when you lose a life.<li></ul></li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        },
+        {
+            "version": "2.1.0",
+            "date": "8-22-2023",
+            "title": "RIP Maroon, Teal, and Gold",
+            "description": "<ul><li>Removed Maroon, Teal, and Gold because they looked too much like other colors and got too confusing.</li><li>Changed the color of pink to be less purply.</li><li>Changed game dynamics:<ul><li>Instead of the phrases \"Click the button colored\" and \"Click the color of the button\", these 4 phrases are used:<ul><li>\"Match color to color\",</li><li>\"Match word to word\",</li><li>\"Match color to word\",</li><li>and \"Match word to color\"</li></ul></li><li>These phrases more accurately describe how to find the right button, as \"Click the color of the button\" was vague and confusing.</li><li>The tutorial has been updated to reflect these changes.</li></ul></li><li>There is now a level counter below the score counter.</li><li>Changed the scoring slightly to give more score during later levels.</li><li>The first 10 levels now have much more time, to be forgiving to new players.</li><li>Added an animation to the score you got in the game over menu.</li><li>Added a \"New Record\" icon that appears next to your score when you beat your old highscore.</li></ul>"
+        }
+    ],
+    "snake": [
+        {
+            "version": "1.0.0",
+            "date": "8-12-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "tic-tac-toe": [
+        {
+            "version": "1.0.0",
+            "date": "8-30-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "opposite-day": [
+        {
+            "version": "1.0.0",
+            "date": "10-10-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "7-3-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        },
+        {
+            "version": "1.1.0",
+            "date": "1-4-2024",
+            "title": "Some Help For The Speedrunners",
+            "description": "<ul><li>Added a speedrun timer.</li><li>Press T to toggle the timer.</li><li>Slightly edited the \"The path is obvious\" and \"Don't worry, this level's easy\" levels.</li></ul>"
+        },
+        {
+            "version": "1.2.0",
+            "date": "12-13-2024",
+            "title": "Debug Menu",
+            "description": "<ul><li>Added a debug menu, press ~ to access it in game.</li><li>Thanks @ppougj.</li></ul>"
+        }
+    ],
+    "ghost-town": [
+        {
+            "version": "1.0.0",
+            "date": "10-31-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "kaleidoscope": [
+        {
+            "version": "1.0.0",
+            "date": "11-23-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "snowman-builder": [
+        {
+            "version": "1.0.0",
+            "date": "12-14-2021",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "8-6-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "fireworks": [
+        {
+            "version": "1.0.0",
+            "date": "12-24-2021",
+            "title": "Initial Release"
+        }
+    ],
+    "coin-dash": [
+        {
+            "version": "1.0.0",
+            "date": "1-11-2022",
+            "title": "Initial Release"
+        }
+    ],
+    "ping-pong": [
+        {
+            "version": "1.0.0",
+            "date": "1-17-2022",
+            "title": "Initial Release"
+        }
+    ],
+    "solar-system-simulator": [
+        {
+            "version": "1.0.0",
+            "date": "2-1-2022",
+            "title": "Initial Release"
+        }
+    ],
+    "unscramble": [
+        {
+            "version": "1.0.0",
+            "date": "2-17-2022",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "8-6-2023",
+            "description": "<ul><li>Made intro animation smoother.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        },
+        {
+            "version": "1.0.2",
+            "date": "9-18-2023",
+            "title": "More Words",
+            "description": "<ul><li>Added a menu to game transition.</li><li>Added some more words: woe, era, dam, god, and aft.</li></ul>"
+        }
+    ],
+    "mini-golf": [
+        {
+            "version": "1.0.0",
+            "date": "3-14-2022",
+            "title": "Initial Release"
+        }
+    ],
+    "logic-tanks": [
+        {
+            "version": "1.0.0",
+            "date": "4-12-2022",
+            "title": "Initial Release"
+        }
+    ],
+    "sandbox": [
+        {
+            "version": "1.0.0",
+            "date": "5-7-2022",
+            "title": "Initial Release"
+        },
+        {
+            "version": "b2.0.0",
+            "date": "1-8-2024",
+            "title": "Redesigned",
+            "description": "<ul><li>Made the game area twice as wide.</li><li>Significant performance improvements resulting in 10x faster framerate.</li><li>Made the UI non-transparent and much wider.</li><li>Added textures to all of the particles.</li><li>Water now levels out as much as possible.</li></ul>"
+        },
+        {
+            "version": "b2.1.0",
+            "date": "11-23-2024",
+            "title": "Plenty of Fish in the Sea",
+            "description": "<ul><li>Reworked the UI, there's now icons for everything.</li><li>The mobs tab now works, allowing you to place fish!</li><li>The landscapes tab now works, allowing you to select from 6 presets.</li><li>The world settings tab now works, allowing you to pause and clear the world.</li><li>Added a texture to stone.</li><li>Changed the background to a blue sky color.</li><li>Some more performance improvements, the game now shouldn't lag regardless of how many particles there are.</li><li>Placing particles with high mouse movement now makes a continuos line without gaps.</li></ul>"
+        }
+    ],
+    "polygon-defense": [
+        {
+            "version": "1.0.0",
+            "date": "6-10-2022",
+            "title": "Initial Release"
+        }
+    ],
+    "geometric-clock": [
+        {
+            "version": "1.0.0",
+            "date": "6-18-2022",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "8-23-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "ramp-it-up": [
+        {
+            "version": "b1.0.0",
+            "date": "3-6-2023",
+            "title": "Initial Beta Release"
+        }
+    ],
+    "spiral": [
+        {
+            "version": "1.0.0",
+            "date": "4-28-2023",
+            "title": "Initial Release"
+        }
+    ],
+    "night-and-day": [
+        {
+            "version": "1.0.0",
+            "date": "4-30-2023",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "7-24-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "mountain-parallax": [
+        {
+            "version": "1.0.0",
+            "date": "5-1-2023",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.0.1",
+            "date": "5-3-2023",
+            "title": "Smooth As Butter",
+            "description": "<ul><li>Added smooth camera motion.</li></ul>"
+        },
+        {
+            "version": "1.0.2",
+            "date": "7-24-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "fire-simulation": [
+        {
+            "version": "1.0.0",
+            "date": "5-2-2023",
+            "title": "Initial Release"
+        }
+    ],
+    "emergence": [
+        {
+            "version": "1.0.0",
+            "date": "5-3-2023",
+            "title": "Initial Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "5-4-2023",
+            "title": "Meander & Spiral",
+            "description": "<ul><li>Made cells move together when they form groups.</li><li>Made lone cells move around randomly.</li><li>Added spiraling behavior.</li></ul>"
+        }
+    ],
+    "jello-gun": [
+        {
+            "version": "1.0.0",
+            "date": "5-4-2023",
+            "title": "Initial Release"
+        }
+    ],
+    "snake-adventure": [
+        {
+            "version": "a1.0.0",
+            "date": "5-8-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "b1.1.0",
+            "date": "5-9-2023",
+            "title": "Initial Beta Release",
+            "description": "<ul><li>Collisions:<ul><li>Collisions hard restart the game.</li><li>Added collisions with the snake and the walls.</li><li>Added collisions with the snake and itself.</li></ul><li>Camera:<ul><li>Made camera follow snake more.</li><li>Made camera progress right faster.</li></ul></li></li><li>Changed the snake to have a rounded look.</li><li>Added an apple counter.</li><li>Changed the wall generation to generate a wall with a gap in the middle.</li><li>Made the snake a little slower.</li><ul>"
+        },
+        {
+            "version": "b1.2.0",
+            "date": "5-11-2023",
+            "title": "Game Over!",
+            "description": "<ul><li>Added a basic game over screen.</li><li>Fixed a glitch of the game restarting in an unloaded chunk.</li><li>Added more variation to the level generation.</li><li>Added WASD controls.</li></ul>"
+        },
+        {
+            "version": "b1.3.0",
+            "date": "5-12-2023",
+            "title": "Spritesheet & Death SFX",
+            "description": "<ul><li>Added death animation with screen shake and particles.</li><li>Added a spritesheet for the snake.</li><li>Added depth to the snake</li></ul>"
+        },
+        {
+            "version": "b1.4.0",
+            "date": "5-15-2023",
+            "title": "The Void!",
+            "description": "<ul><li>Added the void:<ul><li>Slowly progresses right, eating the level.</li><li>The snake dies when it runs into it.</li><li>This prevents the snake from going left infinetely, and creates a pressure to move forward.</li></ul></li><li>Added a barebones title screen.</li><li>Changed the camera to follow the snake tighter.</li></ul>"
+        },
+        {
+            "version": "b1.4.1",
+            "date": "5-17-2023",
+            "title": "More Spritesheets",
+            "description": "<ul><li>Changed the void to look like it is under the rest of the level and that blocks are falling away.</li><li>Added a spritesheet to the walls.</li><li>Added an image for the apples.</li></ul>"
+        },
+        {
+            "version": "1.5.0",
+            "date": "5-29-2023",
+            "title": "Initial Stable Release",
+            "description": "<ul><li>Added a highscore tracker.</li><li>Added a much better title screen.</li><li>Made the snake move faster as time goes on.</li></ul>"
+        }
+    ],
+    "swoop": [
+        {
+            "version": "a1.0.0",
+            "date": "5-9-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "b1.1.0",
+            "date": "6-12-2023",
+            "title": "Initial Beta Release",
+            "description": "<ul><li>You can now collect coins.</li><li>Coins generate in periodic lines.</li><li>Added a coins counter.</li><li>The game resets when you hit the edge.</li><li>Added a cloudy background.</li></ul>"
+        },
+        {
+            "version": "b1.2.0",
+            "date": "6-13-2023",
+            "title": "Floating Walls in the Sky",
+            "description": "<ul><li>Added a title screen.</li><li>Added blocks to avoid.</li><li>Made coin graphics better.</li><li>Varied coin generation.</li><li>Added crash sfx.</li></ul>"
+        },
+        {
+            "version": "b1.3.0",
+            "date": "6-14-2023",
+            "title": "No More Instant Death",
+            "description": "<ul><li>The plane doesn't die instantly now:<ul><li>The plane has 100 health.</li><li>You can see your health with the stats at the top of the screen.</li><li>The health decreases when it crashes into things.</li><li>The plane only dies when health reaches zero.</li><li>Added a crashing mechanic that slides the player along whatever it is crashing into.</li><li>Added a particle effect for when the plane is crashing into something.</li></ul></li><li>Made the game 50% wider.</li><li>The camera now pans up and down as well as side to side.</li><li>There is more verticle space for manuevers.</li><li>The top and bottom borders are now visible.</li><li>Added a distance meter.</li><li>Made the background on the title screen 5% darker to contrast the text more.</li><li>Added a transition between the title screen and the gameplay.</li></ul>"
+        },
+        {
+            "version": "b1.3.1",
+            "date": "6-15-2023",
+            "title": "Hexagons are the Bestagons",
+            "description": "<ul><li>Implemented a polygon collision system to make for more interesting level generation and plane collisions in the future.</li><li>All the blocks have been changed to hexagons.</li></ul>"
+        },
+        {
+            "version": "b1.4.0",
+            "date": "8-23-2023",
+            "title": "Diverse Terrain",
+            "description": "<ul><li>Added 3 new types of terrain:<ul><li>Blocky terrain, with floating cubes and coins.</li><li>Flappy Bird pipe terrain, with a hole in the middle you have to fly through.</li><li>Cave terrain, with a cave that you have to fly through.</li></ul></li><li>The top and bottom borders are now colored black.</li><li>The stats information now has a transparent white background.</li></ul>"
+        }
+    ],
+    "the-labyrinth": [
+        {
+            "version": "a1.0.0",
+            "date": "7-20-2022",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "a2.0.0",
+            "date": "5-16-2023",
+            "title": "Redesigned",
+            "description": "<ul><li>Completely redesigned for a second alpha release.</li><li>New level generation:<ul><li>The map now continues forever.</li><li>Every hallway is connected to a room, so if you keep walking you will always end up a room, making it much easier to get to a room.</li><li>There are now doors that you can open.</li></ul></li><li>Removed the monsters for now, don't worry, they'll come back soon!</li><li>Added a debug mode.</li><li>Added texture to the walls.</li></ul>"
+        }
+    ],
+    "shoot-em-up": [
+        {
+            "version": "b1.0.0",
+            "date": "5-24-2023",
+            "title": "Initial Beta Release"
+        },
+        {
+            "version": "b1.1.0",
+            "date": "7-31-2023",
+            "title": "Magic in the Air",
+            "description": "<ul><li>Added a new type of mob, the wizard.<ul><li>This mob shoots at you from a distance.</li><li>This mob has very low health.</li></ul><li>Buffed the slime split ability, they now split into 1 tier below them instead of 2.</li><li>Slimes are now passive-aggressive, they will only hunt you if you hurt them.</li><li>Peaceful mobs (the hollow ones) are now completely passive, they won't attack you even if you shoot them.</li><li>Added a health bar to damaged mobs.</li><li>Added a 5th tier for mobs, the biggest and baddest of them all.</li><li>When a mob gets hit it takes knockback from the impact.</li><li>When a mob gets hit the particles now match the color of the mob.</li><li>Added collisions between mobs and the player, so you can't go inside mobs now.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "growth": [
+        {
+            "version": "a1.0.0",
+            "date": "7-9-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "a1.1.0",
+            "date": "8-5-2023",
+            "title": "They Actually Grow Now",
+            "description": "<ul><li>Plants now have a growth animation when a new generation starts.</li><li>Changed branch generation:<ul><li>Branches now sprout out of the tips of branches as well as the body.</li><li>Smaller branches are now slightly lighter to differentiate from the smaller ones.</li><li>Branches no longer spawn at the very base of their parent branch.</li></ul></li><li>Changed leaf generation:<ul><li>Added variation to leaf color within a plant.</li><li>Added variation to leaf size within a plant.</li><li>Leaves can no longer be smaller than their branches.</li><li>Leaves are now slightly transparent.</li></ul></li></ul>"
+        },
+        {
+            "version": "a1.2.0",
+            "date": "8-13-2023",
+            "title": "Fractals",
+            "description": "<ul><li>Plants now generate based on a fractal pattern.</li><li>This creates plants that make more sense.</li></ul>"
+        }
+    ],
+    "gym-daddy": [
+        {
+            "version": "a1.0.0",
+            "date": "8-14-2023",
+            "title": "Initial Alpha Release"
+        }
+    ],
+    "atom": [
+        {
+            "version": "a1.0.0",
+            "date": "9-23-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "b1.1.0",
+            "date": "9-25-2023",
+            "title": "Now You Can Actaully Do Stuff",
+            "description": "<ul><li>Added a UI to add and remove elementary particles.</li><li>Enabled intro.</li></ul>"
+        },
+        {
+            "version": "1.2.0",
+            "date": "10-1-2023",
+            "title": "Initial Stable Release",
+            "description": "<ul><li>Added buttons to move between elements.</li><li>Added elements all the way to Xenon.</li><li>Patched bug where adding too many electrons causes rings to disappear and an electron to show in the middle of the atom.</li></ul>"
+        }
+    ],
+    "morse-code": [
+        {
+            "version": "b1.0.0",
+            "date": "9-23-2022",
+            "title": "Initial Beta Release"
+        },
+        {
+            "version": "1.1.0",
+            "date": "10-18-2023",
+            "title": "Redesign",
+            "description": "<ul><li>Redesigned as a canvas game with a graphical interface.</li></ul>"
+        },
+        {
+            "version": "1.2.0",
+            "date": "10-29-2023",
+            "title": "Sound",
+            "description": "<ul><li>Added sound when you make morse code.</li></ul>"
+        },
+        {
+            "version": "1.2.1",
+            "date": "12-4-2023",
+            "description": "<ul><li>Added support for johnbutlergames universal intro.</li></ul>"
+        }
+    ],
+    "escape-the-horde": [
+        {
+            "version": "a1.0.0",
+            "date": "10-30-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "b1.1.0",
+            "date": "11-9-2023",
+            "title": "Initial Beta Release",
+            "description": "<ul><li>Added a way to win, getting to the outside of a green circle.</li><li>Added levels, which progress each time you get to the green circle.</li><li>There are more zombies in each level.</li><li>Added a highscore.</li></ul>"
+        },
+        {
+            "version": "1.2.0",
+            "date": "12-5-2023",
+            "title": "Initial Stable Release",
+            "description": "<ul><li>Added a title screen.</li><li>Added a level transition.</li><li>Changed the background to colored tiles.</li><li>Added a score mechanic, which for now gives you 1000 points for each level completed.</li><li>Added a much better game over animation, bringing back the \"You Got Zombified!\" text.</li><li>Added a dash mechanic, press space to dash.</li><li>Added an actual exit that you get to to complete each level.</li><li>Added walls.</li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        },
+        {
+            "version": "1.3.0",
+            "date": "2-3-2024",
+            "title": "The Forgotten Version",
+            "description": "<ul><li>Experimented with procedurally generated levels.</li></ul>"
+        },
+        {
+            "version": "1.4.0",
+            "date": "9-23-2024",
+            "title": "Back to the Basics",
+            "description": "<ul><li>I didn't like the direction the game was going, so I changed it to be more like the original version.</li><li>Removed the portal, now you have to escape the level boundary to win.</li><li>Removed the dash feature, because it didn't make sense and it looked like a health bar anyway.</li><li>Added procedurally generated walls, with much more randomness than the last version.</li><li>Zombies now start out slow in the early levels and get a little bit faster in the later ones.</li><li>Added baby zombies, which start spawning at level 20 and rush you when they get close.</li><li>Zombies no longer show on the minimap.</li><li>Zombies can no longer spawn on top of you. You're welcome.</li><li>Fixed the bug where you could move without the zombies moving.</li></ul>"
+        },
+        {
+            "version": "1.5.0",
+            "date": "10-8-2024",
+            "title": "Gold, Gems, and Graphics",
+            "description": "<ul><li>Added gold that spawns starting on level 5.</li><li>There are 3 different types of gold: small coins, large coins, and bags of gold.</li><li>Collecting gold adds to your score: 10 for small coins, 50 for large coins, and 250 for bags of gold.</li><li>The amount of higher value gold increases as you progress through levels.</li><li>Added gems, which start spawning on level 15 and above.</li><li>Collecting gems adds 500 to your score.</li><li>Added a slight 3D top down effect to the graphics of the whole game.</li><li>A shop and upgrades are coming soon...</li></ul>"
+        }
+    ],
+    "micro-factory": [
+        {
+            "version": "a1.0.0",
+            "date": "11-4-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "a1.1.0",
+            "date": "11-5-2023",
+            "title": "UI and Camera Controls",
+            "description": "<ul><li>Added UI to the bottom of the screen to switch between object placement type.</li><li>Added mouse camera controls with scroll wheel.</li><li>Added a level border.</li></ul>"
+        },
+        {
+            "version": "a1.2.0",
+            "date": "11-6-2023",
+            "title": "Selecting",
+            "description": "<ul><li>Added functionality for selecting objects.</li><li>You can now copy, move, delete, and rotate selections.</li></ul>"
+        },
+        {
+            "version": "a1.3.0",
+            "date": "11-7-2023",
+            "title": "Wires and Playback",
+            "description": "<ul><li>Added a bunch of different object types into the placement UI.</li><li>Most of these don't have functionality right now, but it will be added in the future.</li><li>Added functionality to wires and emitters.</li><li>Added playback functionality.</li></ul>"
+        },
+        {
+            "version": "a1.4.0",
+            "date": "12-3-2023",
+            "title": "Activators, Delays, Scanners, Transmitters, and Recievers",
+            "description": "<ul><li>Added functionality to activators, delays, scanners, transmitters, and recievers.</li></ul>"
+        }
+    ],
+    "clicks-per-minute": [
+        {
+            "version": "1.0.0",
+            "date": "12-11-2023",
+            "title": "Initial Release"
+        },
+    ],
+    "gift-match": [
+        {
+            "version": "a1.0.0",
+            "date": "12-17-2023",
+            "title": "Initial Alpha Release"
+        },
+        {
+            "version": "b1.1.0",
+            "date": "12-18-2023",
+            "title": "Initial Beta Release",
+            "description": "<ul><li>Created a much better color scheme for the randomly generated presents so that you don't burn your eyes out.</li><li>Added basic functionality for dragging between the matching presents to advance to the next level.</li></ul>"
+        },
+        {
+            "version": "b1.2.0",
+            "date": "12-19-2023",
+            "title": "Your Time is Ticking",
+            "description": "<ul><li>Added a timer.</li><li>Added a score counter, which gives you 10 points for every present that you match.</li><li>Every level now has one more present than the one before it.</li><li>Added a highscore.</li><li>Added a small pause between when you match the presents and when the level advances.</li><li>Added a basic game over menu.</li></ul>"
+        },
+        {
+            "version": "b1.2.1",
+            "date": "12-20-2023",
+            "title": "Target Locked",
+            "description": "<ul><li>Added a better visual for selecting a present.</li></ul>"
+        },
+        {
+            "version": "1.3.0",
+            "date": "12-21-2023",
+            "title": "Initial Stable Release",
+            "description": "<ul><li>Added a barebones title screen.</li><li>Added tutorial text to the first level that prompts the player to match the gifts.</li><li>Added a much better present matching animation:<ul><li>The gifts now explode into particles after a short duration when you match them.</li><li>These particles then fly up to the score, incrementing it upon arrival.</li></ul></li><li>Added support for johnbutlergames universal intro.</li></ul>"
+        },
+        {
+            "version": "1.4.0",
+            "date": "11-27-2024",
+            "description": "<ul><li>Added a transition between stages.</li><li>Added a present popping effect.</li><li>Created a better color scheme for presents (yellow and cyan used to look gross)</li></ul>"
+        },
+        {
+            "version": "1.5.0",
+            "date": "12-5-2024",
+            "title": "Happy Holidays",
+            "description": "<ul><li>Added a fun parallax title screen.</li><li>Added sound effects for matching presents.</li><li>Changed the tutorial to be visual.</li><li>Added mobile support.</li><li>Added a bunch of art to the level transition.</li><li>Presents wiggle when you haven't found them in a while.</li><li>Added a checkerboard background.</li><li>Added shadows to presents.</li></ul>"
+        }
+    ],
+    "battle-blocks": [
+        {
+            "version": "b1.0.0",
+            "date": "2-26-2024",
+            "title": "Initial Beta Release"
+        }
+    ],
+    "opposite-day-2": [
+        {
+            "version": "b1.7.0",
+            "date": "5-28-2024",
+            "title": "Initial Beta Release"
+        },
+        {
+            "version": "1.8.0",
+            "date": "8-2-2024",
+            "title": "Initial Stable Release",
+            "description": "<ul><li>Added levels 7, 9, and 10.</li><li>Added a bunch of blue cubes, red cubes, and shortcuts.</li><li>Added a speedrun timer.</li><li>Added a credits screen.</li><li>Added a bunch of sound effects.</li><li>Added some keyboard controls: Esc to go to level select screen, and Y to restart game.</li></ul>"
+        },
+        {
+            "version": "1.9.0",
+            "date": "10-18-2024",
+            "title": "As Fast as I Can?",
+            "description": "<ul><li>Added the final shortcuts to levels 6, 7, 8, 9, and 10.</li><li>Added the final blue cubes to levels 7, 9, and 10.</li><li>Added a red cube to level 7.</li><li>Added a level splits timer.</li><li>You can now recollect cubes after you collect them the first time. This will be used in the future to track fastest cube collection per level.</li><li>Added some motivational messages to level 3.</li></ul>"
+        },
+        {
+            "version": "1.10.0",
+            "date": "11-23-2024",
+            "title": "Settings",
+            "description": "<ul><li>Added a settings screen.</li><li>Added UI options.</li><li>Added a keybinds screen.</li><li>Changed the level 9 shortcut.</li><li>Added menu button clicking and transition sounds.</li></ul>"
+        }
+    ],
+    "sorting-algorithms": [
+        {
+            "version": "1.0.0",
+            "date": "3-20-2025",
+            "title": "Initial Release"
+        }
+    ],
+    "day": [
+        {
+            "version": "1.0.0",
+            "date": "4-1-2025",
+            "title": "Initial Release"
+        }
+    ]
+}
+
+vox="3-31-2021"

@@ -1,0 +1,1459 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0;
+            }
+        </style>
+        <canvas id="canvas"></canvas>
+        <script>
+            var title = "Balance Bots";
+            var dimensions = {width:1500,height:1000};
+            var images = ["body1.png","body2.png","body3.png","body4.png","body5.png","body6.png","body7.png","body8.png","hat1.png","hat2.png","hat3.png","hat4.png","hat5.png","hat6.png","hat7.png","hat8.png","arm1.png","arm2.png","leg1.png","boot1.png","boot2.png","boot3.png","boot4.png","boot5.png","boot6.png","boot7.png","boot8.png"];
+            var audios = [];
+
+            var canvas,ctx;
+
+            function initialize() {
+                document.title = title;
+
+                canvas = document.getElementById("canvas");
+                var ratio = dimensions.width/dimensions.height;
+                var sizeText = "min(100vw,100vh)";
+                if(ratio>1) {
+                    sizeText = `min(${100/ratio}vw,100vh)`;
+                    canvas.style.width = `calc(${sizeText} * ${ratio})`;
+                    canvas.style.height = sizeText;
+                } else if(ratio<1) {
+                    sizeText = `min(100vw,${100*ratio}vh)`;
+                    canvas.style.width = sizeText;
+                    canvas.style.height = `calc(${sizeText} * ${1/ratio})`;
+                } else {
+                    canvas.style.width = sizeText;
+                    canvas.style.height = sizeText;
+                }
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
+
+                ctx = canvas.getContext("2d");
+                canvas.onmousemove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.onclick = function(event) {
+                    Mouse.click = true;
+                }
+                canvas.onmousedown = function(event) {
+                    Mouse.down = true;
+                }
+                canvas.onmouseup = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.oncontextmenu = function(event) {
+                    event.preventDefault();
+                    Mouse.right = true;
+                }
+                canvas.onwheel = function(event) {
+                    Mouse.scrollX = event.deltaX;
+                    Mouse.scrollY = event.deltaY;
+                    event.preventDefault();
+                }
+                window.onkeydown = function(event) {
+                    Keys.keys[event.keyCode] = true;
+                    Keys.down[event.keyCode] = true;
+                }
+                window.onkeyup = function(event) {
+                    Keys.keys[event.keyCode] = false;
+                    Keys.up[event.keyCode] = true;
+                }
+
+                Loading.loadLogoImage();
+                Loading.loadImages();
+                Loading.loadAudios();
+
+                for(var key of Object.keys(Physics)) {
+                    this[key] = Physics[key];
+                }
+
+                ctx.roundRect=(x,y,w,h,r)=>{
+                    ctx.beginPath();
+                    ctx.moveTo(x+r,y);
+                    ctx.lineTo(x+w-r,y);
+                    ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                    ctx.lineTo(x+w,y+h-r);
+                    ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                    ctx.lineTo(x+r,y+h);
+                    ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                    ctx.lineTo(x,y+r);
+                    ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                }
+            }
+            var Loading = {
+                animation: 0,
+                loads: 0,
+                loaded: true,
+                intro: 0,
+                logoImage: false,
+                percent: 0,
+                loadImages: function() {
+                    for(var n in images) {
+                        var image = document.createElement("img");
+                        image.src = images[n];
+                        image.onload = function() {
+                            Loading.loads++;
+                        }
+                        images[n] = image;
+                    }
+                },
+                loadAudios: function() {
+                    for(var n in audios) {
+                        var audio = document.createElement("audio");
+                        audio.src = audios[n];
+                        audio.oncanplaythrough = function() {
+                            Loading.loads++;
+                        }
+                        audios[n] = audio;
+                    }
+                },
+                loadLogoImage: function() {
+                    this.logoImage = document.createElement("img");
+                    this.logoImage.src = "https://johnbutlergames.com/logoLarge.png";
+                    this.logoImage.onload = function() {
+                        Loading.loads++;
+                    }
+                },
+                updateLoadingScreen: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var percent = this.loads/(images.length+audios.length+1);
+                    this.percent = this.percent*0.9+percent*0.1;
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s,s);
+                    ctx.translate(-250,-250);
+                    if(percent==1) {
+                        var a = 1-this.percent*(images.length+audios.length+1)+this.loads-1;
+                        ctx.globalAlpha = a;
+                    }
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(47.5,272.5,405*this.percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*this.percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = "rgb(255,100,0)";
+                    var a = this.animation/2%40;
+                    for(var n=0;n<40;n++) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Loading...",250,250);
+                    ctx.restore();
+
+                    this.animation++;
+                    if(percent==1&&this.percent>0.99) this.loaded = true;
+                },
+                updateIntro: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var i = Math.min(Physics.easeInOut(this.intro/100),Physics.easeInOut((250-this.intro)/100));
+                    var i2 = Math.min(Physics.easeInOut(this.intro/50),Physics.easeInOut((250-this.intro)/50));
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s*i2,s*i2);
+                    ctx.translate(-250,-250);
+                    ctx.globalAlpha = i;
+                    ctx.drawImage(this.logoImage,0,0,500,500);
+                    ctx.restore();
+
+                    this.intro++;
+                    if(this.intro==300) this.intro = 0;
+                }
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h){return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h},
+                clickInBox: function(x,y,w,h){return this.inBox(x,y,w,h)&&this.click}
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            var Physics = {
+                dirTo: (x1,y1,x2,y2)=>90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI),
+                distToMove: (distance,direction)=>({x:distance*Math.sin(direction*Math.PI/180),y:-distance*Math.cos(direction*Math.PI/180)}),
+                distTo: (x1,y1,x2,y2)=>Math.sqrt((x2-x1)**2+(y2-y1)**2),
+                rotate:(cx,cy,x,y,a)=>([a=Math.PI/180*a,{x:(Math.cos(a)*(x-cx))+(Math.sin(a)*(y-cy))+cx,y:(Math.cos(a)*(y-cy))-(Math.sin(a)*(x-cx))+cy}][1]),
+                easeInOut:a=>1/(1+2.71828**(-10*(a-0.5))),
+                blocksColliding:(b1,b2)=>r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h),
+                blocksCollidingEdge:(b1,b2)=>r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h),
+                r:n=>Math.round(n*10000)/10000,
+                turn: function(angle,targetAngle) {
+                    angle %= 360;
+                    targetAngle %= 360;
+                    if(angle<0) {
+                        angle += 360;
+                    }
+                    if(targetAngle<0) {
+                        targetAngle += 360;
+                    }
+                    var turnRight = targetAngle-angle;
+                    var turnLeft = targetAngle-angle;
+                    if(turnRight<0) {
+                        turnLeft += 360;
+                    } else {
+                        turnLeft -= 360;
+                    }
+                    if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                        return turnRight;
+                    } else {
+                        return turnLeft;
+                    }
+                }
+            }
+            function updateBlocks(blocks,data={}) {
+                data.gravity = data.gravity||{x:0,y:0};
+                data.damping = data.damping||{x:1,y:1};
+                data.maxCollisions = data.maxCollisions||100;
+
+                function initBlock(block) {
+                    if(!block.initialized) {
+                        block.density = block.density||1;
+                        block.mass = block.mass||block.w*block.h*block.density;
+                        block.bounce = {x:1,y:1};
+                        block.move = block.move||{x:0,y:0};
+                        block.static = block.static||false;
+                        block.resting = block.resting||{x:0,y:0};
+                        block.last = block.last||{x:0,y:0}
+                        block.initialized = true;
+                    }
+
+                    block.collided = false;
+                    if(!block.static) {
+                        if(!block.resting.x) {
+                            block.move.x *= data.damping.x;
+                            block.move.x += data.gravity.x;
+                        }
+                        if(!block.resting.y) {
+                            block.move.y *= data.damping.y;
+                            block.move.y += data.gravity.y;
+                        }
+                    }
+
+                    block.resting.x = false;
+                    block.resting.y = false;
+                    block.last.x = block.x;
+                    block.last.y = block.y;
+                }
+
+                function initialize() {
+                    for(var n in blocks) {
+                        blocks[n].id = n;
+                    }
+                    for(var block of blocks) {
+                        initBlock(block);
+                    }
+                }
+
+                function resolveCollision(b1,b2,a) {
+                    if((b1.static||b1.resting[a])&&(b2.static||b2.resting[a])) return false;
+                    if(!(b2.static||b2.resting[a])&&(b1.static||b1.resting[a])) return resolveCollision(b2,b1,a);
+
+                    b1.collided = true;
+                    b2.collided = true;
+                    //blocks have collided
+
+                    var c1 = {x:b1.last.x+b1.w/2,y:b1.last.y+b1.h/2};
+                    var c2 = {x:b2.last.x+b2.w/2,y:b2.last.y+b2.h/2};
+                    //find centers
+
+                    var c = a;
+                    var dim = a=='x'?'w':'h';
+
+                    if(b2.static||b2.resting[a]) {
+                        //static-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            b1[a] = b2[a]+b2[dim];
+                        } else {
+                            b1[a] = b2[a]-b1[dim];
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b1.resting[a] = true;
+                    } else {
+                        //dynamic-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            var dist = b2[a]+b2[dim]-b1[a];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        } else {
+                            var dist = b2[a]-b1[a]-b1[dim];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b2.move[a] = avg;
+                    }
+                    return true;
+                }
+
+                function updateStaticAxis(a) {
+                    for(var block of blocks) {
+                        if(!block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                }
+
+                function updateAxis(a) {
+                    for(var block of blocks) {
+                        if(block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                    var n3 = 0;
+                    while(n3<data.maxCollisions) {
+                        var collisions = false;
+                        for(var n=0;n<blocks.length;n++) {
+                            var block = blocks[n];
+                            for(var n2=n+1;n2<blocks.length;n2++) {
+                                var block2 = blocks[n2];
+                                if(blocksColliding(block,block2)) {
+                                    var x = resolveCollision(block2,block,a);
+                                    var y = resolveCollision(block,block2,a);
+                                    collisions = collisions||x||y;
+                                }
+                            }
+                        }
+                        if(!collisions) break;
+                        n3++;
+                    }
+                }
+
+                initialize();
+                updateStaticAxis("x");
+                updateAxis("x");
+                updateStaticAxis("y");
+                updateAxis("y");
+            }
+            function textBox(data) {
+                data.maxWidth = data.maxWidth||Infinity;
+                data.minWidth = data.minWidth||0;
+                data.minHeight = data.minHeight||0;
+                data.alignX = data.alignX||"middle";
+                data.alignY = data.alignY||"middle";
+                data.textSize = data.textSize||30;
+                data.padding = data.padding||[10,10,10,10];
+                data.padding.map(e=>e||10);
+                f(data.textSize);
+                var words = data.text.split(" ");
+                var lines = [""];
+                while(words.length>0) {
+                    var dim = ctx.measureText(lines[lines.length-1]+words[0]);
+                    if(dim.width>data.maxWidth) {
+                        lines.push(words[0]);
+                    } else {
+                        lines[lines.length-1] += " "+words[0];
+                    }
+                    words.shift();
+                }
+                lines[0] = lines[0].slice(1);
+                var lineWidth = Math.max(...(lines.map(e=>ctx.measureText(e).width)));
+                var lineHeight = lines.length*data.textSize;
+                var rect = {x:data.x,y:data.y,w:0,h:0};
+                rect.w = Math.max(rect.w,data.minWidth,lineWidth);
+                rect.h = Math.max(rect.h,data.minHeight,lineHeight);
+                rect.w = Math.min(rect.w,data.maxWidth);
+                if(data.alignX=="right") rect.x -= rect.w/2;
+                if(data.alignX=="left") rect.x += rect.w/2;
+                if(data.alignY=="bottom") rect.y -= rect.h;
+                if(data.alignY=="middle") rect.y -= rect.h/2;
+                rect.y -= data.padding[1];
+                rect.w += data.padding[2]+data.padding[0];
+                rect.h += data.padding[3]+data.padding[1];
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                for(var n=0;n<lines.length;n++) {
+                    ctx.fillText(lines[n],rect.x,rect.y+(n+0.1)*data.textSize+data.padding[1]);
+                }
+
+                return rect;
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        Loading.updateIntro();
+                    } else {
+                        main();
+                    }
+                } else {
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            initialize();
+            window.setInterval(update,10);
+
+            function f(s) {
+                ctx.font = s+"px Trebuchet MS";
+            }
+
+            function main() {
+                if(page=="menu") {
+                    menu.update();
+                } else {
+                    game.tick();
+                }
+                t++;
+            }
+
+            var menu = {
+                page: "home",
+                switchPage: "home",
+                switchPageAnimation: 0,
+                update: function() {
+                    if(this.page=="home") {
+                        f(150);
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.fillText("Balance Bots",750,250);
+
+                        ctx.fillStyle = "white";
+                        if(Mouse.inBox(550,400,400,125)) {
+                            ctx.fillStyle = "rgb(230,230,230)";
+                            if(Mouse.click) {
+                                this.switchPage = "customize";
+                            }
+                        }
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 10;
+                        ctx.roundRect(550,400,400,125,20);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.fillStyle = "white";
+                        if(Mouse.inBox(550,600,400,125)) {
+                            ctx.fillStyle = "rgb(230,230,230)";
+                            if(Mouse.click) {
+                                this.switchPage = "credits";
+                            }
+                        }
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 10;
+                        ctx.roundRect(550,600,400,125,20);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        f(70);
+                        ctx.fillStyle = "black";
+                        ctx.fillText("START",750,490);
+                        ctx.fillText("CREDITS",750,690);
+                    } else if(this.page=="credits") {
+                        f(150);
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.fillText("Credits:",750,250);
+
+                        ctx.fillStyle = "white";
+                        if(Mouse.inBox(550,800,400,125)) {
+                            ctx.fillStyle = "rgb(230,230,230)";
+                            if(Mouse.click) {
+                                this.switchPage = "home";
+                            }
+                        }
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 10;
+                        ctx.roundRect(550,800,400,125,20);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        f(70);
+                        ctx.fillStyle = "black";
+                        ctx.fillText("BACK",750,890);
+
+                        ctx.fillText("Programming: John Butler",750,450);
+                        ctx.fillText("Art: William Butler",750,550);
+                        ctx.fillText("Game Design: William Butler",750,650);
+                    } else if(this.page=="customize") {
+                        if(this.ready[1]&&this.ready[2]) {
+                            this.pauseTime--;
+                            if(this.pauseTime==0) this.switchPage = "game";
+                        }
+
+                        f(75);
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.fillText("Customize:",750,100);
+                        ctx.fillText("Player 1:",200,200);
+                        ctx.fillText("Player 2:",1300,200);
+
+                        var players = [1,2];
+                        for(var player of players) {
+                            var stats = game.playerStats[player];
+                            var initial = game.playerStats.initialStats;
+                            for(var key of Object.keys(initial)) {
+                                stats[key] = initial[key];
+                            }
+                            //initialize stats
+
+                            var _parts = ["head","arms","body","boots"];
+                            var _partsPlural = ["heads","arms","bodies","boots"];
+                            var functions = ["drawHead","drawArm","drawBody","drawBoots"];
+                            var translates = [{x:0,y:80},{x:0,y:-50},{x:0,y:17},{x:0,y:-30}];
+
+                            var obj = {w:60,h:100,height:0,playerId:player,angle:t%360};
+                            ctx.save();
+                            ctx.translate(this.playerPositions[player].x,this.playerPositions[player].y);
+
+                            game.objects.drawPlayer(obj);
+                            //draw player object
+
+                            if(this.ready[player]) {
+                                ctx.fillText("Ready!",0,100);
+                            } else {
+                                f(40);
+                                ctx.fillText("When Ready",0,80);
+                                ctx.fillText("Press "+(player==1?"1":","),0,130);
+                            }
+                            //press ready text
+
+                            var partPlural = _partsPlural[this.selectParts[player]];
+                            var part = _parts[this.selectParts[player]];
+                            if(!this.ready[player]) {
+                                f(30);
+                                var selectedPart = parts[partPlural][game.playerParts[player][part]]
+                                var rect = textBox({text:selectedPart.description,x:0,y:-210,alignX:"middle",alignY:"bottom",maxWidth:260,minWidth:260});
+                                f(40);
+                                ctx.fillText(selectedPart.name,0,-240-rect.h);
+                            }
+                            //part description and title
+
+                            ctx.restore();
+
+                            if(Keys.keys[game.keys[player].select]) {
+                                this.ready[player] = true;
+                            }
+                            //player is ready
+
+                            if(this.ready[player]) {
+                                this.playerPositions[player].x = this.playerPositions[player].x*0.95+((player-1)*900+300)*0.05;
+                                this.playerPositions[player].y = this.playerPositions[player].y*0.95+(600)*0.05;
+                                continue;
+                            } else {
+                                this.playerPositions[player] = {x:(player-1)*300+600,y:820};
+                            }
+                            //move player object if player is ready
+
+                            var x = 120;
+                            if(player==2) x = 1220;
+                            ctx.strokeStyle = "black";
+                            for(var n=0;n<=3;n++) {
+                                var y = n*170-30;
+                                var part = _parts[n];
+                                var partPlural = _partsPlural[n];
+                                var func = game.objects[functions[n]];
+                                var translate = translates[n];
+                                var partObj = parts[partPlural][game.playerParts[player][part]]
+
+                                for(var key of Object.keys(partObj.stats)) {
+                                    stats[key] += partObj.stats[key];
+                                }
+                                //add part stats to player stats
+
+                                ctx.lineWidth = 5;
+                                if(this.selectParts[player]==n) {
+                                    ctx.lineWidth = 10;
+                                }
+                                ctx.roundRect(x,300+y,150,150,15);
+                                ctx.stroke();
+                                //draw box
+
+                                ctx.save();
+                                ctx.translate(x+75+translate.x,440+y+translate.y);
+                                ctx.scale(0.6,1);
+                                func({playerId:player},partObj);
+                                ctx.restore();
+                                //draw part
+
+                                ctx.lineWidth = 5;
+                                ctx.lineJoin = "round";
+                                if(this.selectParts[player]==n) {
+                                    var a = this.selectChangeAnimations[player].right;
+                                    a = easeInOut(a/20)*10;
+                                    ctx.save();
+                                    ctx.translate(a,0);
+                                    ctx.beginPath();
+                                    ctx.moveTo(x+200,345+y);
+                                    ctx.lineTo(x+240,375+y);
+                                    ctx.lineTo(x+200,405+y);
+                                    ctx.closePath();
+                                    ctx.stroke();
+                                    ctx.restore();
+
+                                    var a = this.selectChangeAnimations[player].left;
+                                    a = easeInOut(a/20)*10;
+                                    ctx.save();
+                                    ctx.translate(-a,0);
+                                    ctx.beginPath();
+                                    ctx.moveTo(x-50,345+y);
+                                    ctx.lineTo(x-90,375+y);
+                                    ctx.lineTo(x-50,405+y);
+                                    ctx.closePath();
+                                    ctx.stroke();
+                                    ctx.restore();
+
+                                    if(Keys.down[game.keys[player].left]) {
+                                        game.playerParts[player][part]--;
+                                        this.selectChangeAnimations[player].left = 20;
+                                    }
+                                    if(Keys.down[game.keys[player].right]) {
+                                        game.playerParts[player][part]++;
+                                        this.selectChangeAnimations[player].right = 20;
+                                    }
+                                    if(game.playerParts[player][part]<0) {
+                                        game.playerParts[player][part] += parts[partPlural].length;
+                                    }
+                                    game.playerParts[player][part] %= parts[partPlural].length;
+                                }
+                            }
+                            //draw select
+
+                            if(this.selectChangeAnimations[player].left>0) {
+                                this.selectChangeAnimations[player].left--;
+                            }
+                            if(this.selectChangeAnimations[player].right>0) {
+                                this.selectChangeAnimations[player].right--;
+                            }
+                            if(Keys.down[game.keys[player].up]) {
+                                this.selectParts[player]--;
+                            }
+                            if(Keys.down[game.keys[player].down]) {
+                                this.selectParts[player]++;
+                            }
+                            if(this.selectParts[player]<0) this.selectParts[player] = 0;
+                            if(this.selectParts[player]>3) this.selectParts[player] = 3;
+                            //update select
+                        }
+                    } else if(this.page=="game") {
+                        page = "game";
+                        game.reset();
+                        game.switchPage = "game";
+                        game.switchPageAnimation = this.switchPageAnimation;
+                    }
+
+                    if(this.switchPageAnimation>0) {
+                        var a = easeInOut(this.switchPageAnimation/50)+0.01;
+                        ctx.fillStyle = "black";
+                        ctx.save();
+                        ctx.translate(1000*(a-1),0);
+                        ctx.beginPath();
+                        ctx.moveTo(-100,0);
+                        ctx.lineTo(1000,0);
+                        ctx.lineTo(500,1000);
+                        ctx.lineTo(-100,1000);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+
+                        ctx.save();
+                        ctx.translate(1500-1000*(a-1),0);
+                        ctx.beginPath();
+                        ctx.moveTo(100,0);
+                        ctx.lineTo(-500,0);
+                        ctx.lineTo(-1000,1000);
+                        ctx.lineTo(100,1000);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
+                    if(this.switchPage!=this.page) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=70) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                    }
+                },
+                selectParts: {
+                    1: 0,
+                    2: 0
+                },
+                selectChangeAnimations: {
+                    1: {left:0,right:0},
+                    2: {left:0,right:0}
+                },
+                ready: {
+                    1: false,
+                    2: false
+                },
+                playerPositions: {
+                    1: {x:0,y:0},
+                    2: {x:0,y:0}
+                },
+                pauseTime: 100,
+                resetCustomization: function() {
+                    this.pauseTime = 100;
+                    this.selectParts = {1:0,2:0};
+                    this.selectChangeAnimations = {1:{left:0,right:0},2:{left:0,right:0}};
+                    this.ready = {1:false,2:false};
+                    this.playerPositions = {1:{x:0,y:0},2:{x:0,y:0}};
+                }
+            }
+
+            var game = {
+                switchPageAnimation: 0,
+                switchPage: "game",
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.board.update();
+                    this.objects.update();
+
+                    if(this.switchPage!="game") {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=70) {
+                            this.page = "menu";
+                            menu.page = "home";
+                            menu.switchPageAnimation = this.switchPageAnimation;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                    }
+                },
+                draw: function() {
+                    ctx.fillStyle = "rgb(230,230,255)";
+                    ctx.fillRect(0,0,1500,1000);
+
+                    ctx.save();
+                    ctx.translate(750,700);
+
+                    this.objects.draw(true);
+                    this.board.draw();
+                    this.objects.draw(false);
+
+                    ctx.restore();
+
+                    if(this.switchPageAnimation>0) {
+                        var a = easeInOut(this.switchPageAnimation/50)+0.01;
+                        ctx.fillStyle = "black";
+                        ctx.save();
+                        ctx.translate(1000*(a-1),0);
+                        ctx.beginPath();
+                        ctx.moveTo(-100,0);
+                        ctx.lineTo(1000,0);
+                        ctx.lineTo(500,1000);
+                        ctx.lineTo(-100,1000);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+
+                        ctx.save();
+                        ctx.translate(1500-1000*(a-1),0);
+                        ctx.beginPath();
+                        ctx.moveTo(100,0);
+                        ctx.lineTo(-500,0);
+                        ctx.lineTo(-1000,1000);
+                        ctx.lineTo(100,1000);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                },
+                reset: function() {
+                    this.board.tilt = {x:0,y:0,xmove:0,ymove:0};
+                    this.objects.objects = [];
+                    var players = [1,2];
+                    for(var player of players) {
+                        var o = {};
+                        o.x = -300+200*player;
+                        o.y = 0;
+                        o.w = 60;
+                        o.h = 100;
+                        o.type = "player";
+                        o.playerId = player;
+                        o.xmove = 0;
+                        o.ymove = 0;
+                        o.height = 0;
+                        o.fall = 0;
+                        o.angle = 0;
+                        o.stats = this.playerStats[player];
+                        this.objects.objects.push(o);
+                    }
+
+                    /*for(var n=1;n<10;n++) {
+                        for(var n2=0;n2<10;n2++) {
+                            var cors = rotate(0,0,0,-n*20,n2*36);
+                            this.objects.objects.unshift({x:cors.x,y:cors.y,type:"dot"});
+                        }
+                    }*/
+                    //dots for position mapping
+                },
+                board: {
+                    tilt: {x:0,y:0,xmove:0,ymove:0},
+                    update: function() {
+                        var avgX = 0;
+                        var avgY = 0;
+                        var count = 0;
+                        for(var o of game.objects.objects) {
+                            if(o.onBoard) {
+                                var dist = distTo(0,0,o.x,o.y);
+                                var weight = dist;
+                                avgX += o.x*weight;
+                                avgY += o.y*weight;
+                                count += weight;
+                            }
+                        }
+                        if(count>0) {
+                            avgX /= count;
+                            avgY /= count;
+                            this.tilt.xmove = (this.tilt.xmove*0.98+avgX*0.02)/3;
+                            this.tilt.ymove = (this.tilt.ymove*0.98+avgY*0.02)/3;
+                        }
+                        this.tilt.x += this.tilt.xmove;
+                        this.tilt.y += this.tilt.ymove;
+                        var dist = distTo(0,0,this.tilt.x,this.tilt.y);
+                        var dir = dirTo(0,0,this.tilt.x,this.tilt.y);
+                        var move = distToMove(Math.min(dist,75),dir);
+                        this.tilt.x = move.x;
+                        this.tilt.y = move.y;
+                    },
+                    draw: function() {
+                        ctx.save();
+                        ctx.translate(0,-this.tilt.y/2);
+                        for(var n=0;n<10;n++) {
+                            ctx.translate(0,this.tilt.y/150-3);
+                            ctx.save();
+                            ctx.rotate((this.tilt.x/10)*Math.PI/180);
+                            ctx.scale(1,(this.tilt.y-100)/500+0.5);
+
+                            if(n!=9) {
+                                ctx.beginPath();
+                                ctx.arc(0,0,400,0,2*Math.PI);
+                                var l = 170+n*5;
+                                ctx.fillStyle = `rgb(${l},${l},${l})`;
+                                ctx.fill();
+                            } else {
+                                ctx.beginPath();
+                                ctx.arc(0,0,400,0,2*Math.PI);
+                                ctx.fillStyle = "rgb(255,255,0)";
+                                ctx.fill();
+                                ctx.save();
+                                ctx.clip();
+                                ctx.fillStyle = "black";
+                                for(var n=0;n<20;n++) {
+                                    ctx.rotate(18*Math.PI/180);
+                                    ctx.fillRect(-30,-400,60,400);
+                                }
+                                ctx.restore();
+
+                                ctx.beginPath();
+                                ctx.arc(0,0,350,0,2*Math.PI);
+                                ctx.fillStyle = "rgb(220,220,220)";
+                                ctx.fill();
+
+                                ctx.beginPath();
+                                ctx.arc(0,0,120,0,2*Math.PI);
+                                ctx.fillStyle = "rgb(180,180,180)";
+                                ctx.fill();
+
+                                ctx.beginPath();
+                                ctx.arc(0,0,100,0,2*Math.PI);
+                                ctx.fillStyle = "rgb(220,220,220)";
+                                ctx.fill();
+                            }
+
+                            ctx.restore();
+                        }
+                        ctx.restore();
+                    },
+                    mapPosition: function(x,y) {
+                        var cor = {x:x,y:y*((this.tilt.y+150)/500)-10};
+                        var newCor = rotate(0,0,cor.x*2,cor.y*2,-this.tilt.x/10);
+                        return newCor;
+                    }
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        for(var n in this.objects) {
+                            this.objects[n].id = n;
+                        }
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                        this.objects.sort((a,b)=>a.y-b.y);
+                    },
+                    draw: function(under) {
+                        ctx.save();
+                        ctx.translate(0,-game.board.tilt.y/2);
+                        ctx.rotate((game.board.tilt.x/10)*Math.PI/180);
+                        ctx.translate(0,11*(game.board.tilt.y/150-3));
+                        ctx.scale(1,(game.board.tilt.y-100)/500+0.5);
+                        ctx.beginPath();
+                        ctx.arc(0,0,400,0,2*Math.PI);
+                        ctx.restore();
+                        ctx.save();
+                        ctx.clip();
+                        for(var o of this.objects) {
+                            ctx.save();
+                            var pos = game.board.mapPosition(o.x,o.y);
+                            ctx.translate(pos.x,pos.y-game.board.tilt.y/4-15);
+                            var s = o.y/800+1;
+                            ctx.scale(s,s);
+                            this.drawShadow(o);
+                            ctx.restore();
+                        }
+                        ctx.restore();
+                        //shadows
+
+                        for(var o of this.objects) {
+                            var over = o.height<=0||o.y>=0;
+                            if(over!=under) {
+                                ctx.save();
+                                var pos = game.board.mapPosition(o.x,o.y);
+                                ctx.translate(pos.x,pos.y-game.board.tilt.y/4-15);
+
+                                var s = o.y/800+1;
+                                ctx.scale(s,s);
+                                this.drawObject(o);
+                                ctx.restore();
+                            }
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(o.type=="player") {
+                            if(o.onBoard) {
+                                var dir = dirTo(0,0,game.board.tilt.x,game.board.tilt.y);
+                                var dist = distTo(0,0,game.board.tilt.x,game.board.tilt.y);
+                                var dist2 = distTo(0,0,o.x,o.y)/150;
+                                var move = distToMove(dist/1200*dist2,dir);
+                                o.xmove += move.x;
+                                o.ymove += move.y;
+                            }
+                            //slide
+
+                            var moveAngle = dirTo(0,0,o.xmove,o.ymove);
+                            var speed = distTo(0,0,o.xmove,o.ymove);
+                            if(speed>0.3) {
+                                o.angle += turn(o.angle,moveAngle)/10;
+                                o.angle %= 360;
+                                if(o.angle<0) o.angle += 360;
+                            }
+                            //angle
+
+                            o.fall += 0.2;
+                            //gravity
+
+                            o.x += o.xmove;
+                            o.y += o.ymove;
+                            o.height += o.fall;
+                            //move
+
+                            if(o.onBoard) {
+                                o.xmove *= 0.95;
+                                o.ymove *= 0.95;
+                            } else {
+                                o.xmove *= 0.99;
+                                o.ymove *= 0.99;
+                            }
+                            o.fall *= 0.995;
+                            //damping
+
+                            var dist = distTo(0,0,o.x,o.y);
+                            if(dist<200&&o.height<10&&o.height>-3&&o.fall>0) {
+                                o.onBoard = true;
+                            } else {
+                                o.onBoard = false;
+                            }
+
+                            if(o.onBoard) {
+                                o.height = 0;
+                                o.fall = 0;
+                            } else {
+                                if(o.fall>0&&o.height>10) {
+                                    var dir = dirTo(0,0,o.x,o.y);
+                                    var dist = distTo(0,0,o.x,o.y);
+                                    dist = Math.max(dist,200);
+                                    var move = distToMove(dist,dir);
+                                    o.x = move.x;
+                                    o.y = move.y;
+                                }
+                            }
+
+                            var dist = distTo(0,0,o.x,o.y);
+                            if(dist<200) {
+                                o.aboveBoard = true;
+                            } else {
+                                o.aboveBoard = false;
+                            }
+
+                            var keys = game.keys[o.playerId];
+                            var speed = o.stats.speed;
+                            if(!o.onBoard) {
+                                speed *= 0.3;
+                            }
+                            if(Keys.keys[keys.left]) {
+                                o.xmove -= speed;
+                            }
+                            if(Keys.keys[keys.right]) {
+                                o.xmove += speed;
+                            }
+                            if(Keys.keys[keys.up]) {
+                                o.ymove -= speed;
+                            }
+                            if(Keys.keys[keys.down]) {
+                                o.ymove += speed;
+                            }
+                            if(Keys.keys[keys.select]&&o.onBoard) {
+                                o.fall = -7;
+                            }
+                            //controls
+
+                            for(var o2 of this.objects) {
+                                if(o.id==o2.id) continue;
+                                var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                if(dist<50) {
+                                    var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                                    var move = distToMove(1,dir);
+                                    o.xmove -= move.x;
+                                    o.ymove -= move.y;
+                                    o2.xmove += move.x;
+                                    o2.ymove += move.y;
+                                }
+                            }
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.type=="player") {
+                            this.drawPlayer(o);
+                        }
+                        if(o.type=="dot") {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(-2,-2,4,4);
+                        }
+                    },
+                    drawShadow: function(o) {
+                        if(o.type=="player") {
+                            ctx.save();
+                            ctx.translate(0,5-game.board.tilt.y/20);
+                            ctx.rotate((game.board.tilt.x/10)*Math.PI/180);
+                            ctx.scale(1,(game.board.tilt.y-100)/500+0.5);
+                            if(o.aboveBoard) {
+                                var s = -o.height/400+0.9975;
+                                ctx.save();
+                                ctx.scale(s,s);
+                                ctx.fillStyle = `rgba(0,0,0,${0.2/((s-0.9)*10)})`;
+                                ctx.beginPath();
+                                ctx.arc(0,10,30,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                            ctx.restore();
+                            //shadow
+                        }
+                    },
+                    drawPlayer: function(o) {
+                        var _parts = game.playerParts[o.playerId];
+                        var head = parts.heads[_parts.head];
+                        var body = parts.bodies[_parts.body];
+                        var arm = parts.arms[_parts.arms];
+                        var boots = parts.boots[_parts.boots];
+
+                        var angle = Math.floor(o.angle/45)*45;
+                        ctx.save();
+                        ctx.translate(0,o.height);
+                        ctx.scale(o.w/100,o.h/100);
+                        ctx.save();
+                        ctx.translate(Math.sin((90-angle)*Math.PI/180)*50,-40);
+                        this.drawArm(o,arm,angle);
+                        ctx.restore();
+                        ctx.save();
+                        ctx.translate(Math.sin((270-angle)*Math.PI/180)*50,-40);
+                        this.drawArm(o,arm,180+angle);
+                        ctx.restore();
+                        this.drawBoots(o,boots);
+                        this.drawBody(o,body);
+                        this.drawHead(o,head);
+                        if(angle<=180) {
+                            ctx.save();
+                            ctx.translate(Math.sin((90-angle)*Math.PI/180)*50,-40);
+                            this.drawArm(o,arm,angle);
+                            ctx.restore();
+                        }
+                        if(angle>=180) {
+                            ctx.save();
+                            ctx.translate(Math.sin((270-angle)*Math.PI/180)*50,-40);
+                            this.drawArm(o,arm,180+angle);
+                            ctx.restore();
+                        }
+                        ctx.restore();
+                    },
+                    drawBody: function(o,p) {
+                        if(o.angle===undefined) o.angle = 180;
+                        var img = Math.floor((o.angle+180)%360/45);
+                        ctx.save();
+                        if(img>3) {
+                            ctx.scale(-1,1);
+                            img = 7-img;
+                        }
+                        ctx.drawImage(images[img],-70,-145,140,130);
+                        ctx.restore();
+                    },
+                    drawHead: function(o,p) {
+                        ctx.drawImage(images[p.img],-80,-180,160,70);
+                    },
+                    drawArm: function(o,p,a) {
+                        a %= 360;
+                        if(a<0) a += 360;
+                        ctx.save();
+                        if(a>90&&a<270) {
+                            ctx.scale(-1,1);
+                        }
+                        ctx.drawImage(images[16],-20,-50,40,60);
+                        ctx.restore();
+                    },
+                    drawBoots: function(o,p) {
+                        ctx.save();
+                        ctx.translate(-35,-45);
+                        game.objects.drawBoot(o,p);
+                        ctx.restore();
+                        ctx.save();
+                        ctx.translate(5,-45);
+                        game.objects.drawBoot(o,p);
+                        ctx.restore();
+                    },
+                    drawBoot: function(o,p) {
+                        ctx.drawImage(images[18],0,0,30,60);
+                        ctx.drawImage(images[p.img],-13,25,50,50);
+                    }
+                },
+                keys: {
+                    1: {
+                        left: 65,
+                        right: 68,
+                        up: 87,
+                        down: 83,
+                        select: 49,
+                        attack: 50
+                    },
+                    2: {
+                        left: 37,
+                        right: 39,
+                        up: 38,
+                        down: 40,
+                        select: 188,
+                        attack: 190
+                    }
+                },
+                playerParts: {
+                    1: {
+                        head: 0,
+                        body: 0,
+                        arms: 0,
+                        boots: 0
+                    },
+                    2: {
+                        head: 0,
+                        body: 0,
+                        arms: 0,
+                        boots: 0
+                    }
+                },
+                playerStats: {
+                    initialStats: {
+                        maxHealth: 100,
+                        healRate: 1,
+                        weight: 100,
+                        speed: 0.1,
+                        stunChance: 0,
+                        overheatRate: 0,
+                        overheatChance: 0,
+                        power: 10,
+                        traction: 0.95
+                    },
+                    1: {
+                        maxHealth: 0,
+                        healRate: 0,
+                        weight: 0,
+                        speed: 0,
+                        stunChance: 0,
+                        overheatRate: 0,
+                        overheatChance: 0,
+                        power: 0,
+                        traction: 0
+                    },
+                    2: {
+                        maxHealth: 0,
+                        healRate: 0,
+                        weight: 0,
+                        speed: 0,
+                        stunChance: 0,
+                        overheatRate: 0,
+                        overheatChange: 0,
+                        power: 0,
+                        traction: 0
+                    }
+                }
+            }
+
+            var parts = {
+                heads: [
+                    {
+                        img:9,
+                        name:"Viking Helmet",
+                        description:"The spikes make your attacks hurt more",
+                        stats: {}
+                    },
+                    {
+                        img:10,
+                        name:"Helicopter Hat",
+                        description:"It helps you jump higher",
+                        stats: {}
+                    },
+                    {
+                        img:11,
+                        name:"Fiery Crown",
+                        description:"So hot your opponent overheats",
+                        stats: {}
+                    },
+                    {
+                        img:12,
+                        name:"Magnet Head",
+                        description:"Magnetizes your opponent towards you",
+                        stats: {}
+                    },
+                    {
+                        img:13,
+                        name:"Repulsor",
+                        description:"Repels your opponent away from you",
+                        stats: {}
+                    },
+                    {
+                        img:14,
+                        name:"Shocker",
+                        description:"Attacks might stun your opponent",
+                        stats: {}
+                    },
+                    {
+                        img:15,
+                        name:"Dirt Hat",
+                        description:"Absorbs electricity and prevents stunning",
+                        stats: {}
+                    },
+                    {
+                        img:16,
+                        name:"Air Conditioner",
+                        description:"Helps you not overheat",
+                        stats: {}
+                    },
+                ],
+                bodies: [
+                    {
+                        img: 0,
+                        name:"Spike Vest",
+                        description: "The spikes make your attacks hurt more",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Rock Bod",
+                        description: "It shoots out a boulder",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Bolt Suit",
+                        description: "So much power you can dash",
+                        stats: {
+                            speed: 0.1
+                        }
+                    },
+                    {
+                        img: 0,
+                        name:"Laser Chest",
+                        description: "You know what this means",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Bouncer",
+                        description: "Bounces your opponent away",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Winter Cloak",
+                        description: "It gives magic snowstorm powers",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Sumo Guy",
+                        description: "You're so heavy you can groundpound",
+                        stats: {}
+                    }
+                ],
+                arms: [
+                    {
+                        img: 0,
+                        name:"Battle Fists",
+                        description: "A quick punching attack",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Lances",
+                        description: "A long range stab",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Pusher Mitts",
+                        description: "Very strong up close",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Glue Gloves",
+                        description: "Opponents you hit might get stuck",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Tazers",
+                        description: "Attacks might stun your opponent",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Fireball",
+                        description: "Attacks might overheat your opponent",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Grapplers",
+                        description: "Attacks pull your opponent towards you",
+                        stats: {}
+                    },
+                    {
+                        img: 0,
+                        name:"Sonic Waves",
+                        description: "Close range, but attacks 360°",
+                        stats: {}
+                    }
+                ],
+                boots: [
+                    {
+                        img: 25,
+                        name:"Spike Grips",
+                        description: "Increased speed and agility, decreased power",
+                        stats: {}
+                    },
+                    {
+                        img: 26,
+                        name:"Iron Boots",
+                        description: "Very heavy",
+                        stats: {}
+                    },
+                    {
+                        img: 19,
+                        name:"Flipflops of Power",
+                        description: "Increased power",
+                        stats: {}
+                    },
+                    {
+                        img: 22,
+                        name:"Lightning Loafers",
+                        description: "Increased speed, but static electricity might shock you",
+                        stats: {}
+                    },
+                    {
+                        img: 23,
+                        name:"Fiery Footwear",
+                        description: "Increased speed and power, but might overheat you",
+                        stats: {}
+                    },
+                    {
+                        img: 24,
+                        name:"Shady Sneakers",
+                        description: "Jumping makes you dash and dodge attacks",
+                        stats: {}
+                    },
+                    {
+                        img: 20,
+                        name:"Snow Boots",
+                        description: "Makes your opponent slippery on contact",
+                        stats: {}
+                    },
+                    {
+                        img: 21,
+                        name:"Magic Moccasins",
+                        description: "Using chest power teleports you",
+                        stats: {}
+                    }
+                ]
+            }
+
+            var page = "menu";
+            var t = 0;
+
+            /*
+            To Do:
+            Add glove images
+            Add boot images
+            Add player stats in customization menu
+            Make accesories change stats
+            Add abilities
+            Add game over menu
+            Add particles
+            Add something on home screen
+            Add walking animation
+            Add background to battle disc
+            Add ai?
+            */
+        </script>
+    </body>
+</html>

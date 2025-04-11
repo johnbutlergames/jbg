@@ -1,0 +1,318 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <canvas id="canvas"></canvas>
+    <script>
+        var title = "Escape the Horde";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+        Loading.loaded = true;
+        Loading.intro = 0;
+
+        var canvas, ctx;
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (Loading.loaded) {
+                if (Loading.intro) {
+                    Loading.updateIntro();
+                } else {
+                    main();
+                }
+            } else {
+                Loading.updateLoadingScreen();
+            }
+            Mouse.click = false;
+            Mouse.right = false;
+            Mouse.scrollX = 0;
+            Mouse.scrollY = 0;
+            Keys.down = [];
+            Keys.up = [];
+        }
+
+        initialize();
+        window.setInterval(update, 10);
+
+        function main() {
+            if (zombies.length == 0) {
+                spawnZombies(zombieCount);
+            }
+
+            player.update();
+            updateZombies();
+            cam.update();
+
+            drawBackground();
+
+            ctx.save();
+            ctx.translate(500, 500);
+            ctx.scale(cam.zoom, cam.zoom);
+            ctx.translate(-cam.x, -cam.y);
+            drawZombies();
+            player.draw();
+            ctx.restore();
+
+            if (player.zombified) {
+                player.zombifiedTime++;
+                if (player.zombifiedTime > 300) {
+                    player.reset();
+                    zombies = [];
+                }
+                ctx.fillStyle = "red";
+                ctx.textAlign = "center";
+                ctx.font = "50px Arial";
+                ctx.fillText("You got zombified!!!", 500, 100);
+            }
+
+            ctx.fillStyle = "black";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = "40px Arial";
+            ctx.fillText("Arrow Keys or WASD to move", 30, 960);
+        }
+
+        function drawBackground() {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "rgb(100,100,100)";
+            var xoffset = -cam.x*cam.zoom%100;
+            var yoffset = -cam.y*cam.zoom%100;
+            for (var n = -1; n < 12; n++) {
+                ctx.beginPath();
+                ctx.moveTo(0,n*100+yoffset);
+                ctx.lineTo(1000,n*100+yoffset);
+                ctx.stroke();
+            }
+            for (var n = -1; n < 12; n++) {
+                ctx.beginPath();
+                ctx.moveTo(n*100+xoffset,0);
+                ctx.lineTo(n*100+xoffset,1000);
+                ctx.stroke();
+            }
+        }
+
+        var zombies = [];
+        function updateZombies() {
+            var playerDir = dirTo(0, 0, player.xmove, player.ymove);
+            for (var n = 0; n < zombies.length; n++) {
+                var o = zombies[n];
+                var zombiesInRadius = 0;
+                for (var n2 = 0; n2 < zombies.length; n2++) {
+                    var o2 = zombies[n2];
+                    var dist = distTo(o.x, o.y, o2.x, o2.y);
+                    if (dist < playerSpeed * 100) {
+                        zombiesInRadius++;
+                    }
+                }
+                zombiesInRadius /= 10;
+                zombiesInRadius = Math.max(zombiesInRadius, 1);
+                var dist = distTo(o.x, o.y, player.x, player.y);
+                o.personalSpace = Math.min((dist / playerSpeed) / 2, playerSpeed * 15);///zombiesInRadius;
+                o.xmove = 0;
+                o.ymove = 0;
+            }
+            for (var n = 0; n < zombies.length; n++) {
+                var o = zombies[n];
+                var prediction = predictLocation(player.x, player.y, player.xmove, player.ymove, o.x, o.y);
+                if (distTo(prediction.x, prediction.y, o.x, o.y) < 10) prediction = { x: player.x, y: player.y };
+                var target = { x: prediction.x, y: prediction.y };
+                var move = distToMove(zombieSpeed, dirTo(o.x, o.y, target.x, target.y));
+                o.xmove += move.x;
+                o.ymove += move.y;
+                continue;
+
+                if (playerSpeed == 0) {
+                    var move = distToMove(zombieSpeed, dirTo(o.x, o.y, player.x, player.y));
+                    o.xmove += move.x;
+                    o.ymove += move.y;
+                    continue;
+                }
+                var dist = distTo(o.x, o.y, player.x, player.y);
+                var movingDist = distTo(o.x, o.y, player.x + player.xmove, player.y + player.ymove);
+                var dir = dirTo(o.x, o.y, player.x, player.y);
+                if (movingDist < dist) {
+                    if (Math.abs(turn(dir + 180, playerDir) < 10)) {
+                        var move = distToMove(zombieSpeed, dirTo(o.x, o.y, player.x, player.y));
+                        o.xmove += move.x;
+                        o.ymove += move.y;
+                        continue;
+                    }
+                    var target = predictLocation(player.x, player.y, player.xmove, player.ymove, o.x, o.y);
+                    var move = distToMove(zombieSpeed, dirTo(o.x, o.y, target.x, target.y));
+                    o.xmove += move.x;
+                    o.ymove += move.y;
+                    continue;
+                }
+            }
+            for (var n = 0; n < zombies.length; n++) {
+                var o = zombies[n];
+                for (var n2 = n + 1; n2 < zombies.length; n2++) {
+                    var o2 = zombies[n2];
+                    var dist = distTo(o.x, o.y, o2.x, o2.y);
+                    if (dist > o.personalSpace + o2.personalSpace) continue;
+                    var collisionDist = o.personalSpace + o2.personalSpace - dist;
+                    var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                    var move = distToMove(collisionDist / 2, dir);
+                    o.xmove -= move.x;
+                    o.ymove -= move.y;
+                    o2.xmove += move.x;
+                    o2.ymove += move.y;
+                }
+            }
+            for (var n = 0; n < zombies.length; n++) {
+                var o = zombies[n];
+                var dir = dirTo(0, 0, o.xmove, o.ymove);
+                var dist = Math.min(distTo(0, 0, o.xmove, o.ymove), zombieSpeed);
+                var move = distToMove(dist, dir);
+                o.x += move.x;
+                o.y += move.y;
+            }
+
+            /*for(var n=0;n<zombies.length;n++) {
+                var o = zombies[n];
+                var distToPlayer = distTo(o.x,o.y,player.x,player.y);
+                var move = distToMove(100,n/zombies.length*360);
+                var target = {x:move.x+player.x,y:move.y+player.y};
+                var dir = dirTo(o.x,o.y,target.x,target.y);
+                var move = distToMove(zombieSpeed,dir);
+                o.x += move.x;
+                o.y += move.y;
+            }*/
+
+            updateZombieInternalCollisions();
+        }
+        function predictLocation(x, y, xmove, ymove, x2, y2) {
+            if (xmove == 0 && ymove == 0) return { x: x, y: y };
+            var lastDistance = distTo(x, y, x2, y2);
+            for (var n = 0; n < 100; n++) {
+                x += xmove;
+                y += ymove;
+                var dist = distTo(x, y, x2, y2);
+                if (dist > lastDistance) return { x: x - xmove, y: y - ymove };
+                lastDistance = dist;
+            }
+            return { x: x, y: y }
+        }
+        function updateZombieInternalCollisions() {
+            for (var n = 0; n < zombies.length; n++) {
+                var o = zombies[n];
+                for (var n2 = n + 1; n2 < zombies.length; n2++) {
+                    var o2 = zombies[n2];
+                    var dist = distTo(o.x, o.y, o2.x, o2.y);
+                    if (dist > zombiePersonalSpace) continue;
+                    var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                    var collisionDistance = zombiePersonalSpace - dist;
+                    var move = distToMove(collisionDistance / 2, dir);
+                    o.x -= move.x;
+                    o.y -= move.y;
+                    o2.x += move.x;
+                    o2.y += move.y;
+                }
+            }
+        }
+        function drawZombies() {
+            for (var n = 0; n < zombies.length; n++) {
+                var o = zombies[n];
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 1;
+                ctx.fillStyle = "green";
+                ctx.fillRect(o.x - 15, o.y - 15, 30, 30);
+                ctx.strokeRect(o.x - 15, o.y - 15, 30, 30);
+            }
+        }
+        function spawnZombies(count) {
+            for (var n = 0; n < count; n++) {
+                var dir = 360 * n / count;
+                var o = {};
+                var move = distToMove(400 + Math.random() * 800, dir);
+                o.x = move.x + Math.random() * 100 - 50;
+                o.y = move.y + Math.random() * 100 - 50;
+                o.id = n;
+                zombies.push(o);
+            }
+        }
+        var player = {
+            zombified: false,
+            zombifiedTime: 0,
+            x: 0,
+            y: 0,
+            xmove: 0,
+            ymove: 0,
+            update: function () {
+                this.updateZombieCollisions();
+                if (!this.zombified) this.updateControls();
+            },
+            updateZombieCollisions: function () {
+                for (var n = 0; n < zombies.length; n++) {
+                    var o = zombies[n];
+                    var dist = distTo(o.x, o.y, this.x, this.y);
+                    if (dist > zombieInfectDistance) continue;
+                    this.zombified = true;
+                }
+                if (this.zombified) {
+                    for (var n = 0; n < zombies.length; n++) {
+                        var o = zombies[n];
+                        var dist = distTo(o.x, o.y, this.x, this.y);
+                        if (dist > zombiePersonalSpace) continue;
+                        var dir = dirTo(this.x, this.y, o.x, o.y);
+                        var collisionDistance = zombiePersonalSpace - dist;
+                        var move = distToMove(collisionDistance / 2, dir);
+                        this.x -= move.x;
+                        this.y -= move.y;
+                        o.x += move.x;
+                        o.y += move.y;
+                    }
+                }
+            },
+            updateControls: function () {
+                this.xmove = 0;
+                this.ymove = 0;
+
+                var left = Keys.keys[37];
+                var right = Keys.keys[39];
+                var up = Keys.keys[38];
+                var down = Keys.keys[40];
+                var move = { x: (right ? 1 : 0) - (left ? 1 : 0), y: (down ? 1 : 0) - (up ? 1 : 0) };
+                if (distTo(0, 0, move.x, move.y) == 0) return;
+                var dir = dirTo(0, 0, move.x, move.y);
+                var move = distToMove(playerSpeed, dir);
+                this.x += move.x;
+                this.y += move.y;
+                this.xmove = move.x;
+                this.ymove = move.y;
+            },
+            draw: function () {
+                ctx.fillStyle = "red";
+                if (this.zombified) ctx.fillStyle = "rgb(0,100,0)";
+                ctx.fillRect(this.x - 20, this.y - 20, 40, 40);
+                ctx.strokeRect(this.x - 20, this.y - 20, 40, 40);
+            },
+            reset: function () {
+                this.zombified = false;
+                this.zombifiedTime = 0;
+                this.x = 0;
+                this.y = 0;
+                this.xmove = 0;
+                this.ymove = 0;
+            }
+        }
+        var cam = {
+            x: 0,
+            y: 0,
+            zoom: 0.5,
+            update: function () {
+                this.x = this.x * 0.99 + player.x * 0.01;
+                this.y = this.y * 0.99 + player.y * 0.01;
+            }
+        }
+
+        var zombieSpeed = 1;
+        var zombieCount = 120;
+        var zombiePersonalSpace = 25;
+        var zombieInfectDistance = 25;
+        var playerSpeed = 5;
+    </script>
+</body>
+
+</html>

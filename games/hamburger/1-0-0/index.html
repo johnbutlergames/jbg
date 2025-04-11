@@ -1,0 +1,83 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <textarea id='textarea' placeholder='Type "hamburger"'></textarea>
+        <div id='imgDivContainer'>
+            <font id='title'>Hamburger:</font>
+            <div id='imgDiv'></div>
+        </div>
+        <style>
+            * {
+                font-family: sans-serif;
+            }
+            textarea {
+                border-radius: 5px;
+                outline: 0px;
+                resize: none;
+                width: 200px;
+                height: 100px;
+            }
+            textarea:focus {
+                border-color: rgb(100,100,200);
+            }
+            #imgDivContainer {
+                display: inline;
+                margin-left: 50px;
+            }
+            #imgDiv,#title {
+                display: inline;
+                position: absolute;
+            }
+        </style>
+        <script>
+            var imgsrcs = ["ham","b","u","r","ger"];
+            imgsrcs = imgsrcs.map(s=>"images/"+s+".png");
+            document.title = 'Hamburger';
+            var textarea = document.getElementById("textarea");
+            var div = document.getElementById('imgDiv');
+            textarea.addEventListener('keydown',function(event) {
+                window.setTimeout(updateImages,0);
+            });
+            function updateImages() {
+                div.innerHTML = '';
+                var t = textarea.value.toLowerCase().split('');
+                var n = 0;
+                while(n < t.length) {
+                    if(n+2<t.length) {
+                        if(t[n]=="h"&&t[n+1]=="a"&&t[n+2]=="m") {
+                            t.splice(n,3,"ham");
+                            n = -1;
+                        }
+                        if(t[n]=="g"&&t[n+1]=="e"&&t[n+2]=="r") {
+                            t.splice(n,3,"ger");
+                            n = -1;
+                        }
+                    }
+                    n++;
+                }
+                var h = ["ham","b","u","r","ger"," "];
+                n = 0;
+                while(n < t.length) {
+                    if(h.indexOf(t[n])==-1) {
+                        t.splice(n,1);
+                    } else {
+                        n++;
+                    }
+                }
+                n = t.length-1;
+                while(n >= 0) {
+                    if(t[n]!=" ") {
+                        var img = document.createElement('img');
+                        img.src = imgsrcs[h.indexOf(t[n])];
+                        img.width = "100";
+                        img.height = "50";
+                        img.style.marginTop = n*18+20+'px';
+                        img.style.position = 'absolute';
+                        div.appendChild(img);
+                    }
+                    n--;
+                }
+            }
+        </script>
+    </body>
+</html>

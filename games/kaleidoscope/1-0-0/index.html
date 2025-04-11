@@ -1,0 +1,432 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Kaleidoscope';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function resolveCollision(b1,b2,e) {
+                var d = distTo(b1.x,b1.y,b2.x,b2.y);
+                var dx = b2.x-b1.x;
+                var dy = b2.y-b1.y;
+                var nx = dx/d;
+                var ny = dy/d;
+                var s = b1.r + b2.r - d;
+                var k = -2 * ((b2.xmove - b1.xmove) * nx + (b2.ymove - b1.ymove) * ny) / (1/b1.mass + 1/b2.mass);
+                if(!isNaN(k)&&!isNaN(nx)&&!isNaN(ny)&&!isNaN(s)) {
+                    b1.xmove -= k * nx / b1.mass*e;
+                    b1.ymove -= k * ny / b1.mass*e;
+                    b2.xmove += k * nx / b2.mass*e;
+                    b2.ymove += k * ny / b2.mass*e;
+                    b1.x -= nx * s/2;
+                    b1.y -= ny * s/2;
+                    b2.x += nx * s/2;
+                    b2.y += ny * s/2;
+                }
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(Keys.down[32]) {
+                        paused = !paused;
+                    }
+
+                    if(!paused) {
+                        this.objects.update();
+                    }
+
+                    var mouseAngle = dirTo(500,500,Mouse.x,Mouse.y);
+                    var t = turn(this.oldMouseAngle,mouseAngle);
+                    if(!Mouse.down) {
+                        t = 0.1;
+                    }
+                    if(!paused) {
+                        var n = 0;
+                        while(n < this.objects.objects.length) {
+                            var obj = this.objects.objects[n];
+                            var r = rotate(0,0,obj.x,obj.y,t);
+                            obj.x = r[0];
+                            obj.y = r[1];
+                            n++;
+                        }
+                    }
+                    this.oldMouseAngle = mouseAngle;
+                    //turn kaleidoscope
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(500,500);
+
+                    var n = 0;
+                    while(n < 16) {
+                        ctx.save();
+                        ctx.rotate(n*22.5*Math.PI/180);
+                        ctx.beginPath();
+                        ctx.moveTo(0,0);
+                        ctx.lineTo(0,500);
+                        ctx.lineTo(209,500);
+                        ctx.closePath();
+                        ctx.clip();
+                        if(n%2==0) {
+                            ctx.scale(-1,1);
+                            ctx.rotate(22.5*Math.PI/180);
+                        }
+                        this.objects.draw();
+                        ctx.restore();
+                        n++;
+                    }
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 20;
+                    ctx.arc(0,0,this.bigCircleRadius+10,0,2*Math.PI);
+                    ctx.stroke();
+                    //draw circle
+
+                    ctx.restore();
+                },
+                objects: {
+                    objects: [],
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            ctx.fillStyle = obj.color;
+                            ctx.beginPath();
+                            if(obj.type=='circle') {
+                                ctx.arc(obj.x,obj.y,obj.r,0,2*Math.PI);
+                            } else if(obj.type=='shape') {
+                                ctx.save();
+                                ctx.translate(obj.x,obj.y);
+                                ctx.rotate(obj.angle);
+                                ctx.moveTo(obj.points[0].x,obj.points[0].y);
+                                var n2 = 0;
+                                while(n2 < obj.points.length) {
+                                    ctx.lineTo(obj.points[n2].x,obj.points[n2].y);
+                                    n2++;
+                                }
+                                ctx.closePath();
+                                ctx.restore();
+                            }
+                            ctx.fill();
+                            n++;
+                        }
+                    },
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            obj.id = n;
+                            this.updateObject(obj);
+                            n++;
+                        }
+                    },
+                    updateObject: function(obj) {
+                        if(obj.xmove===undefined) {
+                            obj.xmove = 0;
+                        }
+                        if(obj.ymove===undefined) {
+                            obj.ymove = 0;
+                        }
+                        obj.mass = obj.r**2*Math.PI;
+                        //init
+
+                        obj.ymove += 0.03;
+                        //gravity
+
+                        obj.xmove *= 0.99;
+                        obj.ymove *= 0.99;
+                        //damping
+
+                        obj.x += obj.xmove;
+                        obj.y += obj.ymove;
+                        //move
+
+                        var dist = distTo(obj.x,obj.y,0,0);
+                        if(dist>game.bigCircleRadius-obj.r) {
+                            var collideDist = dist+obj.r-game.bigCircleRadius;
+                            var dir = dirTo(obj.x,obj.y,0,0);
+                            var move = distToMove(collideDist,dir);
+                            obj.x += move[0];
+                            obj.y += move[1];
+                            var speed = distTo(obj.xmove,obj.ymove,0,0);
+                            var move = distToMove(speed,dir);
+                            obj.xmove = move[0];
+                            obj.ymove = move[1];
+                        }
+                        //collide with big circle
+
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            if(n!=obj.id) {
+                                var obj2 = this.objects[n];
+                                var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                if(dist<obj.r+obj2.r) {
+                                    resolveCollision(obj,obj2,0.9);
+                                }
+                            }
+                            n++;
+                        }
+                        //collide with other circles
+
+                        if(obj.type=='shape') {
+                            obj.angle += obj.xmove/100;
+                        }
+                    }
+                },
+                bigCircleRadius: 500,
+                oldMouseAngle: 0
+            }
+
+            var n = 0;
+            while(n < 70) {
+                var obj = {};
+                obj.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                obj.x = Math.random()*1000-500;
+                obj.y = Math.random()*1000-500;
+                obj.r = n/2+20;
+                obj.angle = Math.random()*360;
+                obj.type = 'circle';
+                if(Math.random()>0.5) {
+                    obj.type = 'shape';
+                    obj.points = [];
+                    var numOfSides = Math.floor(Math.random()*4)+3;
+                    var n2 = 0;
+                    while(n2 < numOfSides) {
+                        var point = rotate(0,0,obj.r+5,0,n2/numOfSides*360);
+                        obj.points.push({x:point[0],y:point[1]});
+                        n2++;
+                    }
+                }
+                game.objects.objects.push(obj);
+                n++;
+            }
+
+            var paused = false;
+        </script>
+    </body>
+</html>

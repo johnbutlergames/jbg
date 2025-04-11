@@ -1,0 +1,385 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Hamburger";
+            var dimensions = {width:1000,height:1000};
+            var imagesArray = ["table","ham","b","u","r","ger","onions","cheese","burger","pickles","bacon","egg","pork","chicken","fries","bbq","mustard","ketchup","red-pepper","green-pepper","yellow-pepper","spinach","pineapple","mushrooms","avacado","chips","mac-and-cheese","m-cheese","jalapeno"];
+            var images = {};
+            for(var n=0;n<imagesArray.length;n++) {
+                images[n] = "images/"+imagesArray[n]+".png";
+            }
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                for(var n=65;n<91;n++) {
+                    if(Keys.down[n]) {
+                        hamburgerWord += String.fromCharCode(n).toLowerCase();
+                        notTyped = false;
+                    }
+                }
+                if(Keys.down[32]) {
+                    hamburgerWord += " ";
+                    notTyped = false;
+                }
+                if(Keys.down[8]) {
+                    if(hamburgerWord.endsWith("ham")||hamburgerWord.endsWith("ger")||hamburgerWord.endsWith("jbg")) {
+                        hamburgerWord = hamburgerWord.slice(0,-3);
+                    } else {
+                        hamburgerWord = hamburgerWord.slice(0,-1);
+                    }
+                    notTyped = false;
+                }
+                hamburgerWord = hamburgerWord.slice(0,350);
+                //typing
+
+                this.objects.update();
+                //objects
+
+                cam.update();
+                //update cam
+
+                ctx.save();
+                ctx.translate(500-cam.x,500-cam.y);
+                drawBackground();
+                objects.draw();
+                ctx.restore();
+                //draw objects and background
+
+                ctx.font = "100px Arial";
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                var w = ctx.measureText(hamburgerWord).width;
+                var size = 100;
+                if(w>900) {
+                    size = 100*(900/w);
+                }
+                if(w>2700) {
+                    size = 33;
+                }
+                ctx.font = size+"px Arial";
+                var lines = [hamburgerWord];
+                while(lines[lines.length-1].length>70) {
+                    lines.push(lines[lines.length-1].slice(70));
+                    lines[lines.length-2] = lines[lines.length-2].slice(0,70);
+                }
+                for(var n=0;n<lines.length;n++) {
+                    ctx.font = "100px Arial";
+                    var w = ctx.measureText(lines[n]).width;
+                    ctx.font = Math.min(size,100*(900/w))+"px Arial";
+                    ctx.fillText(lines[n],500,(n+1)*size);
+                }
+                //word text
+
+                if(notTyped) {
+                    if(t>500) {
+                        typeSomethingOpacity += 0.05;
+                    }
+                } else {
+                    typeSomethingOpacity -= 0.05;
+                }
+                typeSomethingOpacity = Math.min(Math.max(0,typeSomethingOpacity),1);
+                ctx.save();
+                ctx.translate(500,200);
+                var s = easeInOut(typeSomethingOpacity);
+                ctx.scale(s,s);
+                ctx.globalAlpha = typeSomethingOpacity;
+                ctx.font = "50px Arial";
+                ctx.fillText("Type Something...",0,0);
+                ctx.restore();
+
+                var y = Math.max(-objects.burgerSize,-300)+850;
+                sizeTextY = sizeTextY*0.95+y*0.05;
+                barHeight = barHeight*0.95+(objects.burgerSize+50)*0.05;
+                var height = Math.round(objects.burgerSize*0.04);
+                var heightText = height+" in";
+                if(height>=12) {
+                    if(height%12==0) {
+                        heightText = Math.floor(height/12)+" ft";
+                    } else {
+                        heightText = Math.floor(height/12)+" ft "+(height%12)+" in";
+                    }
+                }
+                if(objects.burgerSize>600) {
+                    showButton++;
+                } else {
+                    showButton--;
+                }
+                showButton = Math.max(Math.min(50,showButton),0);
+                ctx.save();
+                ctx.globalAlpha = easeInOut(showButton/50);
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "white";
+                if(Mouse.inBox(50,850,250,100)) {
+                    ctx.fillStyle = "rgb(245,245,245)";
+                }
+                ctx.strokeStyle = "black";
+                ctx.roundRect(50,850,250,100,20);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.font = "50px Arial";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Compost",175,900);
+                ctx.restore();
+                if(Mouse.clickInBox(50,850,250,100)&&showButton) {
+                    hamburgerWord = "";
+                }
+
+                if(objects.burgerSize>150) {
+                    sizeTextAnimation++;
+                } else {
+                    sizeTextAnimation--;
+                }
+                sizeTextAnimation = Math.max(Math.min(50,sizeTextAnimation),0);
+                ctx.save();
+                ctx.globalAlpha = easeInOut(sizeTextAnimation/50);
+                ctx.font = "50px Arial";
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Height:",870,sizeTextY-50);
+                ctx.fillText(heightText,870,sizeTextY);
+
+                ctx.fillStyle = "black";
+                ctx.fillRect(660,sizeTextY-20,80,5);
+                ctx.fillRect(697.5,sizeTextY-20,5,barHeight);
+                ctx.fillRect(660,575-cam.y,80,5);
+                ctx.restore();
+                //size text
+
+                t++;
+            }
+
+            var sizeTextAnimation = 0;
+            var sizeTextY = 850;
+            var barHeight = 0;
+            var showButton = 0;
+
+            var cam = {
+                x: 0,
+                y: -300,
+                update: function() {
+                    var target = Math.min(-objects.burgerSize,-300);
+
+                    this.y = this.y*0.95+target*0.05;
+                }
+            }
+
+            function drawBackground() {
+                ctx.fillStyle = "rgb(180,255,255)";
+                ctx.fillRect(-500,-500+cam.y,1000,1000);
+                var yoff = cam.y-cam.y%1000;
+                for(var c of clouds) {
+                    drawCloud(c.x,c.y+yoff-1000,c.s);
+                    drawCloud(c.x,c.y+yoff-2000,c.s);
+                    drawCloud(c.x,c.y+yoff,c.s);
+                }
+
+                ctx.drawImage(images[0],-500,-800,1000,1000);
+            }
+
+            var clouds = [];
+            for(var n=0;n<10;n++) {
+                var c = {};
+                c.x = Math.random()*500+((n%2-1)*500);
+                c.y = n*100;
+                c.s = 0.5+Math.random();
+                clouds.push(c);
+            }
+
+            function drawCloud(x,y,s) {
+                ctx.save();
+                ctx.translate(x,y);
+                ctx.scale(s,1.5*s);
+                ctx.fillStyle = "rgb(234,255,255)";
+                ctx.beginPath();
+                ctx.arc(0,0,100,Math.PI,0);
+                ctx.arc(-120,0,70,Math.PI,0);
+                ctx.arc(120,0,70,Math.PI,0);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            var objects = {
+                objects: [
+                    {type:"ham",x:-100,y:-1000,xmove:0,ymove:0,angle:0,turn:0,w:200,h:100},
+                    {type:"b",x:-100,y:-1100,xmove:0,ymove:0,angle:0,turn:0,w:200,h:100},
+                    {type:"u",x:-100,y:-1200,xmove:0,ymove:0,angle:0,turn:0,w:200,h:100},
+                    {type:"r",x:-100,y:-1300,xmove:0,ymove:0,angle:0,turn:0,w:200,h:100},
+                    {type:"ger",x:-100,y:-1400,xmove:0,ymove:0,angle:0,turn:0,w:200,h:100}
+                ],
+                burgerSize: 0,
+                update: function() {
+                    var id = 0;
+                    for(var n=0;n<this.objects.length;n++) {
+                        var o = this.objects[n];
+                        if(o.delete) continue;
+                        o.id = id;
+                        id++;
+                    }
+                    this.burgerSize = id*30;
+
+                    for(var o of this.objects) {
+                        this.updateObject(o);
+                    }
+
+                    var types = [];
+                    for(var n=0;n<hamburgerWord.length;n++) {
+                        var recognized = false;
+                        for(var r of recognize) {
+                            if(hamburgerWord.slice(n).startsWith(r)) {
+                                types.push(r);
+                                recognized = r.length;
+                                break;
+                            }
+                        }
+                        if(recognized) n += recognized-1;
+                    }
+
+                    var objNum = 0;
+                    for(var n=0;n<this.objects.length;n++) {
+                        var o = this.objects[n];
+                        if(o.delete) continue;
+                        if(o.type!=types[objNum]) {
+                            if(!o.delete) {
+                                o.delete = true;
+                                o.turn = (Math.random()*6+2)*(Math.floor(Math.random()*2)*2-1);
+                                o.ymove = -20;
+                                o.xmove = Math.random()*40-20;
+                                if(o.y<cam.y-600) o.deleteAnimation = 300;
+                            }
+                            continue;
+                        }
+                        objNum++;
+                    }
+                    for(var n=objNum;n<types.length;n++) {
+                        this.addObject(types[n]);
+                    }
+
+                    this.objects = this.objects.filter(e=>!e.deleteAnimation||e.deleteAnimation<150);
+                },
+                draw: function() {
+                    for(var o of this.objects) {
+                        if(o.y>cam.y+500) continue;
+                        if(o.y+o.h<cam.y-500) continue;
+                        this.drawObject(o);
+                    }
+                },
+                addObject: function(type) {
+                    var o = {};
+                    o.type = type;
+                    o.x = -100+Math.random()*40-20;
+                    o.y = cam.y-800;
+                    o.w = 200;
+                    o.h = 100;
+                    o.ymove = 0;
+                    o.xmove = 0;
+                    o.startAnimation = 100;
+                    o.angle = 0;
+                    o.turn = 0;
+                    o.flipped = Math.floor(Math.random()*2);
+                    this.objects.push(o);
+                },
+                updateObject: function(o) {
+                    if(o.delete) {
+                        if(!o.deleteAnimation) o.deleteAnimation = 0;
+                        if(o.y>cam.y-500) {
+                            o.deleteAnimation++;
+                        }
+                    }
+                    if(o.startAnimation) {
+                        o.startAnimation--;
+                    }
+
+                    o.x += o.xmove;
+                    o.y += o.ymove;
+                    o.angle += o.turn;
+
+                    o.ymove += 0.2;
+                    o.ymove *= 0.98;
+                    o.xmove *= 0.98;
+                    if(o.delete) {
+                    } else {
+                        if(o.y>o.id*-30) {
+                            o.y = o.id*-30;
+                            o.ymove *= -0.5;
+                            if(o.ymove>-0.05) o.ymove = 0;
+                        }
+                    }
+                },
+                drawObject: function(o) {
+                    ctx.save();
+                    ctx.translate(o.x+o.w/2,o.y+o.h/2);
+                    ctx.rotate(o.angle*Math.PI/180);
+                    if(o.deleteAnimation) {
+                        ctx.globalAlpha = Math.min(1,1-(o.deleteAnimation-100)/50);
+                    }
+                    if(o.flipped) ctx.scale(-1,1);
+                    if(imageTable[o.type]) {
+                        ctx.drawImage(images[imageTable[o.type]],-o.w/2,-o.h/2,o.w,o.h);
+                    }
+                    if(o.type=="jbg") {
+                        ctx.scale(2,1);
+                        ctx.translate(0,50);
+                        ctx.fillStyle = "blue";
+                        ctx.fillRect(-50,-100,100,100);
+                        ctx.fillStyle = "black";
+                        ctx.beginPath();
+                        ctx.arc(-18,-70,10,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(18,-70,10,0,2*Math.PI);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            }
+
+            var imageTable = {
+                ham: 5,
+                ger: 1,
+                a: 6,
+                b: 4,
+                c: 7,
+                d: 8,
+                e: 9,
+                f: 10,
+                g: 11,
+                h: 12,
+                i: 13,
+                j: 14,
+                k: 15,
+                l: 16,
+                m: 17,
+                n: 18,
+                o: 19,
+                p: 20,
+                q: 21,
+                r: 2,
+                s: 22,
+                t: 23,
+                u: 3,
+                v: 24,
+                w: 25,
+                x: 26,
+                y: 27,
+                z: 28
+            }
+
+            var recognize = ["ham","ger","jbg"].concat("abcdefghijklmnopqrstuvwxyz".split(""));
+
+            var hamburgerWord = "hamburger";
+            var typeSomethingOpacity = 0;
+            var notTyped = true;
+            var t = 0;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <div onclick='toggleOptions()' id='toggleOptions'>Options: &#9660;</div>
+        <div id='optionsDiv'>
+            <font>Water Level: </font><input type='range' min='0' max='100' id='waterLevel'><font id='waterLevelFont'>50</font>
+            <br>
+            <font>Rough Smoothing: </font><input type='range' min='0' max='20' id='roughSmoothing'><font id='roughSmoothingFont'>10</font>
+            <br>
+            <font>Detailed Smoothing: </font><input type='range' min='0' max='20' id='detailedSmoothing'><font id='detailedSmoothingFont'>10</font>
+        </div>
+        <br>
+        <button onclick='reset()'>Generate New Map</button>
+        <br>
+        <br>
+        <div id='status'>
+            <p id='statusp'></p>
+            <div id='percentCompleteContainer'>
+                <div id='percentComplete' style='position:absolute'></div>
+                <center id='statusText' style='position:absolute'>Status: Generating Heightmap</center>
+            </div>
+        </div>
+        <br>
+        <br>
+        <canvas id='mapCanvas'></canvas>
+        <script>
+            document.getElementById('percentComplete').style = 'background-color:rgb(0,255,0);width:0px;height:20px';
+            document.getElementById('percentCompleteContainer').style = 'border: 1px solid black;width:300px;display:none;';
+            document.getElementById('optionsDiv').style.marginLeft = '50px';
+            document.body.style = 'user-select:none;';
+            var canvas = document.getElementById('mapCanvas');
+            var _canvas = canvas.getContext('2d');
+            var statusText = document.getElementById('statusText');
+            canvas.width = 500;
+            canvas.height = 500;
+            canvas.style.border = '1px solid black';
+            var waterLevelFont = document.getElementById('waterLevelFont');
+            var waterLevelInput = document.getElementById('waterLevel');
+            waterLevelInput.onchange = function() {
+                var value = Number(waterLevelInput.value);
+                waterLevelFont.innerHTML = value;
+                optionsData.waterLevel = value/100;
+            }
+            var roughSmoothingFont = document.getElementById('roughSmoothingFont');
+            var roughSmoothingInput = document.getElementById('roughSmoothing');
+            roughSmoothingInput.onchange = function() {
+                var value = Number(roughSmoothingInput.value);
+                roughSmoothingFont.innerHTML = value;
+                optionsData.smoothing1 = Math.round(value/5)+1;
+            }
+            var detailedSmoothingFont = document.getElementById('detailedSmoothingFont');
+            var detailedSmoothingInput = document.getElementById('detailedSmoothing');
+            detailedSmoothingInput.onchange = function() {
+                var value = Number(detailedSmoothingInput.value);
+                detailedSmoothingFont.innerHTML = value;
+                optionsData.smoothing2 = value+1;
+            }
+            var optionsData = {
+                waterLevel: 0.5,
+                smoothing1: 3,
+                smoothing2: 12,
+                layeredLand: true,
+                layeredWater: false
+            };
+            function distance(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function reset() {
+                clearInterval(generateMapInterval);
+                generateStep = 0;
+                generateMapInterval = window.setInterval(generateMap,10);
+                document.getElementById('percentCompleteContainer').style.display = 'block';
+            }
+            function generateMap() {
+                if(generateStep==0) {
+                    heightMap = [];
+                    statusText.innerHTML = 'Status: Generating Rough Heightmap';
+                    _canvas.clearRect(0,0,500,500);
+                }
+                if(generateStep==50) {
+                    heightMap2 = [];
+                    statusText.innerHTML = 'Status: Smoothing Heightmap';
+                }
+                if(generateStep==100) {
+                    heightMap = JSON.parse(JSON.stringify(heightMap2));
+                    heightMap2 = [];
+                    statusText.innerHTML = 'Status: Generating Detailed Heightmap';
+                }
+                if(generateStep==600) {
+                    heightMap = JSON.parse(JSON.stringify(heightMap2));
+                    heightMap2 = [];
+                    statusText.innerHTML = 'Status: Smoothing Heightmap';
+                }
+                if(generateStep<50) {
+                    heightMap.push([]);
+                    var y = 0;
+                    while(y < 50) {
+                        var r = random(y+generateStep*50)+Math.min(1.5/distance(y,generateStep,25,25),1);
+                        heightMap[generateStep].push(r);
+                        drawSquare(generateStep*10,y*10,10,10,r);
+                        y++;
+                    }
+                }
+                if(generateStep<100&&generateStep>=50) {
+                    heightMap2.push([]);
+                    var x = generateStep-50;
+                    var y = 0;
+                    while(y < 50) {
+                        var m = heightMap;
+                        var int = 0;
+                        var n = 0;
+                        var x2 = 0;
+                        while(x2 < optionsData.smoothing1) {
+                            var y2 = 0;
+                            while(y2 < optionsData.smoothing1) {
+                                int += h(x+x2-optionsData.smoothing1/2,y+y2-optionsData.smoothing1/2,m);
+                                n++;
+                                y2++;
+                            }
+                            x2++;
+                        }
+                        var r = int/n;
+                        heightMap2[x].push(r);
+                        drawSquare(x*10,y*10,10,10,r);
+                        y++;
+                    }
+                }
+                if(generateStep>=100&&generateStep<600) {
+                    heightMap2.push([]);
+                    var y = 0;
+                    while(y < 500) {
+                        var rx = random(y+generateStep*50+0.1)-0.5;
+                        var ry = random(y+generateStep*50+0.2)-0.5;
+                        var r = random(y+generateStep*50)/2-0.25+h((generateStep-100)/10+rx,y/10+ry,heightMap);
+                        heightMap2[generateStep-100].push(r);
+                        drawSquare(generateStep-100,y,1,1,r);
+                        y++;
+                    }
+                }
+                if(generateStep<1100&&generateStep>=600) {
+                    heightMap2.push([]);
+                    var x = generateStep-600;
+                    var y = 0;
+                    while(y < 500) {
+                        var m = heightMap;
+                        var int = 0;
+                        var n = 0;
+                        var x2 = 0;
+                        while(x2 < optionsData.smoothing2) {
+                            var y2 = 0;
+                            while(y2 < optionsData.smoothing2) {
+                                int += h(x+x2-optionsData.smoothing2/2,y+y2-optionsData.smoothing2/2,m);
+                                n++;
+                                y2++;
+                            }
+                            x2++;
+                        }
+                        var r = int/n;
+                        heightMap2[x].push(r);
+                        drawSquare(x,y,1,1,r);
+                        y++;
+                    }
+                }
+                var percent = generateStep/1100;
+                document.getElementById('percentComplete').style.width = (300*percent)+'px';
+                if(generateStep==1099) {
+                    canvas.style.display = 'block';
+                    document.getElementById('percentCompleteContainer').style.display = 'none';
+                    window.clearInterval(generateMapInterval);
+                }
+                generateStep++;
+            }
+            function changeOptions() {
+            }
+            function toggleOptions() {
+                var options = document.getElementById('optionsDiv');
+                var disp = options.style.display;
+                if(disp=='none') {
+                    options.style.display = 'block';
+                    document.getElementById('toggleOptions').innerHTML = 'Options: ▼'
+                } else {
+                    options.style.display = 'none';
+                    document.getElementById('toggleOptions').innerHTML = 'Options: ▲'
+                }
+            }
+            function random(seed) {
+                /*if(seed===undefined) {
+                    seed = Math.random();
+                }
+                var int = 0;
+                var n = 0;
+                while(n < 10) {
+                    n++;
+                    int += Math.round(Math.abs(sin(sin(sin(seed+n))))*10)/Math.pow(10,n);
+                }*/
+                return Math.random();
+                return sin(seed/10);
+            }
+            function sin(x) {
+                return Math.abs(Math.sin(x)*Math.sin(x*1.1)+Math.sin(x+1)*Math.sin(x*3+1))%1;
+            }
+            function h(x,y,hm) {
+                x%=hm.length;
+                y%=hm.length;
+                if(x < 0) {
+                    x = hm.length+x;
+                }
+                if(y < 0) {
+                    y = hm.length+y;
+                }
+                x = Math.floor(x);
+                y = Math.floor(y);
+                return hm[x][y];
+            }
+            function drawSquare(x,y,w,h,d) {
+                var wl = optionsData.waterLevel;
+                var l = Math.floor((d-wl)*5)/5;
+                if(!optionsData.layeredLand) {
+                    l = d-wl;
+                }
+                _canvas.fillStyle = 'rgb('+((l)*255)+','+((l)*255+100)+','+((l)*255)+')';
+                _canvas.fillRect(x,y,w,h);
+                if(d<wl) {
+                    var depth = (200-Math.round((wl-d)*4)/4*255);
+                    if(!optionsData.layeredWater) {
+                        depth = 200-(wl-d)*255;
+                    }
+                    _canvas.fillStyle = 'rgb('+depth+','+depth+',255)';
+                    _canvas.fillRect(x,y,w,h);
+                }
+            }
+            var heightMap = [];
+            var heightMap2 = [];
+            toggleOptions();
+            var generationStep = 0;
+            var generateMapInterval;
+        </script>
+    </body>
+</html>

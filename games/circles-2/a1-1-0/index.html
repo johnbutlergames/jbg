@@ -1,0 +1,108 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script src="game.js"></script>
+    <script src="sprites.js"></script>
+    <script src="components.js"></script>
+    <script src="player.js"></script>
+    <script src="input.js"></script>
+    <script>
+        var title = "Circles 2";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            game.tick();
+        }
+
+        var game = new Game();
+        game.loadLevel({
+            objects:
+                [
+                    { x: 0, y: 300, r: 100, type: "circle platform" },
+                    { x: 200, y: 350, r: 200, type: "circle platform" },
+                    { x: -500, y: 350, r: 200, type: "circle platform" },
+                    { x: 0, y: -250, r: 200, type: "circle platform" },
+                    { x: 250, y: -100, r: 200, type: "circle platform" },
+                    { x: 25, y: -600, r: 100, type: "circle platform" },
+                    { x: 250, y: -600, r: 100, type: "circle platform" },
+                    { x: -400, y: -600, w: 1000, h: 200, spin: -0.1, type: "rectangle platform" },
+                    { x: 400, y: -600, w: 200, h: 200, spin: -1, type: "rectangle platform" },
+                    { x: 625, y: -600, w: 200, h: 200, spin: 1, type: "rectangle platform" },
+                    { slippery: false, bounceEnergy: 0.3, x: 0, y: 400, w: 2000, h: 200, type: "rectangle platform" },
+                    { slippery: false, bounceEnergy: 0.3, x: -1400, y: -200, w: 2000, h: 200, angle: 45, type: "rectangle platform" },
+                    { x: -1400, y: -200, r: 150, type: "circle platform" },
+                    { x: -1200, y: 0, r: 150, type: "circle platform" },
+                    { x: -800, y: 0, r: 80, type: "dynamic circle" },
+                    { x: -200, y: 200, r: 80, type: "dynamic circle", update:function(){this.ymove += 0.05} },
+                    { x: 40, y: -490, r: 20, type: "player" },
+                ]
+        });
+        game.loadCanvas(ctx);
+
+        window.setTimeout(function () {
+            rotate = function (cx, cy, x, y, a) {
+                a = -Math.PI / 180 * a;
+                return {
+                    x: (Math.cos(a) * (x - cx)) + (Math.sin(a) * (y - cy)) + cx,
+                    y: (Math.cos(a) * (y - cy)) - (Math.sin(a) * (x - cx)) + cy
+                };
+            }
+        }, 0);
+
+        function pointInPolygon(x, y, o) {
+            var response = false;
+            var crossCount = 0;
+            for (var n = 0; n < o.length; n++) {
+                var line = o[n];
+                var intersection = linesIntersection(x, y, x + 1, y, line.p1.x, line.p1.y, line.p2.x, line.p2.y);
+                if (!intersection) continue;
+                if (intersection === true) continue;
+                if (intersection.x < x) continue;
+                if (intersection.y < Math.min(line.p1.y, line.p2.y)) continue;
+                if (intersection.y > Math.max(line.p1.y, line.p2.y)) continue;
+                crossCount++;
+            }
+            return crossCount % 2 === 1;
+        }
+
+        function linesIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+            if (x1 === x3 && y1 === y3 && x2 === x4 && y2 === y4) return true;
+            var m1 = (y2 - y1) / (x2 - x1);
+            var b1 = y1 - x1 * m1;
+            var m2 = (y4 - y3) / (x4 - x3);
+            var b2 = y3 - x3 * m2;
+
+            if ((!isFinite(m1) && !isFinite(m2))) {
+                if (x1 === x3) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            if (m1 === m2) {
+                if (b1 === b2) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            if (!isFinite(m1)) {
+                return { x: x1, y: m2 * x1 + b2 };
+            }
+            if (!isFinite(m2)) {
+                return { x: x3, y: m1 * x3 + b1 };
+            }
+            return { x: (b1 - b2) / (m2 - m1), y: m1 * (b1 - b2) / (m2 - m1) + b1 };
+        }
+    </script>
+</body>

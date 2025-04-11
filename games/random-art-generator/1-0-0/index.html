@@ -1,0 +1,258 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Random Art Generator';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.addEventListener('mousemove',function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            });
+            canvas.addEventListener('click',function(event) {
+                Mouse.click = true;
+            });
+            canvas.addEventListener('mousedown',function(event) {
+                Mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                Mouse.down = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            });
+            window.addEventListener('keyup',function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            });
+            var loads = 0;
+            var loaded = false;
+            if(imgs.length+audios.length==0) {
+                loaded = true;
+            }
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function r(n) {
+                return Math.random()*n;
+            }
+            function rarr(arr) {
+                return arr[Math.floor(r(arr.length))];
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function update() {
+                main();
+                Mouse.click = false;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(Mouse.click||t%400==0&&!Keys.keys[32]) {
+                    ctx.clearRect(0,0,1000,1000);
+                    drawRandomArt();
+                }
+                t++;
+            }
+
+            function drawRandomArt() {
+                var objects = generate();
+                var n = 0;
+                while(n < objects.length) {
+                    var o = objects[n];
+                    ctx.beginPath();
+                    if(o.type=='circle') {
+                        ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                    }
+                    if(o.type=='rectangle') {
+                        ctx.rect(o.x,o.y,o.w,o.h);
+                    }
+                    if(o.type=='line') {
+                        var points = o.points;
+                        if(o.points.length>0) {
+                            ctx.moveTo(o.points[0].x,o.points[1].y);
+                            var n2 = 1;
+                            while(n2 < points.length) {
+                                ctx.lineTo(o.points[n2].x,o.points[n2].y);
+                                n2++;
+                            }
+                        }
+                    }
+                    if(o.fill) {
+                        ctx.fillStyle = o.fillStyle;
+                        ctx.fill();
+                    }
+                    if(o.stroke) {
+                        ctx.strokeStyle = o.strokeStyle;
+                        ctx.lineWidth = o.lineWidth;
+                        ctx.stroke();
+                    }
+                    n++;
+                }
+            }
+
+            function generate(data) {
+                var objects = [];
+                if(data===undefined) {
+                    data = {};
+                }
+                var pallete = {accents:[],fills:[]};
+                var n = 0;
+                while(n < r(3)) {
+                    pallete.accents.push('rgb('+r(255)+','+r(255)+','+r(255)+')');
+                    n++;
+                }
+                var n = 0;
+                while(n < r(3)) {
+                    pallete.fills.push('rgb('+r(255)+','+r(255)+','+r(255)+')');
+                    n++;
+                }
+                var lineWidth = r(8)+5;
+                var n = 0;
+                while(n < 50) {
+                    var o = {};
+                    var type = ['circle','rectangle','polygon'][Math.floor(Math.random()*3)];
+                    o.fill = Math.floor(Math.random()*2);
+                    o.stroke = Math.floor(Math.random()*2);
+                    o.fillStyle = rarr(pallete.accents);
+                    o.strokeStyle = rarr(pallete.fills);
+                    o.lineWidth = lineWidth;
+                    if(type=='circle') {
+                        o.type = 'circle';
+                        o.x = r(1000);
+                        o.y = r(1000);
+                        o.r = Math.max(r(100)+5,lineWidth);
+                    }
+                    if(type=='rectangle') {
+                        o.type = 'rectangle';
+                        o.x = r(1000);
+                        o.y = r(1000);
+                        o.w = Math.max(r(200),lineWidth);
+                        o.h = Math.max(r(200),lineWidth);
+                    }
+                    if(type=='polygon') {
+                        o.type = 'line';
+                        o.points = [];
+                        var x = r(1000);
+                        var y = r(1000);
+                        var rad = Math.max(r(100)+5,lineWidth);
+                        var numOfPoints = Math.floor(r(5)+3);
+                        var n2 = 0;
+                        while(n2-3 < numOfPoints) {
+                            var p = rotate(x,y,x,y-rad,n2/numOfPoints*360);
+                            o.points.push({x:p[0],y:p[1]});
+                            n2++;
+                        }
+                        o.points.shift();
+                    }
+                    if(type=='line') {
+                        o.type = 'line';
+                        var x = r(1000);
+                        var y = r(1000);
+                        o.points = [{x:x,y:y}];
+                        var n2 = 0;
+                        while(n2 < r(10)) {
+                            x += r(100)-50;
+                            y += r(100)-50;
+                            o.points.push({x:x,y:y});
+                            n2++;
+                        }
+                    }
+                    objects.push(o);
+                    n++;
+                }
+                return objects;
+            }
+            var t = 0;
+        </script>
+    </body>
+</html>

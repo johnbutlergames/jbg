@@ -1,0 +1,160 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.body.style.backgroundColor = 'white';
+            var beeping = false;
+            var robot = document.createElement('center');
+            document.body.appendChild(robot);
+            updateRobot("_"," . . ");
+            robot.style.fontFamily = 'Courier New';
+            var context = new AudioContext();
+            document.title = 'Robot B33PO';
+            function playNote(frequency,length) {
+                var oscillator = context.createOscillator();
+                var gainNode = context.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                oscillator.connect(context.destination);
+                oscillator.start();
+                setTimeout(function(){
+                    gainNode.gain.setTargetAtTime(0, context.currentTime, 1);
+                    oscillator.stop();
+                },length);
+            }
+            function beep(number,gainArr,eyeArr,mouthArr,resetEye,resetMouth,speed,variance) {
+                beeping = true;
+                var n = 0;
+                var time = 0;
+                while(n < number) {
+                    var r = Math.floor(Math.random()*speed)+Math.floor(Math.random()*speed);
+                    var mouth = mouthArr[n%mouthArr.length];
+                    var eyes = eyeArr[n%eyeArr.length];
+                    if(n==number-1) {
+                        mouth = resetMouth;
+                    }
+                    if(n==number-1) {
+                        eyes = resetEye;
+                    }
+                    var setBeeping = '';
+                    if(n==number-1) {
+                        setBeeping = 'window.setTimeout("beeping=false",300)';
+                    }
+                    setTimeout("randomNote("+r+","+gainArr[n]+","+variance+");updateRobot('"+mouth+"','"+eyes+"');"+setBeeping,time);
+                    time += r;
+                    n++;
+                }
+            }
+            function beepSurprised(a,b) {
+                var r = Math.floor(Math.random()*4)+8;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push(200);
+                    n++;
+                }
+                beep(r,gainArr,[a+'O O'+b,a+'0 0'+b],['_','O'],a+'. .'+b,'_',100,300);
+            }
+            function beepAngry(a,b) {
+                var r = Math.floor(Math.random()*4)+8;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push(200);
+                    n++;
+                }
+                beep(r,gainArr,[a+'\\\\ /'+b],['_','O'],a+'\\\\ /'+b,'_',100,300);
+            }
+            function beepSad(a,b) {
+                var r = Math.floor(Math.random()*4)+8;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push(200);
+                    n++;
+                }
+                beep(r,gainArr,[a+'/ \\\\'+b],['_','O'],a+'/ \\\\'+b,'_',200,300);
+            }
+            function beepTired(a,b) {
+                var r = Math.floor(Math.random()*3)+5;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push(-50);
+                    n++;
+                }
+                beep(r,gainArr,[a+'_ _'+b,a+'. .'+b,a+'_ _'+b],['_','O'],a+'_ _'+b,'_',250,300);
+            }
+            function beepQuestion(a,b) {
+                var r = Math.floor(Math.random()*3)+5;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push((n-r+3)*100);
+                    n++;
+                }
+                beep(r,gainArr,[a+'. .'+b],['_','O'],a+'. .'+b,'_',150,50);
+            }
+            function beepTalk(a,b) {
+                var r = Math.floor(Math.random()*4)+8;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push(0);
+                    n++;
+                }
+                beep(r,gainArr,[a+'. .'+b],['_','O'],a+'. .'+b,'_',150,300);
+            }
+            function beepBored(a,b) {
+                var r = Math.floor(Math.random()*4)+8;
+                var gainArr = []
+                var n = 0;
+                while(n < r) {
+                    gainArr.push(0);
+                    n++;
+                }
+                beep(r,gainArr,[a+'_ _'+b,a+'. .'+b,a+'. .'+b],['_','O'],a+'. .'+b,'_',200,300);
+            }
+            function robotBeep(left,right,type,timeout) {
+                if(!beeping) {
+                    if(type=='surprised') {
+                        setTimeout("beepSurprised('"+left+"','"+right+"')",timeout);
+                    } else if(type=='talk') {
+                        setTimeout("beepTalk('"+left+"','"+right+"')",timeout);
+                    } else if(type=='bored') {
+                        setTimeout("beepBored('"+left+"','"+right+"')",timeout);
+                    } else if(type=='question') {
+                        setTimeout("beepQuestion('"+left+"','"+right+"')",timeout);
+                    } else if(type=='tired') {
+                        setTimeout("beepTired('"+left+"','"+right+"')",timeout);
+                    } else if(type=='angry') {
+                        setTimeout("beepAngry('"+left+"','"+right+"')",timeout);
+                    } else if(type=='sad') {
+                        setTimeout("beepSad('"+left+"','"+right+"')",timeout);
+                    }
+                }
+                beeping = true;
+            }
+            function randomNote(length,f,variance) {
+                playNote(Math.random()*variance+100+f,length);
+            }
+            function updateRobot(mouth,eyes) {
+                robot.innerHTML = "/¯¯¯¯¯\\<br>|"+eyes+"|<br>| &nbsp;&nbsp;&nbsp;&nbsp;|<br>| &nbsp;"+mouth+" &nbsp;|<br>\\_____/<br>";
+            }
+            window.addEventListener('mousemove',function(event) {
+                var types = ['talk','angry','sad','question','bored','tired','surprised'];
+                robotBeep(' ',' ',types[Math.floor(Math.random()*types.length)],Math.random()*1000+500);
+            });
+            window.addEventListener('click',function(event) {
+                var types = ['talk','angry','sad','question','bored','tired','surprised'];
+                robotBeep(' ',' ',types[Math.floor(Math.random()*types.length)],Math.random()*1000+500);
+            });
+            window.addEventListener('keydown',function(event) {
+                var types = ['talk','angry','sad','question','bored','tired','surprised'];
+                robotBeep(' ',' ',types[Math.floor(Math.random()*types.length)],Math.random()*1000+500);
+            });
+        </script>
+    </body>
+</html>

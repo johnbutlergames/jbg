@@ -1,0 +1,213 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {
+            bread: "images/bread.png"
+        };
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+        }
+
+        var menu = {
+            page: "game",
+            switchPage: "game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.bread.update();
+                this.score.update();
+                this.particles.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                this.bread.draw();
+                this.score.draw();
+                this.particles.draw();
+            },
+            reset: function () {
+                this.score.score = 0;
+            },
+            bread: {
+                animation: 0,
+                angle: 0,
+                update: function () {
+                    if (this.animation) this.animation--;
+                    if (Mouse.click) {
+                        this.click();
+                    }
+                    this.angle *= 0.9;
+                },
+                draw: function () {
+                    var s = 1 + easeInOut(this.animation / 30) * 0.3;
+                    ctx.save();
+                    ctx.translate(500, 500);
+                    ctx.scale(s, s);
+                    ctx.rotate(this.angle * Math.PI / 180);
+                    ctx.drawImage(images.bread, -200, -200, 400, 400);
+                    ctx.restore();
+                },
+                click: function () {
+                    game.score.score++;
+                    game.score.animation = 10;
+                    if (game.score.score % 100 == 0) {
+                        this.angle = -360;
+                    } else {
+                        this.angle = (Math.random() * 10 + 5) * (Math.floor(Math.random() * 2) * 2 - 1);
+                    }
+                    this.animation = 30;
+                    game.particles.click();
+                    localStorage.setItem("bread", game.score.score);
+                }
+            },
+            score: {
+                score: 0,
+                animation: 0,
+                update: function () {
+                    if (this.animation) this.animation--;
+                },
+                draw: function () {
+                    var s = 1 + easeInOut(1 - this.animation / 10) * 0.3;
+                    ctx.save();
+                    ctx.translate(500, 800);
+                    ctx.scale(s, s);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 60px Times New Roman";
+                    ctx.fillText(this.score, 0, 0);
+                    ctx.restore();
+                }
+            },
+            particles: {
+                objects: [],
+                update: function () {
+                    for (var o of this.objects) {
+                        if (o.type == "bread text") {
+                            o.alpha -= 0.05;
+                            o.animation++;
+                        }
+                    }
+                    this.objects = this.objects.filter(e => e.alpha >= 0);
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        if (o.type == "bread text") {
+                            var s = easeInOut(o.animation / 20);
+                            ctx.save();
+                            ctx.translate(o.x, o.y);
+                            ctx.scale(s, s);
+                            ctx.globalAlpha = o.alpha;
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "bold 40px Times New Roman";
+                            ctx.fillText("BREAD", 0, 0);
+                            ctx.restore();
+                        }
+                    }
+                },
+                click: function () {
+                    var o = {
+                        type: "bread text",
+                        x: Math.random() * 1000,
+                        y: Math.random() * 1000,
+                        alpha: 3,
+                        animation: 0
+                    }
+                    this.objects.push(o);
+                }
+            }
+        }
+        if (localStorage.bread) game.score.score = localStorage.bread;
+    </script>
+</body>
+
+</html>

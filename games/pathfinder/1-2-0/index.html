@@ -1,0 +1,402 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script src="presets.js"></script>
+        <script>
+            var title = "Pathfinder";
+            var dimensions = {width:2000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            Loading.loaded = true;
+            Loading.intro = 0;
+            window.setInterval(update,10);
+
+            function main() {
+                if(pathfinding) {
+                    if(t%pathfinderTickSpeed==0) {
+                        tickPathfinder();
+                    }
+                } else {
+                    updateStartAndEnd();
+                    updateBlocks();
+                    if(Keys.down[32]) {
+                        startPathfinder();
+                    }
+                    for(var n=0;n<10;n++) {
+                        if(Keys.down[48+n]) {
+                            loadPreset(n);
+                            path = [];
+                        }
+                    }
+                    if(word.endsWith("JOHNBUTLERGAMES")) {
+                        word = "";
+                        loadPreset(10);
+                        path = [];
+                    }
+                }
+                drawPath();
+                drawBlocks();
+                drawStartAndEnd();
+                if(pathfinding) {
+                    drawPathfinding();
+                }
+                drawInstructions();
+                if(Keys.down[73]) instructions = !instructions;
+                if(Keys.down[65]) {
+                    pathfinderSpeed++;
+                }
+                if(Keys.down[68]) {
+                    pathfinderSpeed--;
+                }
+                pathfinderSpeed = Math.max(Math.min(pathfinderSpeed,4),0);
+                pathfinderTickSpeed = speeds[pathfinderSpeed].speed;
+                t++;
+            }
+            function drawInstructions() {
+                if(!instructions) return;
+                ctx.fillStyle = "rgba(230,230,230,0.8)";
+                ctx.fillRect(0,0,450,1000);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 50px Arial";
+                ctx.fillText("- Pathfinder -",225,70);
+                ctx.font = "bold 35px Arial";
+                ctx.fillText("Mouse: Place Blocks",225,175);
+                ctx.fillText("Mouse+X: Delete Blocks",225,225);
+                ctx.fillRect(50,120,350,5);
+                ctx.fillText("S: Move Start",225,325);
+                ctx.fillText("F: Move Finish",225,375);
+                ctx.fillRect(70,275,310,3);
+                ctx.fillText("C: Clear",225,475);
+                ctx.fillText("0-9: Presets",225,525);
+                ctx.fillRect(70,425,310,3);
+                ctx.fillText("Space: Pathfind",225,625);
+                ctx.fillText("A/D: Change Speed",225,675);
+                ctx.fillText("Speed: "+speeds[pathfinderSpeed].word,225,725);
+                ctx.fillRect(70,575,310,3);
+                ctx.fillText("I: Toggle Instructions",225,825);
+                ctx.fillRect(70,775,310,3);
+                ctx.fillText("By John Butler",225,950);
+            }
+            function drawStartAndEnd() {
+                ctx.save();
+                ctx.fillStyle = "lime";
+                ctx.translate(start.x*50+25,start.y*50+25);
+                ctx.fillRect(-25,-25,50,50);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 30px Arial";
+                ctx.fillText("S",0,0);
+                ctx.restore();
+
+                ctx.save();
+                ctx.fillStyle = "red";
+                ctx.translate(end.x*50+25,end.y*50+25);
+                ctx.fillRect(-25,-25,50,50);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 30px Arial";
+                ctx.fillText("F",0,0);
+                ctx.restore();
+            }
+            function drawBlocks() {
+                for(var o of blocks) {
+                    ctx.fillStyle = "black";
+                    if(o.color) ctx.fillStyle = o.color;
+                    if(o.animation==1) {
+                        ctx.fillRect(o.x*50,o.y*50,50,50);
+                    } else {
+                        var a = easeInOut(o.animation);
+                        ctx.save();
+                        ctx.translate(o.x*50+25,o.y*50+25);
+                        ctx.scale(a,a);
+                        ctx.fillRect(-25,-25,50,50);
+                        ctx.restore();
+                    }
+                }
+            }
+            function updateStartAndEnd() {
+                if(Keys.keys[83]) {
+                    var x = Math.max(0,Math.floor(Mouse.x/50));
+                    var y = Math.max(0,Math.floor(Mouse.y/50));
+                    if(x!=end.x||y!=end.y) {
+                        start.x = x;
+                        start.y = y;
+                        path = [];
+                    }
+                }
+                if(Keys.keys[70]) {
+                    var x = Math.max(0,Math.floor(Mouse.x/50));
+                    var y = Math.max(0,Math.floor(Mouse.y/50));
+                    if(x!=start.x||y!=start.y) {
+                        end.x = x;
+                        end.y = y;
+                        path = [];
+                    }
+                }
+            }
+            function updateBlocks() {
+                for(var o of blocks) {
+                    if(o.x==start.x&&o.y==start.y) o.delete = true;
+                    if(o.x==end.x&&o.y==end.y) o.delete = true;
+                    if(o.toDelete) {
+                        if(o.animation>0) {
+                            o.animation -= 0.1;
+                            if(o.animation<=0) {
+                                o.animation = 0;
+                                o.delete = true;
+                            }
+                        }
+                    } else {
+                        if(o.animation<1) {
+                            o.animation += 0.1;
+                            o.animation = Math.min(o.animation,1);
+                        }
+                    }
+                }
+
+                this.blocks = this.blocks.filter(e=>!e.delete);
+
+                if(Mouse.down) {
+                    var line = {x1:lastMouse.x,y1:lastMouse.y,x2:Mouse.x,y2:Mouse.y};
+                    var points = getPointsInLine(line);
+                    for(var point of points) {
+                        if(Keys.keys[88]) {
+                            remove(point);
+                        } else {
+                            add(point);
+                        }
+                    }
+                }
+                lastMouse.x = Mouse.x;
+                lastMouse.y = Mouse.y;
+                if(Keys.keys[67]) {
+                    for(var o of blocks) {
+                        o.toDelete = true;
+                    }
+                }
+            }
+
+            function getPointsInLine(line) {
+                var length = distTo(line.x1,line.y1,line.x2,line.y2);
+                length = Math.max(length,50);
+                var dir = dirTo(line.x1,line.y1,line.x2,line.y2);
+                var points = [];
+                for(var dist=0;dist<length;dist+=50) {
+                    var point = {x:line.x1,y:line.y1};
+                    var move = distToMove(dist,dir);
+                    point.x += move.x;
+                    point.y += move.y;
+                    points.push({x:Math.floor(point.x/50),y:Math.floor(point.y/50)});
+                }
+                return points;
+            }
+
+            function add(cors) {
+                if(cors.x==start.x&&cors.y==start.y) return;
+                if(cors.x==end.x&&cors.y==end.y) return;
+                var inSpace = blocks.filter(e=>e.x==cors.x&&e.y==cors.y);
+                if(inSpace.length==0) {
+                    var o = {};
+                    o.x = cors.x;
+                    o.y = cors.y;
+                    o.animation = 0;
+                    blocks.push(o);
+                } else {
+                    var o = inSpace[0];
+                    if(o.toDelete) o.toDelete = false;
+                }
+            }
+
+            function remove(cors) {
+                var inSpace = blocks.filter(e=>e.x==cors.x&&e.y==cors.y);
+                if(inSpace.length>0) {
+                    var o = inSpace[0];
+                    o.toDelete = true;
+                }
+            }
+
+            function drawPath() {
+                for(var node of path) {
+                    if(blocks.filter(e=>e.x==node.x&&e.y==node.y).length>0) {
+                        path = [];
+                        return;
+                    }
+                    ctx.fillStyle = "rgba(100,0,0,0.1)";
+                    ctx.save();
+                    ctx.translate(node.x*50+25,node.y*50+25);
+                    ctx.rotate(node.stemDir*Math.PI/180);
+                    ctx.fillRect(-20,-20,40,50);
+                    ctx.restore();
+                }
+            }
+
+            function drawPathfinding() {
+                for(var node of deadNodes) {
+                    node.animation += 1/pathfinderTickSpeed;
+                    if(node.animation>=1) node.animation = 1;
+                    var a = node.animation;
+                    ctx.fillStyle = "rgba(0,255,0,0.2)";
+                    ctx.save();
+                    ctx.translate(node.x*50+25,node.y*50+25);
+                    ctx.rotate(node.stemDir*Math.PI/180);
+                    ctx.beginPath();
+                    ctx.rect(-20,-20+50*(1-a),40,50*a);
+                    ctx.clip();
+                    ctx.fillRect(-20,-20,40,50);
+                    ctx.restore();
+                }
+                for(var n=0;n<pathNodes.length;n++) {
+                    var node = pathNodes[n];
+                    if(node.x==end.x&&node.y==end.y) continue;
+                    var stemDir = node.stemDir;
+                    if(n>0) {
+                        var nextNode = pathNodes[n-1];
+                        stemDir = nextNode.stemDir;
+                    }
+                    node.animation += 1/pathfinderTickSpeed;
+                    if(node.animation>=1) node.animation = 1;
+                    var a = node.animation;
+                    ctx.fillStyle = "rgb(255,0,0)";
+                    ctx.save();
+                    ctx.translate(node.x*50+25,node.y*50+25);
+                    ctx.rotate((stemDir+180)*Math.PI/180);
+                    ctx.beginPath();
+                    ctx.rect(-20,-20+50*(1-a),40,50*a);
+                    ctx.clip();
+                    ctx.fillRect(-20,-20,40,50);
+                    ctx.restore();
+                }
+            }
+
+            function tickPathfinder() {
+                var nodesToAdd = [];
+                if(concludingPathfinding) {
+                    var lastPathNode = pathNodes[pathNodes.length-1];
+                    if(distTo(lastPathNode.x,lastPathNode.y,start.x,start.y)<=1) {
+                        path = pathNodes;
+                        pathfinding = false;
+                        concludingPathfinding = false;
+                        deadNodes = [];
+                        liveNodes = [];
+                        pathNodes = [];
+                        return;
+                    }
+                    var move = distToMove(1,lastPathNode.stemDir+180);
+                    var newPathNode = {};
+                    newPathNode.animation = 0;
+                    newPathNode.x = lastPathNode.x+Math.round(move.x);
+                    newPathNode.y = lastPathNode.y+Math.round(move.y);
+                    var node = deadNodes.filter(e=>e.x==newPathNode.x&&e.y==newPathNode.y)[0];
+                    newPathNode.stemDir = node.stemDir;
+                    pathNodes.push(newPathNode);
+                } else {
+                    if(liveNodes.length==0) {
+                        pathfinding = false;
+                        deadNodes = [];
+                        return;
+                    }
+                    for(var node of liveNodes) {
+                        if(node.x==end.x&&node.y==end.y) {
+                            concludingPathfinding = true;
+                            pathNodes.push({x:node.x,y:node.y,stemDir:node.stemDir,animation:0});
+                            break;
+                        }
+                        if(canAdd(node.x-1,node.y)) {
+                            nodesToAdd.push({x:node.x-1,y:node.y,stemDir:270});
+                        }
+                        if(canAdd(node.x+1,node.y)) {
+                            nodesToAdd.push({x:node.x+1,y:node.y,stemDir:90});
+                        }
+                        if(canAdd(node.x,node.y-1)) {
+                            nodesToAdd.push({x:node.x,y:node.y-1,stemDir:0});
+                        }
+                        if(canAdd(node.x,node.y+1)) {
+                            nodesToAdd.push({x:node.x,y:node.y+1,stemDir:180});
+                        }
+                    }
+                    liveNodes = liveNodes.filter(e=>e.x!=end.x||e.y!=end.y);
+                    deadNodes = deadNodes.concat(liveNodes);
+                    liveNodes = [];
+                    for(var node of nodesToAdd) {
+                        node.animation = 0;
+                        if(canAdd(node.x,node.y)) {
+                            liveNodes.push(node);
+                        }
+                    }
+                }
+            }
+
+            function startPathfinder() {
+                path = [];
+                pathfinding = true;
+                if(canAdd(start.x-1,start.y)) {
+                    liveNodes.push({x:start.x-1,y:start.y,stemDir:270,animation:0});
+                }
+                if(canAdd(start.x+1,start.y)) {
+                    liveNodes.push({x:start.x+1,y:start.y,stemDir:90,animation:0});
+                }
+                if(canAdd(start.x,start.y-1)) {
+                    liveNodes.push({x:start.x,y:start.y-1,stemDir:0,animation:0});
+                }
+                if(canAdd(start.x,start.y+1)) {
+                    liveNodes.push({x:start.x,y:start.y+1,stemDir:180,animation:0});
+                }
+            }
+
+            function canAdd(x,y) {
+                if(x<0) return false;
+                if(y<0) return false;
+                if(x>=40) return false;
+                if(y>=20) return false;
+                if(x==start.x&&y==start.y) return false;
+                if(deadNodes.filter(e=>e.x==x&&e.y==y).length>0) return false;
+                if(liveNodes.filter(e=>e.x==x&&e.y==y).length>0) return false;
+                if(blocks.filter(e=>e.x==x&&e.y==y).length>0) return false;
+                return true;
+            }
+
+            function loadPreset(n) {
+                var preset = JSON.parse(JSON.stringify(presets[n]));
+                blocks = preset.blocks;
+                for(var o of blocks) {
+                    o.animation = 1;
+                }
+                start = preset.start;
+                end = preset.end;
+            }
+
+            var deadNodes = [];
+            var liveNodes = [];
+            var pathNodes = [];
+            var pathfinding = false;
+            var concludingPathfinding = false;
+            var path = [];
+            var blocks = [];
+            var start = {x:0,y:0};
+            var end = {x:0,y:0};
+            var lastMouse = {x:0,y:0};
+            var lineSize = 1;
+            var t = 0;
+            var instructions = true;
+            var pathfinderTickSpeed = 5;
+            var pathfinderSpeed = 2;
+            var speeds = [
+                {word:"Super Fast",speed:1},
+                {word:"Fast",speed:3},
+                {word:"Normal",speed:5},
+                {word:"Slow",speed:10},
+                {word:"Super Slow",speed:20}
+            ];
+
+            loadPreset(0);
+        </script>
+    </body>
+</html>

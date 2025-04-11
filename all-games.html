@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Games A-Z</title>
+    <meta charset="utf-8">
+    <meta name="description" content="All games A-Z on johnbutlergames.">
+    <meta name="keywords" content="john, butler, games, johnbutlergames, a-z, all games, alphabetic">
+    <meta name="author" content="John Butler">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <link rel="stylesheet" href="styles.css">
+    <script src="game-data.json"></script>
+    <script src="scripts.js"></script>
+    <script src="updates.json"></script>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EXRQS6M7G7"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-EXRQS6M7G7');
+</script>
+
+<body>
+    <div class="section" id="left-section"></div>
+    <div class="section" id="right-section"></div>
+    <div class="section" id="center-section">
+        <h2 class="title" id="all-games-title">
+            <font>All Games </font>
+            <select id="sort-by-select">
+                <option>A-Z</option>
+                <option>Z-A</option>
+                <option>New</option>
+                <option>Old</option>
+                <option>Popular</option>
+                <option>Unpopular</option>
+            </select>
+            <font>:</font>
+        </h2>
+        <br>
+        <div id="games-a-to-z">
+        </div>
+    </div>
+</body>
+
+</html>

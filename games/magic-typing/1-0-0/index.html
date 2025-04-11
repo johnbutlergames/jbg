@@ -1,0 +1,27 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Magic Typing</title>
+    </head>
+    <body>
+        <style>
+            body {
+                margin: 1px;
+            }
+            textarea {
+                width: 98vw;
+                height: 98vh;
+                padding: 0px;
+            }
+        </style>
+        <textarea id="text" placeholder="Type something..."></textarea>
+        <script>
+            var t = "Why aren't the words that I am typing coming out correct? I wonder why... It could be that my keyboard has been rewired, it could be that I am actually typing this on purpose, or it could be that my computer has been invaded by a virus that scrambles my keys. To fix these problems, I could get a new keyboard, have someone else type on this, and buy a new computer. Also, I should share this with a friend. ";
+            var e = document.getElementById('text');
+            e.addEventListener('keypress',function(event) {
+                event.preventDefault();
+                e.value += t[e.value.length-Math.floor(e.value.length/t.length,0)*t.length];
+            });
+        </script>
+    </body>
+</html>

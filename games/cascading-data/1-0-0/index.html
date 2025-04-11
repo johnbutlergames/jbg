@@ -1,0 +1,56 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            var c = document.createElement('center');
+            var canvas = document.createElement('canvas');
+            document.body.appendChild(c);
+            c.appendChild(canvas);
+            canvas.width = 500;
+            canvas.height = 500;
+            canvas.style.border = '1px solid black';
+            var _canvas = canvas.getContext('2d');
+            _canvas.fillStyle = 'black';
+            _canvas.fillRect(0,0,500,500);
+            function r() {
+                var n;
+                if(Math.random()>0.5) {
+                    n = 161+Math.random()*94;
+                } else {
+                    n = 33+Math.random()*93;
+                }
+                return String.fromCharCode(Math.floor(n));
+            }
+            function update() {
+                _canvas.fillStyle = 'rgba(0,0,0,0.02)';
+                _canvas.fillRect(0,0,500,500);
+                if(t%1==0) {
+                    data.push([Math.floor(Math.random()*50),-1,Math.floor(Math.random()*5),r()]);
+                }
+                var n = 0;
+                while(n < data.length) {
+                    data[n][2]--;
+                    if(data[n][2]==0) {
+                        data[n][2] = 5;
+                        data[n][3] = r();
+                        data[n][1]++;
+                    }
+                    _canvas.fillStyle = 'lime';
+                    _canvas.font = '10px Times New Roman';
+                    _canvas.textAlign = 'center';
+                    _canvas.textBaseline = 'middle';
+                    _canvas.fillText(data[n][3],data[n][0]*10+5,data[n][1]*10+5);
+                    if(data[n][1]>50) {
+                        data.splice(n,1);
+                    } else {
+                        n++;
+                    }
+                }
+                t++;
+            }
+            var t = 0;
+            var data = [];
+            window.setInterval(update,20);
+        </script>
+    </body>
+</html>

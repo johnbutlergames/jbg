@@ -1,0 +1,589 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Chess";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {
+            "piecesSpritesheet": "images/pieces-spritesheet.png"
+        };
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            board.draw();
+            board.updateSelection();
+        }
+
+        class Board {
+            constructor() {
+                this.theme = {
+                    light: "rgb(255,240,240)",
+                    dark: "rgb(220,200,200)",
+                    hoverLight: "rgb(255,230,230)",
+                    hoverDark: "rgb(220,190,190)",
+                    selectLight: "rgb(200,150,150)",
+                    selectDark: "rgb(220,150,150)"
+                }
+                this.turn = "white";
+                this.x = 100;
+                this.y = 100;
+                this.w = 800;
+                this.h = 800;
+                this.flipped = false;
+                this.selected = false;
+                this.selectedPiece = false;
+                this.selectedPieceMoveOptions = false;
+                this.state = [];
+                this.stateHistory = [];
+                this.moveMatrices = {
+                    white: this.getMoveMatrixForColor("white"),
+                    black: this.getMoveMatrixForColor("black")
+                }
+                this.setMatrixState();
+                this.spritesheet = images.piecesSpritesheet;
+            }
+            get mouse() {
+                return {
+                    x: (Mouse.x - this.x) / this.w * 8,
+                    y: (Mouse.y - this.y) / this.h * 8
+                }
+            }
+            updateSelection() {
+                var x = Math.floor(this.mouse.x);
+                var y = Math.floor(this.mouse.y);
+                this.state.forEach(e => e.selected = false);
+                if (Mouse.downStart) {
+                    if (x == this.selected.x && y == this.selected.y) {
+                        this.selected = false;
+                        this.selectedPiece = false;
+                        this.selectedPieceMoveOptions = false;
+                    } else {
+                        if (this.selectedPiece && this.selectedPieceMoveOptions[7 - y][x] && this.selectedPiece.color == this.turn) {
+                            this.chooseMoveOption(x, y);
+                        } else {
+                            var o = this.state.find(e => e.x === x && e.y === (7 - y));
+                            if (o) {
+                                this.selected = { x: x, y: y };
+                                this.selectedPiece = o;
+                                var pieceMoves = this.getMoveMatrixForPiece(o);
+                                this.selectedPieceMoveOptions = this.combineMoveArrays(pieceMoves.moves, pieceMoves.attacks);
+                                o.selected = true;
+                            } else {
+                                this.selected = false;
+                                this.selectedPiece = false;
+                                this.selectedPieceMoveOptions = false;
+                            }
+                        }
+                    }
+                }
+                if (this.selectedPiece) {
+                    var o = this.selectedPiece;
+                    o.selected = true;
+                    if (!Mouse.down) {
+                        if (o.drawX != o.x || o.drawY != o.y && this.coordinateOnBoard(x, 7 - y)) {
+                            if (this.selectedPieceMoveOptions[7 - y][x] && o.color === this.turn) {
+                                this.chooseMoveOption(x, y);
+                            }
+                        }
+                        o.drawX = o.x;
+                        o.drawY = o.y;
+                    } else {
+                        o.drawX = this.mouse.x - 0.5;
+                        o.drawY = (7 - this.mouse.y) + 0.5;
+                    }
+                }
+                this.state = this.state.sort((a, b) => (a.selected ? 1 : 0) - (b.selected ? 1 : 0));
+            }
+            combineMoveArrays(...arrays) {
+                var arr = this.emptyMoveArray();
+                for (var o of arrays) {
+                    for (var x = 0; x <= 7; x++) {
+                        for (var y = 0; y <= 7; y++) {
+                            arr[y][x] = arr[y][x] || o[y][x];
+                        }
+                    }
+                }
+                return arr;
+            }
+            emptyMoveArray() {
+                return [
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0]
+                ];
+            }
+            setMatrixState() {
+                this.matrixState = this.emptyMoveArray();
+                for (var o of this.state) {
+                    this.matrixState[o.y][o.x] = o;
+                }
+            }
+            setDefaultState() {
+                this.state = [
+                    { x: 0, y: 7, color: "black", piece: "rook" },
+                    { x: 1, y: 7, color: "black", piece: "knight" },
+                    { x: 2, y: 7, color: "black", piece: "bishop" },
+                    { x: 3, y: 7, color: "black", piece: "queen" },
+                    { x: 4, y: 7, color: "black", piece: "king" },
+                    { x: 5, y: 7, color: "black", piece: "bishop" },
+                    { x: 6, y: 7, color: "black", piece: "knight" },
+                    { x: 7, y: 7, color: "black", piece: "rook" },
+                    { x: 0, y: 6, color: "black", piece: "pawn" },
+                    { x: 1, y: 6, color: "black", piece: "pawn" },
+                    { x: 2, y: 6, color: "black", piece: "pawn" },
+                    { x: 3, y: 6, color: "black", piece: "pawn" },
+                    { x: 4, y: 6, color: "black", piece: "pawn" },
+                    { x: 5, y: 6, color: "black", piece: "pawn" },
+                    { x: 6, y: 6, color: "black", piece: "pawn" },
+                    { x: 7, y: 6, color: "black", piece: "pawn" },
+                    { x: 0, y: 0, color: "white", piece: "rook" },
+                    { x: 1, y: 0, color: "white", piece: "knight" },
+                    { x: 2, y: 0, color: "white", piece: "bishop" },
+                    { x: 3, y: 0, color: "white", piece: "queen" },
+                    { x: 4, y: 0, color: "white", piece: "king" },
+                    { x: 5, y: 0, color: "white", piece: "bishop" },
+                    { x: 6, y: 0, color: "white", piece: "knight" },
+                    { x: 7, y: 0, color: "white", piece: "rook" },
+                    { x: 0, y: 1, color: "white", piece: "pawn" },
+                    { x: 1, y: 1, color: "white", piece: "pawn" },
+                    { x: 2, y: 1, color: "white", piece: "pawn" },
+                    { x: 3, y: 1, color: "white", piece: "pawn" },
+                    { x: 4, y: 1, color: "white", piece: "pawn" },
+                    { x: 5, y: 1, color: "white", piece: "pawn" },
+                    { x: 6, y: 1, color: "white", piece: "pawn" },
+                    { x: 7, y: 1, color: "white", piece: "pawn" }
+                ].map(e => new Piece(e));
+                this.setMatrixState();
+            }
+            alignViewport() {
+                ctx.translate(this.x, this.y);
+                if (this.flipped) {
+                    ctx.translate(this.w / 2, this.h / 2);
+                    ctx.rotate(Math.PI);
+                    ctx.translate(-this.w / 2, -this.h / 2);
+                }
+                var wScale = this.w / 800;
+                var hScale = this.h / 800;
+                ctx.scale(wScale, hScale);
+            }
+            drawBoardBackground() {
+                ctx.fillStyle = this.theme.light;
+                ctx.fillRect(0, 0, 800, 800);
+                var mouseX = Math.floor(this.mouse.x);
+                var mouseY = Math.floor(this.mouse.y);
+                for (var x = 0; x <= 7; x++) {
+                    for (var y = 0; y <= 7; y++) {
+                        if ((x + y) % 2 === 0) {
+                            if (mouseX == x && mouseY == y) {
+                                ctx.fillStyle = this.theme.hoverLight;
+                                ctx.fillRect(x * 100, y * 100, 100, 100);
+                            }
+                        } else {
+                            ctx.fillStyle = this.theme.dark;
+                            if (mouseX == x && mouseY == y) {
+                                ctx.fillStyle = this.theme.hoverDark;
+                            }
+                            ctx.fillRect(x * 100, y * 100, 100, 100);
+                        }
+                    }
+                }
+                if (this.selected) {
+                    ctx.fillStyle = this.theme.selectLight;
+                    if ((this.selected.x + this.selected.y) % 2 === 0) {
+                        ctx.fillStyle = this.theme.selectDark;
+                    }
+                    ctx.fillRect(this.selected.x * 100, this.selected.y * 100, 100, 100);
+                }
+                var { moves, attacks, defends } = this.getMoveMatrixForColor(this.turn);
+                for (var x = 0; x <= 7; x++) {
+                    for (var y = 0; y <= 7; y++) {
+                        if (moves[7 - y][x]) {
+                            ctx.fillStyle = "rgba(0,255,0,0.5)";
+                            ctx.fillRect(x * 100, y * 100, 100, 100);
+                        }
+                        if (attacks[7 - y][x]) {
+                            ctx.fillStyle = "rgba(255,0,0,0.5)";
+                            ctx.fillRect(x * 100, y * 100, 100, 100);
+                        }
+                        if (defends[7 - y][x]) {
+                            ctx.fillStyle = "rgba(0,0,255,0.5)";
+                            ctx.fillRect(x * 100, y * 100, 100, 100);
+                        }
+                    }
+                }
+            }
+            drawPieces() {
+                for (var o of this.state) {
+                    ctx.save();
+                    if (this.flipped) {
+                        ctx.translate(o.drawX * 100, (7 - o.drawY) * 100);
+                        ctx.translate(50, 50);
+                        ctx.rotate(-Math.PI);
+                        ctx.translate(-50, -50);
+                        ctx.translate(-o.drawX * 100, -(7 - o.drawY) * 100);
+                    }
+
+                    o.draw();
+
+                    ctx.restore();
+                }
+            }
+            drawPieceMoveOptions() {
+                if (!this.selectedPiece || !this.selectedPieceMoveOptions) return;
+                if (this.selectedPiece.color != this.turn) return;
+                for (var x = 0; x <= 7; x++) {
+                    for (var y = 0; y <= 7; y++) {
+                        if (!this.selectedPieceMoveOptions[y][x]) continue;
+                        ctx.save();
+                        ctx.translate(x * 100, (7 - y) * 100);
+                        ctx.translate(50, 50);
+
+                        ctx.fillStyle = "rgba(0,0,0,0.13)";
+                        if (this.matrixState[y][x]) {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 50, 0, 2 * Math.PI);
+                            ctx.clip();
+                            ctx.arc(0, 0, 42, 0, 2 * Math.PI);
+                            ctx.clip("evenodd");
+
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 50, 0, 2 * Math.PI);
+                            ctx.fill();
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 15, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+
+                        ctx.restore();
+                    }
+                }
+            }
+            draw() {
+                ctx.save();
+                this.alignViewport();
+
+                this.drawBoardBackground();
+                this.drawPieceMoveOptions();
+                this.drawPieces();
+
+                ctx.restore();
+            }
+            getMovesForPiece(o) {
+                var { moves, attacks, defends } = this.getMoveMatrixForPiece(o);
+                var movesArr = [];
+                for (var x = 0; x <= 7; x++) {
+                    for (var y = 0; y <= 7; y++) {
+                        if (moves[y][x]) {
+                            var move = new Move();
+                            move.x1 = o.x;
+                            move.y1 = o.y;
+                            move.x2 = x;
+                            move.y2 = y;
+                            move.piece = o.piece;
+                            move.color = o.color;
+                            move.moveType = "move";
+                            movesArr.push(move);
+                        }
+                        if (attacks[y][x]) {
+                            var move = new Move();
+                            move.x1 = o.x;
+                            move.y1 = o.y;
+                            move.x2 = x;
+                            move.y2 = y;
+                            move.piece = o.piece;
+                            move.color = o.color;
+                            move.moveType = "attack";
+                            movesArr.push(move);
+                        }
+                        if (defends[y][x]) {
+                            var move = new Move();
+                            move.x1 = o.x;
+                            move.y1 = o.y;
+                            move.x2 = x;
+                            move.y2 = y;
+                            move.piece = o.piece;
+                            move.color = o.color;
+                            move.moveType = "defend";
+                            movesArr.push(move);
+                        }
+                    }
+                }
+                return movesArr;
+            }
+            getMoveMatrixForPiece(o) {
+                var moves = this.emptyMoveArray();
+                var attacks = this.emptyMoveArray();
+                var defends = this.emptyMoveArray();
+                if (o.piece == "pawn") {
+                    var forwardMoves = [];
+                    var captureMoves = [];
+                    if (o.color == "white") {
+                        forwardMoves.push({ x: o.x, y: o.y + 1 });
+                        if (o.y === 1) forwardMoves.push({ x: o.x, y: o.y + 2 });
+                        captureMoves.push({ x: o.x - 1, y: o.y + 1 });
+                        captureMoves.push({ x: o.x + 1, y: o.y + 1 });
+                    } else {
+                        forwardMoves.push({ x: o.x, y: o.y - 1 });
+                        if (o.y === 6) forwardMoves.push({ x: o.x, y: o.y - 2 });
+                        captureMoves.push({ x: o.x - 1, y: o.y - 1 });
+                        captureMoves.push({ x: o.x + 1, y: o.y - 1 });
+                    }
+                    forwardMoves = forwardMoves.filter(e => this.coordinateOnBoard(e.x, e.y) && !this.matrixState[e.y][e.x]);
+                    captureMoves = captureMoves.filter(e => this.coordinateOnBoard(e.x, e.y) && this.matrixState[e.y][e.x]);
+                    forwardMoves.forEach(e => moves[e.y][e.x] = 1);
+                    captureMoves.forEach(e => {
+                        if (this.matrixState[e.y][e.x].color == o.color) {
+                            defends[e.y][e.x] = 1;
+                        } else {
+                            attacks[e.y][e.x] = 1;
+                        }
+                    });
+                }
+                if (o.piece == "knight") {
+                    [
+                        { x: o.x - 1, y: o.y - 2 },
+                        { x: o.x + 1, y: o.y - 2 },
+                        { x: o.x + 2, y: o.y - 1 },
+                        { x: o.x + 2, y: o.y + 1 },
+                        { x: o.x + 1, y: o.y + 2 },
+                        { x: o.x - 1, y: o.y + 2 },
+                        { x: o.x - 2, y: o.y + 1 },
+                        { x: o.x - 2, y: o.y - 1 }
+                    ].filter(
+                        e => this.coordinateOnBoard(e.x, e.y)
+                    ).forEach(e => {
+                        if (this.matrixState[e.y][e.x]) {
+                            if (this.matrixState[e.y][e.x].color == o.color) {
+                                defends[e.y][e.x] = 1;
+                            } else {
+                                attacks[e.y][e.x] = 1;
+                            }
+                        } else {
+                            moves[e.y][e.x] = 1;
+                        }
+                    });
+                }
+                if (o.piece == "rook" || o.piece == "queen") {
+                    [
+                        { x: o.x, y: o.y, xmove: 1, ymove: 0 },
+                        { x: o.x, y: o.y, xmove: -1, ymove: 0 },
+                        { x: o.x, y: o.y, xmove: 0, ymove: 1 },
+                        { x: o.x, y: o.y, xmove: 0, ymove: -1 }
+                    ].forEach(e => {
+                        var lineMoves = this.movesForLine(o.color, e.x, e.y, e.xmove, e.ymove);
+                        var pieceMoves = lineMoves.moves;
+                        var pieceDefends = lineMoves.defends;
+                        var pieceAttacks = lineMoves.attacks;
+                        pieceMoves.forEach(f => moves[f.y][f.x] = 1);
+                        pieceDefends.forEach(f => defends[f.y][f.x] = 1);
+                        pieceAttacks.forEach(f => attacks[f.y][f.x] = 1);
+                    })
+                }
+                if (o.piece == "bishop" || o.piece == "queen") {
+                    [
+                        { x: o.x, y: o.y, xmove: -1, ymove: -1 },
+                        { x: o.x, y: o.y, xmove: 1, ymove: -1 },
+                        { x: o.x, y: o.y, xmove: 1, ymove: 1 },
+                        { x: o.x, y: o.y, xmove: -1, ymove: 1 }
+                    ].forEach(e => {
+                        var lineMoves = this.movesForLine(o.color, e.x, e.y, e.xmove, e.ymove);
+                        var pieceMoves = lineMoves.moves;
+                        var pieceDefends = lineMoves.defends;
+                        var pieceAttacks = lineMoves.attacks;
+                        pieceMoves.forEach(f => moves[f.y][f.x] = 1);
+                        pieceDefends.forEach(f => defends[f.y][f.x] = 1);
+                        pieceAttacks.forEach(f => attacks[f.y][f.x] = 1);
+                    })
+                }
+                if (o.piece == "king") {
+                    [
+                        { x: o.x - 1, y: o.y - 1 },
+                        { x: o.x, y: o.y - 1 },
+                        { x: o.x + 1, y: o.y - 1 },
+                        { x: o.x + 1, y: o.y },
+                        { x: o.x + 1, y: o.y + 1 },
+                        { x: o.x, y: o.y + 1 },
+                        { x: o.x - 1, y: o.y + 1 },
+                        { x: o.x - 1, y: o.y },
+                    ].filter(
+                        e => this.coordinateOnBoard(e.x, e.y)
+                    ).forEach(e => {
+                        if (this.matrixState[e.y][e.x]) {
+                            if (this.matrixState[e.y][e.x].color == o.color) {
+                                defends[e.y][e.x] = 1;
+                            } else {
+                                attacks[e.y][e.x] = 1;
+                            }
+                        } else {
+                            moves[e.y][e.x] = 1;
+                        }
+                    });
+                }
+                return { moves: moves, defends: defends, attacks: attacks };
+            }
+            movesForLine(color, x, y, xmove, ymove) {
+                var moves = [];
+                var attacks = [];
+                var defends = [];
+                x += xmove;
+                y += ymove;
+                while (this.coordinateOnBoard(x, y)) {
+                    if (!this.matrixState[y][x]) {
+                        moves.push({ x: x, y: y });
+                        x += xmove;
+                        y += ymove;
+                        continue;
+                    }
+                    var o = this.matrixState[y][x];
+                    if (o.color == color) {
+                        defends.push({ x: x, y: y });
+                    } else {
+                        attacks.push({ x: x, y: y });
+                    }
+                    break;
+                }
+                return { moves: moves, attacks: attacks, defends: defends };
+            }
+            coordinateOnBoard(x, y) {
+                return x >= 0 && x <= 7 && y >= 0 && y <= 7;
+            }
+            chooseMoveOption(x, y) {
+                var o = this.selectedPiece;
+                var move = new Move();
+                move.x1 = o.x;
+                move.y1 = o.y;
+                move.x2 = x;
+                move.y2 = 7 - y;
+                move.color = o.color;
+                move.piece = o.piece;
+                this.makeMove(move);
+            }
+            addToHistory() {
+                this.stateHistory.push({
+                    state: this.state.map(e => new Piece(e)),
+                    turn: this.turn
+                });
+            }
+            makeMove(move) {
+                var o = this.state.find(e => e.x === move.x1 && e.y === move.y1);
+                if (!o) return;
+                this.state.filter(e => e.color == this.turn).forEach(e => delete e.enPassantEligible);
+                this.addToHistory();
+
+                this.state = this.state.filter(e => e.x != move.x2 || e.y != move.y2);
+                o.x = move.x2;
+                o.y = move.y2;
+                o.drawX = move.x2;
+                o.drawY = move.y2;
+                if (o.piece == "pawn" && Math.abs(move.y2 - move.y1) == 2) o.enPassantEligible = true;
+                this.setMatrixState();
+                this.moveMatrices = {
+                    white: this.getMoveMatrixForColor("white"),
+                    black: this.getMoveMatrixForColor("black")
+                }
+
+                this.nextTurn();
+            }
+            nextTurn() {
+                this.turn = this.turn == "white" ? "black" : "white";
+                this.selected = false;
+                this.selectedPiece = false;
+                this.selectedPieceMoveOptions = false;
+            }
+            getMovesForColor(color) {
+                return this.state.filter(e => e.color == color).reduce((a, b) => [...a, ...this.getMovesForPiece(b)], []);
+            }
+            getMoveMatrixForColor(color) {
+                var moves = this.emptyMoveArray();
+                var defends = this.emptyMoveArray();
+                var attacks = this.emptyMoveArray();
+                this.state.filter(e => e.color == color).forEach(e => {
+                    var pieceMoves = this.getMoveMatrixForPiece(e);
+                    for (var x = 0; x <= 7; x++) {
+                        for (var y = 0; y <= 7; y++) {
+                            moves[y][x] = moves[y][x] || pieceMoves.moves[y][x];
+                            defends[y][x] = defends[y][x] || pieceMoves.defends[y][x];
+                            attacks[y][x] = attacks[y][x] || pieceMoves.attacks[y][x];
+                        }
+                    }
+                });
+                return { moves: moves, defends: defends, attacks: attacks };
+            }
+            isInCheck(color) {
+                var king = this.state.find(e => e.piece == "king" && e.color == color);
+                if (!king) return false;
+                var opposingColor = color == "white" ? "black" : "white";
+                var attacks = this.moveMatrices[opposingColor].attacks;
+                return Boolean(attacks[king.y][king.x]);
+            }
+        }
+
+        class Piece {
+            constructor(data) {
+                this.piece = data?.piece || "king";
+                this.color = data?.color || "white";
+                if (data.enPassantEligible) this.enPassantEligible = true;
+                this.x = data?.x || 0;
+                this.y = data?.y || 0;
+                this.drawX = this.x;
+                this.drawY = this.y;
+                this.spritesheet = images.piecesSpritesheet;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.drawX * 100, (7 - this.drawY) * 100);
+
+                var cut = {};
+                if (this.piece == "king") cut.x = 0;
+                if (this.piece == "queen") cut.x = 1;
+                if (this.piece == "bishop") cut.x = 2;
+                if (this.piece == "knight") cut.x = 3;
+                if (this.piece == "rook") cut.x = 4;
+                if (this.piece == "pawn") cut.x = 5;
+                if (this.color == "white") cut.y = 0;
+                if (this.color == "black") cut.y = 1;
+                cut.w = 1;
+                cut.h = 1;
+
+                cut.x *= 200;
+                cut.y *= 200;
+                cut.w *= 200;
+                cut.h *= 200;
+                ctx.drawImage(this.spritesheet, cut.x, cut.y, 200, 200, 0, 0, 100, 100);
+
+                ctx.restore();
+            }
+        }
+
+        class Move {
+            constructor() {
+                this.x1 = 0;
+                this.y1 = 0;
+                this.x2 = 0;
+                this.y2 = 0;
+                this.piece = "king";
+                this.color = "white";
+                this.moveType = "move";
+            }
+        }
+
+        var board = new Board();
+        board.setDefaultState();
+    </script>
+</body>
+
+</html>

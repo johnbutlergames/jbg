@@ -1,0 +1,1210 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <script src="combineTypes.json"></script>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Battle Blocks';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.addEventListener('mousemove',function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            });
+            canvas.addEventListener('click',function(event) {
+                Mouse.click = true;
+            });
+            canvas.addEventListener('mousedown',function(event) {
+                Mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                Mouse.down = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            });
+            window.addEventListener('keyup',function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            });
+            var loads = 0;
+            var loaded = false;
+            if(imgs.length+audios.length==0) {
+                loaded = true;
+            }
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function s(n) {
+                if(n>0) {
+                    return 1;
+                } else if(n<0) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
+            function blocksColliding(b1,b2) {
+                return r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h);
+            }
+            function blocksCollidingEdge(b1,b2) {
+                return r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h);
+            }
+            function r(n) {
+                return Math.round(n*10000)/10000;
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function updateBlock(block,staticBlocks) {
+                block.x += block.xmove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide!==false&&blocksColliding(block,b)) {
+                        if(block.x+block.w/2<b.x+b.w/2) {
+                            block.x = b.x-block.w;
+                        } else {
+                            block.x = b.x+b.w;
+                        }
+                        block.xmove = 0;
+                    }
+                    n++;
+                }
+                block.y += block.ymove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide!==false&&blocksColliding(block,b)) {
+                        if(block.y+block.h/2<b.y+b.h/2) {
+                            block.y = b.y-block.h;
+                        } else {
+                            block.y = b.y+b.h;
+                        }
+                        block.ymove = 0;
+                    }
+                    n++;
+                }
+            }
+            function roundRect(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x+r,y);
+                ctx.lineTo(x+w-r,y);
+                ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                ctx.lineTo(x+w,y+h-r);
+                ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                ctx.lineTo(x+r,y+h);
+                ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                ctx.lineTo(x,y+r);
+                ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                ctx.closePath();
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(loaded) {
+                    main();
+                } else {
+                    var percent = loads/(imgs.length+audios.length);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'black';
+                    ctx.font = '120px Arial';
+                    ctx.fillText(title.toUpperCase(),500,300);
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,840,820,120);
+                    ctx.fillStyle = 'green';
+                    ctx.fillRect(100,850,800*percent,100);
+                    ctx.fillStyle = 'black';
+                    if(percent===1) {
+                        ctx.fillRect(300,635,400,150);
+                        if(Mouse.inBox(300,635,400,150)) {
+                            if(Mouse.click) {
+                                loaded = true;
+                            }
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                        } else {
+                            ctx.fillStyle = 'white';
+                        }
+                        ctx.fillRect(310,645,380,130);
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Play',500,745);
+                    } else {
+                        ctx.fillText('Loading...',500,750);
+                    }
+                }
+                Mouse.click = false;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=='menu') {
+                    menu.update();
+                } else if(page=='game') {
+                    game.tick();
+                }
+            }
+
+            var menu = {
+                page: 'title screen',
+                switchPageAnimation: 0,
+                switchPage: 'title screen',
+                animations: [0,0,0],
+                update: function() {
+                    if(this.switchPage!==this.page) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=50) {
+                            this.switchPageAnimation = 50;
+                            this.page = this.switchPage;
+                            var n = 0;
+                            while(n < this.animations.length) {
+                                this.animations[n] = 0;
+                                n++;
+                            }
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                    }
+                    var n = 0;
+                    while(n < this.animations.length) {
+                        this.animations[n] = Math.min(Math.max(this.animations[n],-0.1),1);
+                        n++;
+                    }
+                    if(this.page=='title screen') {
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = 'black';
+                        ctx.font = '100px sans-serif';
+                        ctx.fillText('Battle Blocks',500,150);
+
+                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = 'black';
+
+                        if(Mouse.inBox(350,300,300,120)) {
+                            this.animations[0] += 0.05;
+                            if(Mouse.click&&this.switchPageAnimation==0) {
+                                this.switchPage = 'home';
+                            }
+                        } else {
+                            this.animations[0] -= 0.05;
+                        }
+                        roundRect(350,300,300,120,20);
+                        ctx.save();
+                        ctx.clip();
+                        ctx.fillStyle = 'rgb(220,220,220)';
+                        ctx.fillRect(350,300,300*(1-(1-this.animations[0])**2),120);
+                        ctx.restore();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '70px Sans Serif';
+                        ctx.fillText('Play',500,380);
+                        //play button
+
+                        if(Mouse.inBox(350,500,300,120)) {
+                            this.animations[1] += 0.05;
+                            if(Mouse.click&&this.switchPageAnimation==0) {
+                                this.switchPage = 'credits';
+                            }
+                        } else {
+                            this.animations[1] -= 0.05;
+                        }
+                        ctx.fillStyle = 'rgb(220,220,220)';
+                        roundRect(350,500,300,120,20);
+                        ctx.save();
+                        ctx.clip();
+                        ctx.fillRect(350,500,300*(1-(1-this.animations[1])**2),120);
+                        ctx.restore();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '70px Sans Serif';
+                        ctx.fillText('Credits',500,580);
+                        //credits button
+                    } else if(this.page=='credits') {
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = 'black';
+                        ctx.font = '100px sans-serif';
+                        ctx.fillText('Credits:',500,150);
+                        //title
+
+                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = 'black';
+
+                        if(Mouse.inBox(350,850,300,120)) {
+                            this.animations[2] += 0.05;
+                            if(Mouse.click&&this.switchPageAnimation==0) {
+                                this.switchPage = 'title screen';
+                            }
+                        } else {
+                            this.animations[2] -= 0.05;
+                        }
+                        ctx.fillStyle = 'rgb(220,220,220)';
+                        roundRect(350,850,300,120,20);
+                        ctx.save();
+                        ctx.clip();
+                        ctx.fillRect(350,850,300*(1-(1-this.animations[2])**2),120);
+                        ctx.restore();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '70px Sans Serif';
+                        ctx.fillText('Back',500,930);
+                        //back button
+
+                        ctx.font = '70px sans-serif';
+                        ctx.fillText('Game Design: John Butler',500,400);
+                        ctx.fillText('Programming: John Butler',500,300);
+                        //credits
+                    } else if(this.page=='home') {
+
+                    }
+                    ctx.fillStyle = 'black';
+                    if(this.page!=this.switchPage) {
+                        ctx.fillRect((Math.max(40-this.switchPageAnimation,0)*2)**2.1/10,0,1000,1000);
+                    } else {
+                        ctx.fillRect(((50-this.switchPageAnimation)*2)**2/-10,0,1000,1000);
+                    }
+                }
+            }
+
+            var data = {
+                slots: [{cards:[0,1,2,3],reloadReset:100}],
+                cards: ['wall','wall','wall','tower-arrow den'],
+                base: {x:-20,y:-20,w:80,h:80,type:'base',health:200,maxHealth:200,reload:0,reloadReset:40,dir:0,sight:200,turnSpeed:5,bullet:{speed:2,damage:40,size:10}}
+            }
+
+            var waves = [
+                [{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}}],
+                [{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}},{spawnTime:100,enemy:{x:-500,y:-500}}]
+            ];
+
+            var game = {
+                typesToCombine: ['tower'],
+                wave: {
+                    update: function() {
+                        if(this.animation>0) {
+                            this.animation--;
+                        } else {
+                            var n = 0;
+                            while(n < this.current.length) {
+                                var enemy = this.current[n];
+                                enemy.spawnTime--;
+                                if(enemy.spawnTime<=0) {
+                                    var enemyToSpawn = enemy.enemy;
+                                    game.enemies.addEnemy(enemyToSpawn.x,enemyToSpawn.y,enemyToSpawn.type);
+                                    this.current.splice(n,1);
+                                    n--;
+                                }
+                                n++;
+                            }
+                            //spawn enemies
+
+                            if(game.enemies.enemies.length==0&&this.current.length==0) {
+                                this.next();
+                                if(this.wave>waves.length) {
+                                    this.wave = 0;
+                                    this.next();
+                                    //if waves have been completed, restart at wave 1
+                                }
+
+                            }
+                            //next wave
+                        }
+                    },
+                    animation: 200,
+                    wave: 1,
+                    current: [],
+                    next: function() {
+                        game.enemies.enemies = [];
+                        if(waves[this.wave]!==undefined) {
+                            this.current = JSON.parse(JSON.stringify(waves[this.wave]));
+                        }
+                        this.wave++;
+                        this.animation = 200;
+                    }
+                },
+                slots: {
+                    slots: [{reload:100,reloadReset:100,blocks:[]}],
+                    offsets: [0],
+                    placeCors: {x:0,y:0},
+                    using: false,
+                    validPlacement: false,
+                    slotRotate: 0,
+                    update: function() {
+                        if(this.using!==false) {
+                            this.placeCors.x = Math.ceil((Mouse.x+cam.x-500)/40)*40;;
+                            this.placeCors.y = Math.ceil((Mouse.y+cam.y-500)/40)*40;;
+                            //find where blocks are being placed
+
+                            if(Keys.keys[88]) {
+                                this.stopUsing();
+                            }
+                            //if pressing x, nullify placement
+
+                            if(Keys.down[82]) {
+                                this.slotRotate -= 90;
+                                var slot = this.slots[this.using];
+                                var n = 0;
+                                while(n < slot.blocks.length) {
+                                    var block = slot.blocks[n];
+                                    var newCors = rotate(0,0,block.x,block.y,-90);
+                                    block.x = Math.round(newCors[0]);
+                                    block.y = Math.round(newCors[1]);
+                                    n++;
+                                }
+                            }
+                            //rotate slot when r pressed
+                        }
+
+                        if(this.using!==false) {
+                            this.validPlacement = true;
+
+                            var slot = this.slots[this.using];
+                            var blocks = slot.blocks;
+                            var n = 0;
+                            while(n < blocks.length) {
+                                var block = JSON.parse(JSON.stringify(blocks[n]));
+                                block.x = this.placeCors.x+block.x*40;
+                                block.y = this.placeCors.y+block.y*40;
+                                block.w = 20;
+                                block.h = 20;
+                                var n2 = 0;
+                                while(n2 < game.blocks.blocks.length) {
+                                    var block2 = game.blocks.blocks[n2];
+                                    if(blocksColliding(block,block2)) {
+                                        this.validPlacement = false;
+                                        break;
+                                    }
+                                    n2++;
+                                }
+                                n++;
+                            }
+                            //find if valid placement
+
+                            this.offsets[this.using] += 2;
+                            if(!Mouse.down) {
+                                if(this.validPlacement) {
+                                    var slot = this.slots[this.using];
+                                    this.use(slot);
+                                    this.reloadSlot(this.using);
+                                    this.using = false;
+                                } else {
+                                    this.stopUsing();
+                                }
+                            }
+                            //use slot if valid
+                        }
+
+                        var n = 0;
+                        while(n < this.offsets.length) {
+                            this.offsets[n] *= 0.95;
+                            n++;
+                        }
+
+                        var n = 0;
+                        while(n < this.slots.length) {
+                            var slot = this.slots[n];
+                            if(slot.reload>0) {
+                                slot.reload--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.slots.length) {
+                            var slot = this.slots[n];
+                            ctx.fillStyle = 'white';
+                            ctx.strokeStyle = 'black';
+                            ctx.fillRect(n*130+20,20+this.offsets[n],110,110);
+                            ctx.strokeRect(n*130+20,20+this.offsets[n],110,110);
+                            //draw outline
+
+                            if(this.using!==n) {
+                                this.drawSlotBlocks(slot.blocks,n*130+65+slot.offx*20,65+this.offsets[n]+slot.offy*20,20);
+                            }
+                            //draw slot blocks
+
+                            if(slot.reload>0) {
+                                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                                ctx.fillRect(n*130+20,20+this.offsets[n],110,110);
+                                var reload = slot.reload/slot.reloadReset;
+                                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.rect(n*130+20,20+this.offsets[n],110,110);
+                                ctx.clip();
+                                ctx.beginPath();
+                                ctx.moveTo(n*130+75,75+this.offsets[n]);
+                                ctx.arc(n*130+75,75+this.offsets[n],78,-Math.PI*(reload*2+0.5),-0.5*Math.PI);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                            //draw reload
+                            n++;
+                        }
+
+                        var n = 0;
+                        while(n < this.slots.length) {
+                            var slot = this.slots[n];
+                            if(slot.reload==0&&!(this.using!==false&&this.using!==n)) {
+                                if(Mouse.inBox(n*130+20,20+this.offsets[n],110,110)||this.using===n) {
+                                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                                    ctx.fillRect(n*130+20,20+this.offsets[n],110,110);
+                                    if(Mouse.down) {
+                                        this.using = n;
+                                    }
+                                }
+                            }
+                            n++;
+                        }
+
+                        if(this.using!==false) {
+                            var slot = this.slots[this.using];
+                            var blocks = slot.blocks;
+
+                            ctx.globalAlpha = 0.5;
+                            this.drawSlotBlocks(blocks,this.placeCors.x+480-cam.x,this.placeCors.y+480-cam.y,40);
+                            if(this.validPlacement===false) {
+                                var n = 0;
+                                while(n < blocks.length) {
+                                    var block = blocks[n];
+                                    var x = this.placeCors.x+480-cam.x+block.x*40;
+                                    var y = this.placeCors.y+480-cam.y+block.y*40;
+                                    ctx.fillStyle = 'rgba(255,0,0,0.5)';
+                                    ctx.fillRect(x,y,40,40);
+                                    n++;
+                                }
+                            }
+                            ctx.globalAlpha = 1;
+                            //draw blocks being placed
+                        }
+                    },
+                    stopUsing: function() {
+                        var slot = this.slots[this.using];
+                        var n = 0;
+                        while(n < slot.blocks.length) {
+                            var block = slot.blocks[n];
+                            var newCors = rotate(0,0,block.x,block.y,-this.slotRotate);
+                            block.x = Math.round(newCors[0]);
+                            block.y = Math.round(newCors[1]);
+                            n++;
+                        }
+                        this.slotRotate = 0;
+                        this.using = false;
+                    },
+                    drawSlotBlocks: function(blocks,x,y,size) {
+                        var n = 0;
+                        while(n < blocks.length) {
+                            var block = JSON.parse(JSON.stringify(blocks[n]));
+                            block.x = x+block.x*size;
+                            block.y = y+block.y*size;
+                            block.w = size;
+                            block.h = size;
+                            game.blocks.drawBase(block);
+                            game.blocks.drawTop(block);
+                            n++;
+                        }
+                    },
+                    reloadSlot: function(n) {
+                        var slot = this.slots[n];
+                        slot.blocks = [];
+                        var blocks = [];
+                        var slot2 = JSON.parse(JSON.stringify(data.slots[n]));
+                        slot.reloadReset = slot2.reloadReset;
+                        slot.reload = slot.reloadReset;
+                        var n = 0;
+                        while(n < slot2.cards.length) {
+                            blocks.push(game.blocks.createBlock(data.cards[slot2.cards[n]].split("-")[0],data.cards[slot2.cards[n]].split("-")[1]));
+                            n++;
+                        }
+                        var positions = [{x:0,y:0}];
+                        var n = 0;
+                        while(n < blocks.length) {
+                            var block = blocks[n];
+                            var pos = Math.floor(Math.random()*positions.length);
+                            block.x = positions[pos].x;
+                            block.y = positions[pos].y;
+                            positions.push({x:block.x-1,y:block.y});
+                            positions.push({x:block.x+1,y:block.y});
+                            positions.push({x:block.x,y:block.y+1});
+                            positions.push({x:block.x,y:block.y-1});
+                            slot.blocks.push(block);
+                            var n2 = 0;
+                            while(n2 < blocks.length) {
+                                var b = blocks[n2];
+                                var n3 = 0;
+                                while(n3 < positions.length) {
+                                    var p = positions[n3];
+                                    if(b.x===p.x&&b.y===p.y) {
+                                        positions.splice(n3,1);
+                                        n3--;
+                                    }
+                                    n3++;
+                                }
+                                n2++;
+                            }
+                            n++;
+                        }
+                        var avg = {x:0,y:0};
+                        var n = 0;
+                        while(n < slot.blocks.length) {
+                            var b = slot.blocks[n];
+                            avg.x += b.x;
+                            avg.y += b.y;
+                            n++;
+                        }
+                        avg.x /= slot.blocks.length;
+                        avg.y /= slot.blocks.length;
+                        slot.offx = -avg.x;
+                        slot.offy = -avg.y;
+                    },
+                    use: function(slot) {
+                        var x = Math.ceil((Mouse.x+cam.x-500)/40)*40;
+                        var y = Math.ceil((Mouse.y+cam.y-500)/40)*40;
+                        var n = 0;
+                        while(n < slot.blocks.length) {
+                            var block = JSON.parse(JSON.stringify(slot.blocks[n]));
+                            block.x = x+block.x*40-20;
+                            block.y = y+block.y*40-20;
+                            block.w = 40;
+                            block.h = 40;
+                            block.placingAnimation = 100;
+                            game.blocks.blocks.push(block);
+                            n++;
+                        }
+                    }
+                },
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.enemies.update();
+                    this.background.update();
+                    this.blocks.update();
+                    this.bullets.update();
+                    this.wave.update();
+                    this.slots.update();
+                    cam.update();
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(500-cam.x,500-cam.y);
+                    ctx.scale(cam.zoom,cam.zoom);
+                    this.background.draw();
+                    this.blocks.draw();
+                    this.enemies.draw();
+                    this.bullets.draw();
+                    ctx.restore();
+                    this.drawUI();
+                },
+                drawUI: function() {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0,0,1000,150);
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(0,150);
+                    ctx.lineTo(1000,150);
+                    ctx.stroke();
+                    //draw white bar
+
+                    this.slots.draw();
+                    //draw slots
+
+                    if(this.wave.animation>0) {
+                        var xoffset = Math.max(Math.abs(this.wave.animation-100)-50,0)**1.7;
+                        if(this.wave.animation<100) {
+                            xoffset *= -1;
+                        }
+                        ctx.globalAlpha = 1.5-Math.abs(this.wave.animation-100)/67;
+                        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                        ctx.fillRect(300+xoffset,470,400,100);
+                        ctx.fillStyle = 'black';
+                        ctx.textAlign = 'center';
+                        ctx.font = '100px sans-serif';
+                        ctx.fillText('Wave '+this.wave.wave,500+xoffset,550);
+                        ctx.globalAlpha = 1;
+                    }
+                    //draw wave text
+
+                },
+                background: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        this.drawGrid();
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            n++;
+                        }
+                    },
+                    drawGrid: function() {
+                        var s = 1000/cam.zoom;
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        ctx.fillRect(cam.x/cam.zoom-s/2,cam.y/cam.zoom-s/2,s,s);
+                        ctx.strokeStyle = 'rgb(180,180,180)';
+                        ctx.lineWidth = 1;
+                        var gridDistance = 40;
+                        var xoff = -cam.x%gridDistance/cam.zoom;
+                        var yoff = -cam.y%gridDistance/cam.zoom;
+                        var numberOfLines = s/gridDistance;
+                        var n = -numberOfLines/2;
+                        while(n < numberOfLines/2+1) {
+                            ctx.beginPath();
+                            ctx.moveTo(n*gridDistance+xoff+cam.x,-s/2+cam.y/cam.zoom);
+                            ctx.lineTo(n*gridDistance+xoff+cam.x,s/2+cam.y/cam.zoom);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(-s/2+cam.x/cam.zoom,n*gridDistance+yoff+cam.y);
+                            ctx.lineTo(s/2+cam.x/cam.zoom,n*gridDistance+yoff+cam.y);
+                            ctx.stroke();
+                            n++;
+                        }
+                    }
+                },
+                enemies: {
+                    enemies: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.enemies.length) {
+                            var enemy = this.enemies[n];
+                            this.updateEnemy(enemy,n);
+                            updateBlock(enemy,game.blocks.blocks);
+                            enemy.xmove *= 0.99;
+                            enemy.ymove *= 0.99;
+                            if(enemy.health<=0) {
+                                this.destroyEffect(enemy);
+                                this.enemies.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    addEnemy: function(x,y,type) {
+                        var enemy = {x:-100,y:-100,health:100,maxHealth:100,w:20,h:20,speed:1,damage:5,reload:10,reloadReset:10};
+                        enemy.x = x;
+                        enemy.y = y;
+                        this.enemies.push(enemy);
+                    },
+                    updateEnemy: function(enemy,id) {
+                        var nearestBlock = [false,Infinity];
+                        if(enemy.xmove===undefined) {
+                            enemy.xmove = 0;
+                        }
+                        if(enemy.ymove===undefined) {
+                            enemy.ymove = 0;
+                        }
+                        var n = 0;
+                        while(n < game.blocks.blocks.length) {
+                            var block = game.blocks.blocks[n];
+                            var dist = distTo(block.x+block.w/2,block.y+block.h/2,enemy.x+enemy.w/2,enemy.y+enemy.h/2);
+                            if(dist<nearestBlock[1]) {
+                                if(block.type.startsWith('wall')) {
+                                    nearestBlock = [n,dist+50];
+                                } else {
+                                    nearestBlock = [n,dist];
+                                }
+                            }
+                            n++;
+                        }
+                        if(nearestBlock[1]>200&&game.blocks.blocks[0]&&game.blocks.blocks[0].type=='base') {
+                            nearestBlock = [0,0];
+                        }
+                        var n = 0;
+                        while(n < game.blocks.blocks.length) {
+                            var block = game.blocks.blocks[n];
+                            if(blocksCollidingEdge(enemy,block)&&enemy.reload==0) {
+                                enemy.reload = enemy.reloadReset;
+                                block.health -= enemy.damage;
+                                block.hitAnimation = 30;
+                            }
+                            n++;
+                        }
+                        if(nearestBlock[0]!==false) {
+                            var block = game.blocks.blocks[nearestBlock[0]];
+                            var dir = dirTo(enemy.x+enemy.w/2,enemy.y+enemy.h/2,block.x+block.w/2,block.y+block.h/2);
+                            var move = distToMove(enemy.speed,dir);
+                            enemy.xmove = move[0];
+                            enemy.ymove = move[1];
+                        }
+                        if(enemy.reload>0) {
+                            enemy.reload--;
+                        }
+                        var n = 0;
+                        while(n < this.enemies.length) {
+                            if(n!=id) {
+                                var enemy2 = this.enemies[n];
+                                var dist = distTo(enemy.x+enemy.w/2,enemy.y+enemy.h/2,enemy2.x+enemy2.w/2,enemy2.y+enemy2.h/2);
+                                if(dist<20) {
+                                    var dir = dirTo(enemy.x+enemy.w/2,enemy.y+enemy.h/2,enemy2.x+enemy2.w/2,enemy2.y+enemy2.h/2);
+                                    var colDist = 20-dist;
+                                    var move = distToMove(colDist/2,dir);
+                                    enemy2.x += move[0];
+                                    enemy2.y += move[1];
+                                    enemy.x -= move[0];
+                                    enemy.y -= move[1];
+                                }
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.enemies.length) {
+                            var enemy = this.enemies[n];
+                            this.drawEnemy(enemy);
+                            //draw enemy
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.enemies.length) {
+                            var enemy = this.enemies[n];
+                            var health = enemy.health/enemy.maxHealth;
+                            if(health!=1&&health>0) {
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(enemy.x,enemy.y+enemy.h*1.2,enemy.w,10);
+                                ctx.fillStyle = 'rgb(200,50,50)';
+                                ctx.fillRect(enemy.x+3,enemy.y+enemy.h*1.2+3,(enemy.w-6)*health,4);
+                            }
+                            //draw health bar
+                            n++;
+                        }
+                    },
+                    destroyEffect: function(enemy) {
+                    },
+                    drawEnemy: function(enemy) {
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(enemy.x,enemy.y,enemy.w,enemy.h);
+                    }
+                },
+                blocks: {
+                    blocks: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.blocks.length) {
+                            var block = this.blocks[n];
+                            this.updateBlock(block);
+                            if(block.health<=0) {
+                                this.destroyEffect(block);
+                                this.blocks.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+
+                        var n = 0;
+                        while(n < this.blocks.length) {
+                            var block = this.blocks[n];
+                            if(game.typesToCombine.indexOf(block.type)!==-1&&block.placingAnimation==0) {
+                                var n2 = n+1;
+                                while(n2 < this.blocks.length) {
+                                    var block2 = this.blocks[n2];
+                                    if(game.typesToCombine.indexOf(block2.type)!==-1&&block2.tier==block.tier) {
+                                        if(Math.round(distTo(block.x,block.y,block2.x,block2.y))==40&&block2.placingAnimation==0) {
+                                            if(block.w==block2.w&&block.h==block2.h) {
+                                                var newBlock = this.combine(block,block2);
+                                                newBlock.placingAnimation = 100;
+                                                this.blocks.push(newBlock);
+                                                this.blocks.splice(n2,1);
+                                                this.blocks.splice(n,1);
+                                                n--;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    n2++;
+                                }
+                            }
+                            n++;
+                        }
+                    },
+                    updateBlock: function(block) {
+                        if(block.hitAnimation===undefined) {
+                            block.hitAnimation = 0;
+                        }
+                        if(block.hitAnimation>0) {
+                            block.hitAnimation--;
+                        }
+                        if(block.spread===undefined) {
+                            block.spread = 0;
+                        }
+                        var closestEnemy = [false,Infinity];
+                        var n = 0;
+                        while(n < game.enemies.enemies.length) {
+                            var enemy = game.enemies.enemies[n];
+                            var dist = distTo(enemy.x+enemy.w/2,enemy.y+enemy.h/2,block.x+block.w/2,block.y+block.h/2);
+                            if(dist<=block.sight) {
+                                if(dist<closestEnemy[1]) {
+                                    closestEnemy = [n,dist];
+                                }
+                            }
+                            n++;
+                        }
+                        if(closestEnemy[0]!==false) {
+                            var enemy = game.enemies.enemies[closestEnemy[0]];
+                            var dir = dirTo(block.x+block.w/2,block.y+block.h/2,enemy.x+enemy.w/2,enemy.y+enemy.h/2);
+                            var t = turn(block.dir,dir);
+                            if(Math.abs(t)<Math.abs(s(t)*block.turnSpeed)) {
+                                block.dir += t;
+                            } else {
+                                block.dir += s(t)*block.turnSpeed;
+                            }
+                        }
+                        if(block.reload>0) {
+                            block.reload--;
+                        }
+                        if(block.reload<=0&&closestEnemy[0]!==false) {
+                            block.reload = block.reloadReset;
+                            var bullet = JSON.parse(JSON.stringify(block.bullet));
+                            bullet.x = block.x+block.w/2;
+                            bullet.y = block.y+block.h/2;
+                            var move = distToMove(bullet.speed,block.dir+Math.random()*block.spread-block.spread/2);
+                            bullet.xmove = move[0];
+                            bullet.ymove = move[1];
+                            bullet.decay = 200;
+                            game.bullets.bullets.push(bullet);
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.blocks.length) {
+                            var block = this.blocks[n];
+                            this.drawBase(block);
+                            //draw block base
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.blocks.length) {
+                            var block = this.blocks[n];
+                            this.drawTop(block);
+                            //draw block top
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.blocks.length) {
+                            var block = this.blocks[n];
+                            if(block.placingAnimation>0) {
+                                block.placingAnimation--;
+                                ctx.fillStyle = 'white';
+                                ctx.globalAlpha = block.placingAnimation/100;
+                                ctx.fillRect(block.x,block.y,block.w,block.h);
+                            }
+                            //draw placing animation
+                            n++;
+                        }
+                        ctx.globalAlpha = 1;
+                        var n = 0;
+                        while(n < this.blocks.length) {
+                            var block = this.blocks[n];
+                            ctx.save();
+                            if(block.hitAnimation>0) {
+                                ctx.translate(Math.random()*4-2,Math.random()*4-2);
+                            }
+                            var health = block.health/block.maxHealth;
+                            if(health!=1&&health>0) {
+                                ctx.fillStyle = 'black';
+                                var w = Math.max(block.w,block.h);
+                                ctx.fillRect(block.x+1+(block.w-w)/2,block.y+block.h*1.2+1,w-2,13);
+                                ctx.fillStyle = 'rgb(100,100,200)';
+                                if(block.hitAnimation>0) {
+                                    ctx.fillStyle = 'rgb(200,50,50)';
+                                }
+                                ctx.fillRect(block.x+4+(block.w-w)/2,block.y+block.h*1.2+4,(w-8)*health,7);
+                            }
+                            //draw health bar
+                            ctx.restore();
+                            n++;
+                        }
+                    },
+                    drawBase: function(block) {
+                        if(block.type=='wall') {
+                            ctx.fillStyle = 'rgb(50,50,50)';
+                            ctx.fillRect(block.x,block.y,block.w,block.h);
+                        }
+                        if(block.type=='base') {
+                            ctx.fillStyle = 'rgb(100,100,220)';
+                            ctx.fillRect(block.x,block.y,block.w,block.h);
+                        }
+                        if(block.type=='tower') {
+                            if(block.towerType=='aksdjfhklajh') {
+                            } else {
+                                ctx.fillStyle = 'rgb(100,100,220)';
+                                ctx.fillRect(block.x,block.y,block.w,block.h);
+                            }
+                        }
+                    },
+                    drawTop: function(block) {
+                        if(block.type=='tower') {
+                            if(block.towerType=='aksjdfljk') {
+                            } else {
+                                ctx.save();
+                                ctx.translate(block.x+block.w/2,block.y+block.h/2);
+                                ctx.rotate(block.dir*Math.PI/180);
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(-block.w/3,-block.h,block.w*2/3,block.h);
+                                ctx.restore();
+                            }
+                        }
+                        if(block.type=='base') {
+                            ctx.save();
+                            ctx.translate(block.x+block.w/2,block.y+block.h/2);
+                            ctx.rotate(block.dir*Math.PI/180);
+                            ctx.fillStyle = 'black';
+                            ctx.fillRect(-block.w/6,-block.h/2,block.w*1/3,block.h/2);
+                            ctx.restore();
+                        }
+                    },
+                    destroyEffect: function(block) {
+                    },
+                    combine: function(block1,block2) {
+                        var type = this.combineTypes(block1.towerType,block2.towerType);
+                        var block = this.createBlock('tower',type);
+                        if(block1.x==block2.x) {
+                            block.h = block1.h+block2.h;
+                            block.w = block1.w;
+                        } else {
+                            block.h = block1.h;
+                            block.w = block1.w+block2.w;
+                        }
+                        block.x = Math.min(block1.x,block2.x);
+                        block.y = Math.min(block1.y,block2.y);
+                        block.reloadReset = block1.reloadReset/2.5;
+                        block.sight = block1.sight+block2.sight;
+                        return block;
+                    },
+                    combineTypes: function(type1,type2) {
+                        var type = "tower";
+                        for(_type in combineTypes) {
+                            if(combineTypes[_type].indexOf(type1)==-1||combineTypes[_type].indexOf(type2)==-1) continue;
+                            type = _type;
+                            break;
+                        }
+                        console.log(type1,type2,type);
+                        return type;
+                    },
+                    createTower: function(towerType) {
+                            return  {towerType:towerType,type:'tower',health:100,maxHealth:100,reload:0,reloadReset:20,dir:0,sight:200,spread:10,turnSpeed:5,bullet:{speed:3,damage:10,size:10}};
+                    },
+                    createBlock: function(type,towerType) {
+                        var block;
+                        if(type=='tower') {
+                            block = this.createTower(towerType);
+                        } else {
+                            block = {health:100,maxHealth:100};
+                        }
+                        block.type = type;
+                        return block;
+                    }
+                },
+                bullets: {
+                    bullets: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.bullets.length) {
+                            var bullet = this.bullets[n];
+                            bullet.x += bullet.xmove;
+                            bullet.y += bullet.ymove;
+                            bullet.decay--;
+                            var hitEnemy = false;
+                            var n2 = 0;
+                            while(n2 < game.enemies.enemies.length) {
+                                var enemy = game.enemies.enemies[n2];
+                                if(distTo(enemy.x+enemy.w/2,enemy.y+enemy.h/2,bullet.x,bullet.y)<bullet.size+enemy.w/2) {
+                                    enemy.health -= bullet.damage;
+                                    hitEnemy = true;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if(hitEnemy||bullet.decay<=0) {
+                                this.bullets.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.bullets.length) {
+                            var bullet = this.bullets[n];
+                            this.drawBullet(bullet);
+                            n++;
+                        }
+                    },
+                    drawBullet: function(bullet) {
+                        ctx.fillStyle = 'black';
+                        ctx.beginPath();
+                        ctx.arc(bullet.x,bullet.y,bullet.size,0,2*Math.PI);
+                        ctx.fill();
+                    }
+                },
+                reset: function() {
+                    this.background.objects = [];
+                    this.blocks.blocks = [];
+                    this.blocks.blocks.push(JSON.parse(JSON.stringify(data.base)));
+                    this.bullets.bullets = [];
+                    this.slots.slots = [];
+                    var n = 0;
+                    while(n < data.slots.length) {
+                        this.slots.slots.push({});
+                        this.slots.reloadSlot(n);
+                        n++;
+                    }
+                    this.wave.wave = 0;
+                    this.wave.next();
+                }
+            }
+            var cam = {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                moveSpeed: 3,
+                update: function() {
+                    if(Keys.keys[37]||Keys.keys[65]) {
+                        this.x -= this.moveSpeed;
+                    }
+                    if(Keys.keys[38]||Keys.keys[87]) {
+                        this.y -= this.moveSpeed;
+                    }
+                    if(Keys.keys[39]||Keys.keys[68]) {
+                        this.x += this.moveSpeed;
+                    }
+                    if(Keys.keys[40]||Keys.keys[83]) {
+                        this.y += this.moveSpeed;
+                    }
+                }
+            }
+
+            var page = 'game';
+
+            game.reset();
+
+            /*
+            To Do:
+            Add menu
+            Add upgrades
+            Add game over
+            Add board size
+            Add tower combinations
+            */
+        </script>
+    </body>
+</html>

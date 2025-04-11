@@ -1,0 +1,356 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function findPolygonArea(points) {
+            var total = 0;
+            for (var i = 0; i < points.length; i++) {
+                var addX = points[i].x;
+                var addY = points[i == points.length - 1 ? 0 : i + 1].y;
+                var subX = points[i == points.length - 1 ? 0 : i + 1].x;
+                var subY = points[i].y;
+                total += (addX * addY * 0.5);
+                total -= (subX * subY * 0.5);
+            }
+            return Math.abs(total);
+        }
+        function findLineIntersection(line1, line2) {
+            var slope1 = (line1.y2 - line1.y1) / (line1.x2 - line1.x1);
+            if (slope1 === Infinity || slope1 === -Infinity) slope1 = 100000000;
+            var yInt1 = line1.y1 - line1.x1 * slope1;
+            var slope2 = (line2.y2 - line2.y1) / (line2.x2 - line2.x1);
+            if (slope2 === Infinity || slope2 === -Infinity) slope2 = 100000000;
+            var yInt2 = line2.y1 - line2.x1 * slope2;
+            var xCor = (yInt1 - yInt2) / (slope2 - slope1);
+            var yCor = slope1 * xCor + yInt1;
+            return { x: xCor, y: yCor };
+        }
+        function cutPolygons(line, polygons) {
+            var newPolygons = [];
+            for (var o of polygons) {
+                newPolygons = newPolygons.concat(cutPolygon(line, o));
+            }
+            return newPolygons;
+        }
+        function cutPolygon(line, polygon) {
+            polygon = structuredClone(polygon);
+            var slope = (line.y2 - line.y1) / (line.x2 - line.x1);
+            var yInt = line.y1 - line.x1 * slope;
+            var o = polygon;
+            for (var p of o.points) {
+                p.splitNumber = 0;
+                p.splitPoint = false;
+                p.right = false;
+                p.left = false;
+                if (p.x * slope + yInt > p.y) {
+                    p.right = true;
+                } else {
+                    p.left = true;
+                }
+            }
+            var leftCount = o.points.map(e => e.left).reduce((a, b) => a + b);
+            var rightCount = o.points.map(e => e.right).reduce((a, b) => a + b);
+            if (leftCount === 0 || rightCount === 0) {
+                return [o];
+            }
+            var newPolygons = [];
+            var startingPoint;
+            for (var n = 0; n < o.points.length; n++) {
+                var point = o.points[n];
+                var nextPoint = o.points[(n + 1) % o.points.length];
+                if (point.left !== nextPoint.left) {
+                    var line2 = { x1: point.x, y1: point.y, x2: nextPoint.x, y2: nextPoint.y };
+                    var collisionPoint = findLineIntersection(line, line2);
+                    collisionPoint.splitPoint = true;
+                    var collisionPoint2 = structuredClone(collisionPoint);
+                    collisionPoint.splitNumber = 1;
+                    collisionPoint2.splitNumber = 2;
+                    if (startingPoint === undefined) startingPoint = n + 2;
+                    o.points.splice(n + 1, 0, collisionPoint, collisionPoint2);
+                    n += 2;
+                }
+            }
+            var currentPolygon = { points: [] };
+            for (var n = startingPoint; n < o.points.length + startingPoint; n++) {
+                var point = o.points[n % o.points.length];
+                currentPolygon.points.push(point);
+                if (point.splitPoint && point.splitNumber === 1) {
+                    newPolygons.push(structuredClone(currentPolygon));
+                    currentPolygon.points = [];
+                }
+            }
+            return newPolygons;
+        }
+
+        function main() {
+            menu.tick();
+        }
+
+        var menu = {
+            page: "game",
+            switchPage: "game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.blades.update();
+                this.circle.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                ctx.save();
+                this.cam.alignViewport();
+                this.circle.draw();
+                this.blades.draw();
+                ctx.restore();
+            },
+            reset: function () {
+                this.circle.reset(150);
+                this.blades.reset();
+            },
+            blades: {
+                cutting: false,
+                cuttingAnimation: 0,
+                objects: [],
+                update: function () {
+                    if (this.cutting) {
+                        this.cuttingAnimation++;
+                        for (var n = 0; n < this.objects.length; n++) {
+                            var o = this.objects[n];
+                            var individualAnimation = this.cuttingAnimation - n * 15;
+                            var a = easeInOut((individualAnimation - 20) / 20) * 0.3 + easeInOut((individualAnimation - 40) / 40) * 0.9 - easeInOut((individualAnimation) / 20) * 0.2;
+                            var move = distToMove(a * 40, o.angle);
+                            o.x += move.x;
+                            o.y += move.y;
+                            if (a===1 && !o.cut) {
+                                o.cut = true;
+                                var line = {};
+                                line.x1 = o.x;
+                                line.y1 = o.y;
+                                var move = distToMove(100, o.angle);
+                                line.x2 = o.x + move.x;
+                                line.y2 = o.y + move.y;
+                                game.circle.cut(line);
+                            }
+                        }
+                    } else {
+                        for (var o of this.objects) {
+                            o.angle += 2;
+                        }
+                        if (Keys.down[32]) {
+                            this.cutting = true;
+                        }
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        ctx.save();
+                        ctx.translate(o.x, o.y);
+                        ctx.rotate(o.angle * Math.PI / 180);
+                        this.drawBlade(o);
+                        ctx.restore();
+                    }
+                },
+                drawBlade: function () {
+                    ctx.fillStyle = "black";
+                    ctx.beginPath();
+                    ctx.moveTo(0, -20);
+                    ctx.lineTo(15, 20);
+                    ctx.lineTo(0, 7);
+                    ctx.lineTo(-15, 20);
+                    ctx.closePath();
+                    ctx.fill();
+                },
+                reset: function () {
+                    this.cutting = false;
+                    this.cuttingAnimation = 0;
+                    this.objects = [
+                        {
+                            x: 300,
+                            y: 0,
+                            angle: 0
+                        },
+                        {
+                            x: 300,
+                            y: -50,
+                            angle: 0
+                        },
+                        {
+                            x: 300,
+                            y: 50,
+                            angle: 0
+                        }
+                    ];
+                }
+            },
+            circle: {
+                objects: [],
+                cutAnimation: 0,
+                update: function () {
+                    if (this.cutAnimation) {
+                        this.cutAnimation--;
+                        if (this.cutAnimation == 0) {
+                            this.objects = this.objects.filter(e => e.center);
+                            var area = this.objects.map(e => findPolygonArea(e.points)).reduce((a, b) => a + b);
+                            var radius = Math.sqrt(area / Math.PI);
+                            this.reset(radius);
+                            game.blades.reset();
+                        }
+                    }
+                    for (var o of this.objects) {
+                        if (o.move) {
+                            for (var p of o.points) {
+                                p.x += o.move.x;
+                                p.y += o.move.y;
+                            }
+                        }
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        ctx.beginPath();
+                        ctx.fillStyle = "rgb(0,0,100)";
+                        if (this.cutAnimation && !o.center) ctx.fillStyle = "red";
+                        for (var p of o.points) {
+                            ctx.lineTo(p.x, p.y);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                },
+                reset: function (size) {
+                    var o = { points: [] };
+                    var resolution = 100;
+                    for (var n = 0; n < resolution; n++) {
+                        var angle = n / resolution * 360;
+                        var point = rotate(0, 0, 0, -size, angle);
+                        o.points.push(point);
+                    }
+                    this.objects = [o];
+                },
+                cut: function (line) {
+                    this.cutAnimation = 100;
+                    this.objects = cutPolygons(line, this.objects);
+                    for (var o of this.objects) {
+                        o.cx = o.points.map(e => e.x).reduce((a, b) => a + b) / o.points.length;
+                        o.cy = o.points.map(e => e.y).reduce((a, b) => a + b) / o.points.length;
+                        o.dist = distTo(0, 0, o.cx, o.cy);
+                    }
+                    this.objects.sort((a, b) => a.dist - b.dist);
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        if (n == 0) {
+                            o.center = true;
+                        } else {
+                            o.center = false;
+                            var dir = dirTo(0, 0, o.cx, o.cy);
+                            var move = distToMove(3, dir);
+                            o.move = move;
+                        }
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                alignViewport: function () {
+                    ctx.translate(500, 500);
+                    ctx.scale(this.zoom, this.zoom);
+                    ctx.translate(-this.x, -this.y);
+                }
+            }
+        }
+
+        game.reset();
+    </script>
+</body>
+
+</html>

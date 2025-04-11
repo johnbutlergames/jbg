@@ -1,0 +1,572 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0;
+            }
+        </style>
+        <canvas id="canvas"></canvas>
+        <script>
+            var word = "";
+            var title = "Jello Gun!";
+            var dimensions = {width:1000,height:1000};
+            var images = [];
+            var audios = [];
+
+            var canvas,ctx;
+
+            function initialize() {
+                document.title = title;
+
+                canvas = document.getElementById("canvas");
+                var ratio = dimensions.width/dimensions.height;
+                var sizeText = "min(100vw,100vh)";
+                if(ratio>1) {
+                    sizeText = `min(${100/ratio}vw,100vh)`;
+                    canvas.style.width = `calc(${sizeText} * ${ratio})`;
+                    canvas.style.height = sizeText;
+                } else if(ratio<1) {
+                    sizeText = `min(100vw,${100*ratio}vh)`;
+                    canvas.style.width = sizeText;
+                    canvas.style.height = `calc(${sizeText} * ${1/ratio})`;
+                } else {
+                    canvas.style.width = sizeText;
+                    canvas.style.height = sizeText;
+                }
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
+
+                ctx = canvas.getContext("2d");
+                canvas.onmousemove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.onclick = function(event) {
+                    Mouse.click = true;
+                }
+                canvas.onmousedown = function(event) {
+                    Mouse.down = true;
+                }
+                canvas.onmouseup = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.oncontextmenu = function(event) {
+                    event.preventDefault();
+                    Mouse.right = true;
+                }
+                canvas.onwheel = function(event) {
+                    Mouse.scrollX = event.deltaX;
+                    Mouse.scrollY = event.deltaY;
+                    event.preventDefault();
+                }
+                window.onkeydown = function(event) {
+                    Keys.keys[event.keyCode] = true;
+                    Keys.down[event.keyCode] = true;
+                    word += String.fromCharCode(event.keyCode);
+                }
+                window.onkeyup = function(event) {
+                    Keys.keys[event.keyCode] = false;
+                    Keys.up[event.keyCode] = true;
+                }
+
+                Loading.loadLogoImage();
+                Loading.loadImages();
+                Loading.loadAudios();
+
+                for(var key of Object.keys(Physics)) {
+                    this[key] = Physics[key];
+                }
+            }
+            var Loading = {
+                animation: 0,
+                loads: 0,
+                loaded: false,
+                intro: 1,
+                logoImage: false,
+                percent: 0,
+                loadImages: function() {
+                    for(var n in images) {
+                        var image = document.createElement("img");
+                        image.src = images[n];
+                        image.onload = function() {
+                            Loading.loads++;
+                        }
+                        images[n] = image;
+                    }
+                },
+                loadAudios: function() {
+                    for(var n in audios) {
+                        var audio = document.createElement("audio");
+                        audio.src = audios[n];
+                        audio.oncanplaythrough = function() {
+                            Loading.loads++;
+                        }
+                        audios[n] = audio;
+                    }
+                },
+                loadLogoImage: function() {
+                    this.logoImage = document.createElement("img");
+                    this.logoImage.src = "https://johnbutlergames.com/logoLarge.png";
+                    this.logoImage.onload = function() {
+                        Loading.loads++;
+                    }
+                },
+                updateLoadingScreen: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var percent = this.loads/(images.length+audios.length+1);
+                    this.percent = this.percent*0.9+percent*0.1;
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s,s);
+                    ctx.translate(-250,-250);
+                    if(percent==1) {
+                        var a = 1-this.percent*(images.length+audios.length+1)+this.loads-1;
+                        ctx.globalAlpha = a;
+                    }
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(47.5,272.5,405*this.percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*this.percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = "rgb(255,100,0)";
+                    var a = this.animation/2%40;
+                    for(var n=0;n<40;n++) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Loading...",250,250);
+                    ctx.restore();
+
+                    this.animation++;
+                    if(percent==1&&this.percent>0.99) this.loaded = true;
+                },
+                updateIntro: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var i = Math.min(Physics.easeInOut(this.intro/100),Physics.easeInOut((250-this.intro)/100));
+                    var i2 = Math.min(Physics.easeInOut(this.intro/50),Physics.easeInOut((250-this.intro)/50));
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s*i2,s*i2);
+                    ctx.translate(-250,-250);
+                    ctx.globalAlpha = i;
+                    ctx.drawImage(this.logoImage,0,0,500,500);
+                    ctx.restore();
+
+                    this.intro++;
+                    if(this.intro==300) this.intro = 0;
+                }
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: (x,y,w,h)=>this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h,
+                clickInBox: (x,y,w,h)=>this.inBox(x,y,w,h)&&this.click
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            var Physics = {
+                dirTo: (x1,y1,x2,y2)=>90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI),
+                distToMove: (distance,direction)=>({x:distance*Math.sin(direction*Math.PI/180),y:-distance*Math.cos(direction*Math.PI/180)}),
+                distTo: (x1,y1,x2,y2)=>Math.sqrt((x2-x1)**2+(y2-y1)**2),
+                rotate:(cx,cy,x,y,a)=>([a=Math.PI/180*a,{x:(Math.cos(a)*(x-cx))+(Math.sin(a)*(y-cy))+cx,y:(Math.cos(a)*(y-cy))-(Math.sin(a)*(x-cx))+cy}][1]),
+                easeInOut:a=>1/(1+2.71828**(-10*(a-0.5))),
+                segmentsIntersect: function(a,b,c,d,p,q,r,s) {
+                    var det, gamma, lambda;
+                    det = (c - a) * (s - q) - (r - p) * (d - b);
+                    if (det === 0) {
+                        return false;
+                    } else {
+                        lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+                        gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+                        return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+                    }
+                },
+                distFromPointToSegment: function(x, y, x1, y1, x2, y2) {
+                    var A = x - x1;
+                    var B = y - y1;
+                    var C = x2 - x1;
+                    var D = y2 - y1;
+                    var dot = A * C + B * D;
+                    var len_sq = C * C + D * D;
+                    var param = -1;
+                    if (len_sq != 0) //in case of 0 length line
+                        param = dot / len_sq;
+                    var xx, yy;
+                    if (param < 0) {
+                        xx = x1;
+                        yy = y1;
+                    }
+                    else if (param > 1) {
+                        xx = x2;
+                        yy = y2;
+                    }
+                    else {
+                        xx = x1 + param * C;
+                        yy = y1 + param * D;
+                    }
+                    var dx = x - xx;
+                    var dy = y - yy;
+                    return Math.sqrt(dx * dx + dy * dy);
+                },
+                reflect: function(incidenceAngle, surfaceAngle){
+                    var a = surfaceAngle * 2 - incidenceAngle;
+                    return a >= 360 ? a - 360 : a < 0 ? a + 360 : a;
+                },
+                turn: function(angle,targetAngle) {
+                    angle %= 360;
+                    targetAngle %= 360;
+                    if(angle<0) {
+                        angle += 360;
+                    }
+                    if(targetAngle<0) {
+                        targetAngle += 360;
+                    }
+                    var turnRight = targetAngle-angle;
+                    var turnLeft = targetAngle-angle;
+                    if(turnRight<0) {
+                        turnLeft += 360;
+                    } else {
+                        turnLeft -= 360;
+                    }
+                    if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                        return turnRight;
+                    } else {
+                        return turnLeft;
+                    }
+                }
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        Loading.updateIntro();
+                    } else {
+                        main();
+                    }
+                } else {
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                updateObjects();
+                draw();
+                drawGun();
+
+                if(Mouse.down) {
+                    var shapeInRadius = false;
+                    for(var n in shapes) {
+                        var shape = shapes[n];
+                        var dist = distTo(500,500,shape.x,shape.y);
+                        var colDist = 75;
+                        if(Keys.keys[82]) colDist = 150;
+                        if(dist<colDist) shapeInRadius = true;
+                        if(dist<colDist*2&&dist>10) {
+                            var dir = dirTo(500,500,shape.x,shape.y);
+                            var move = distToMove(0.1,dir);
+                            if(Keys.keys[32]) move = distToMove(1,dir);
+                            shape.move = move;
+                        }
+                    }
+                    if(!shapeInRadius) {
+                        var dir = dirTo(500,500,Mouse.x,Mouse.y);
+                        var move = distToMove(7,dir);
+                        if(Keys.keys[32]) move = distToMove(15,dir);
+                        if(Keys.keys[82]) move = distToMove(7,dir);
+                        var radius = 33;
+                        if(Keys.keys[32]) radius = 20;
+                        if(Keys.keys[82]) radius = 50;
+                        var color = `hsl(${Math.random()*360},100%,50%)`;
+                        if(Keys.keys[82]) color = 'grey';
+                        var elasticity = 0.01;
+                        if(Keys.keys[82]) elasticity = 0.3;
+                        var sides = 3+Math.floor(Math.random()*3);
+                        if(Keys.keys[82]) sides = 4;
+                        var distribute = 0.005;
+                        if(Keys.keys[82]) distribute = 0.02;
+                        createShape(500,500,radius,sides,0,move,false,color,elasticity,distribute);
+                    }
+                }
+
+                if(Keys.down[67]) {
+                    points = [{x:0,y:0,static:true},{x:1000,y:0,static:true},{x:1000,y:1000,static:true},{x:0,y:1000,static:true}];
+                    lines = [{o1:0,o2:1},{o1:1,o2:2},{o1:2,o2:3},{o1:3,o2:0}];
+                    shapes = [];
+                    springs = [];
+                }
+                
+                if(word.endsWith("JOHNBUTLERGAMES")) {
+                    word = "";
+                    for(var shape of shapes) {
+                        shape.color = "blue";
+                    }
+                }
+                t++;
+                
+                ctx.fillStyle = "black";
+                ctx.font = "25px Arial";
+                ctx.textAlign = "left";
+                ctx.textBaseline = "top";
+                ctx.fillText("C: Clear, R: Rock Gun, Space: Gummy Gun",15,15);
+            }
+
+            function drawGun() {
+                var dir = dirTo(500,500,Mouse.x,Mouse.y)-90;
+                ctx.save();
+                ctx.translate(500,500);
+                ctx.rotate(dir*Math.PI/180);
+                ctx.fillStyle = 'black';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 10;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(-35,-25);
+                ctx.lineTo(35,-35);
+                ctx.lineTo(35,35);
+                ctx.lineTo(-35,25);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.font = 'Bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if(Keys.keys[82]) {
+                    ctx.fillText("ROCK",0,-10);
+                    ctx.fillText("GUN?",0,10);
+                } else if(Keys.keys[32]) {
+                    ctx.fillText("GUMMY",0,-10);
+                    ctx.fillText("GUN!",0,10);
+                } else {
+                    ctx.fillText("JELLO",0,-10);
+                    ctx.fillText("GUN!",0,10);
+                }
+                ctx.restore();
+            }
+
+            function draw() {
+                for(var shape of shapes) {
+                    var n = 0;
+                    ctx.beginPath();
+                    for(var point of shape.points) {
+                        var o = points[point];
+                        if(n==0) {
+                            ctx.moveTo(o.x,o.y);
+                        } else {
+                            ctx.lineTo(o.x,o.y);
+                        }
+                        n++;
+                    }
+                    ctx.closePath();
+                    ctx.strokeStyle = shape.color;
+                    ctx.lineJoin = "round";
+                    ctx.lineWidth = 10;
+                    ctx.fillStyle = shape.color;
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+
+            function updateObjects() {
+                for(var point of points) {
+                    point.move = point.move||{x:0,y:0};
+                    point.move.x = point.move.x||0;
+                    point.move.y = point.move.y||0;
+                    if(point.static===undefined) point.static = false;
+                }
+                for(var shape of shapes) {
+                    shape.move = shape.move||{};
+                    shape.move.x = shape.move.x||0;
+                    shape.move.y = shape.move.y||0;
+                    var avgX = 0;
+                    var avgY = 0;
+                    for(var n of shape.points) {
+                        var point = points[n];
+                        point.move.x += shape.move.x;
+                        point.move.y += shape.move.y;
+                        avgX += point.x;
+                        avgY += point.y;
+                    }
+                    shape.x = avgX/shape.points.length;
+                    shape.y = avgY/shape.points.length;
+                    shape.move.x = 0;
+                    shape.move.y = 0;
+                }
+                for(var spring of springs) {
+                    if(spring.elasticity===undefined) spring.elasticity = 0.01;
+                    if(spring.distribute===undefined) spring.distribute = 0.005;
+                    var o1 = points[spring.o1];
+                    var o2 = points[spring.o2];
+                    var dist = distTo(o1.x,o1.y,o2.x,o2.y);
+                    if(spring.length===undefined) spring.length = dist;
+                    var dir = dirTo(o1.x,o1.y,o2.x,o2.y);
+                    var move = distToMove((spring.length-dist)*spring.elasticity,dir);
+                    o1.move.x -= move.x*damping.x;
+                    o1.move.y -= move.y*damping.y;
+                    o2.move.x += move.x*damping.x;
+                    o2.move.y += move.y*damping.y;
+
+                    var xmove = o1.move.x;
+                    var ymove = o1.move.y;
+                    o1.move.x = o1.move.x*(1-spring.distribute)+o2.move.x*spring.distribute;
+                    o1.move.y = o1.move.y*(1-spring.distribute)+o2.move.y*spring.distribute;
+                    o2.move.x = o2.move.x*(1-spring.distribute)+xmove*spring.distribute;
+                    o2.move.y = o2.move.y*(1-spring.distribute)+ymove*spring.distribute;
+                }
+                for(var line of lines) {
+                    var o1 = points[line.o1];
+                    var o2 = points[line.o2];
+                    line.move = {};
+                    line.move.x = (o1.move.x+o2.move.x)/2;
+                    line.move.y = (o1.move.y+o2.move.y)/2;
+                }
+                for(var n in points) {
+                    var point = points[n];
+                    point.move = point.move||{x:0,y:0};
+                    point.move.x = point.move.x||0;
+                    point.move.y = point.move.y||0;
+                    if(point.static) {
+                        point.move.x = 0;
+                        point.move.y = 0;
+                        continue;
+                    }
+                    point.x += point.move.x;
+                    point.y += point.move.y;
+                    point.move.x *= airResistance.x;
+                    point.move.y *= airResistance.y;
+                    point.move.x += gravity.x;
+                    point.move.y += gravity.y;
+                }
+                for(var n in points) {
+                    var point = points[n];
+                    if(point.static) continue;
+                    var pointDir = dirTo(0,0,point.move.x,point.move.y);
+                    var pointSpeed = distTo(0,0,point.move.x,point.move.y);
+
+                    for(var line of lines) {
+                        if(line.o1==n||line.o2==n) continue;
+                        var o1 = points[line.o1];
+                        var o2 = points[line.o2];
+                        var l2 = {x1:o1.x,y1:o1.y,x2:o2.x,y2:o2.y};
+                        var dist = distFromPointToSegment(point.x,point.y,l2.x1,l2.y1,l2.x2,l2.y2);
+                        if(dist<10) {
+                            var lineAngle = dirTo(l2.x1,l2.y1,l2.x2,l2.y2);
+                            var midX = (l2.x1+l2.x2)/2;
+                            var midY = (l2.y1+l2.y2)/2;
+                            var dirToMid = dirTo(point.x,point.y,midX,midY);
+                            var move = distToMove(dist-11,lineAngle+90);
+                            var t = turn(lineAngle,dirToMid);
+                            if(t<0) {
+                                t = -1;
+                            } else {
+                                t = 1;
+                            }
+                            point.x += move.x*t;
+                            point.y += move.y*t;
+                            var combinedSpeed = pointSpeed+distTo(0,0,o1.move.x,o1.move.y)+distTo(0,0,o2.move.x,o2.move.y);
+                            var reflectAngle = reflect(pointDir,lineAngle);
+                            var move = distToMove(combinedSpeed/3,reflectAngle);
+                            point.move.x = move.x;
+                            point.move.y = move.y;
+                            var dist1 = distTo(o1.x,o1.y,point.x,point.y);
+                            var dist2 = distTo(o2.x,o2.y,point.x,point.y);
+                            var p = dist1/(dist1+dist2);
+                            o1.move.x = -move.x*(1-p);
+                            o1.move.y = -move.y*(1-p);
+                            o2.move.x = -move.x*p;
+                            o2.move.y = -move.y*p;
+                        }
+                    }
+                }
+            }
+
+            var airResistance = {x:1,y:1};
+            var damping = {x:0.99,y:0.99};
+            var gravity = {x:0,y:0};
+            var points = [{x:0,y:0,static:true},{x:1000,y:0,static:true},{x:1000,y:1000,static:true},{x:0,y:1000,static:true}];
+            var lines = [{o1:0,o2:1},{o1:1,o2:2},{o1:2,o2:3},{o1:3,o2:0}];
+            var springs = [];
+            var shapes = [];
+
+            function createShape(x,y,r,s,a,move={x:0,y:0},static=false,color,elasticity,distribute) {
+                if(color===undefined) color = `hsl(${Math.random()*360},100%,50%)`;
+                var l = points.length;
+                var shape = {points:[]};
+                var num = s;
+                for(var n=0;n<num;n++) {
+                    var cors = rotate(x,y,x,y-r,n*(360/num)+a);
+                    points.push({x:cors.x,y:cors.y,move:JSON.parse(JSON.stringify(move)),static:static});
+                    lines.push({o1:n+l,o2:(n+1)%num+l});
+                    for(var n2=n+1;n2<num;n2++) {
+                        springs.push({o1:n+l,o2:n2+l,elasticity:elasticity,distribute:distribute});
+                    }
+                    shape.points.push(n+l);
+                    shape.color = color;
+                }
+                shapes.push(shape);
+            }
+
+            function createRectangle(x,y,w,h,move={x:0,y:0},static=false,color,elasticity,distribute) {
+                if(color===undefined) color = `hsl(${Math.random()*360},100%,50%)`;
+                var l = points.length;
+                var shape = {points:[]};
+                for(var n=0;n<4;n++) {
+                    var cors = {x:x,y:y};
+                    if(n==1) cors = {x:x+w,y:y};
+                    if(n==2) cors = {x:x+w,y:y+h};
+                    if(n==3) cors = {x:x,y:y+h};
+                    points.push({x:cors.x,y:cors.y,move:JSON.parse(JSON.stringify(move)),static:static});
+                    lines.push({o1:n+l,o2:(n+1)%4+l});
+                    for(var n2=n+1;n2<4;n2++) {
+                        springs.push({o1:n+l,o2:n2+l,elasticity:elasticity,distribute:distribute});
+                    }
+                    shape.points.push(n+l);
+                    shape.color = color;
+                }
+                shapes.push(shape);
+            }
+
+            var t = 0;
+        </script>
+    </body>
+</html>

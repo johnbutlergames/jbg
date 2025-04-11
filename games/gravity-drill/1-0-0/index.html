@@ -1,0 +1,1301 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Gravity Drill';
+            var word = '';
+            var dimensions = {width:500,height:500};
+            var imgs = ["drill.png","dirt.png","stone.png","gem.png","spike.png"];
+            var audios = ["collectGem","drillSound","drillExplode","buttonClick","turnBoard","fallHit","drillMove","music"];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.addEventListener('mousemove',function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            });
+            canvas.addEventListener('click',function(event) {
+                Mouse.click = true;
+            });
+            canvas.addEventListener('mousedown',function(event) {
+                Mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                Mouse.down = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                word += String.fromCharCode(event.keyCode);
+            });
+            window.addEventListener('keyup',function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            });
+            var loads = 0;
+            var loaded = false;
+            if(imgs.length+audios.length==0) {
+                loaded = true;
+            }
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = 'images/'+imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = "audio/"+audios[n]+".mp3";
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function roundRect(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x+r,y);
+                ctx.lineTo(x+w-r,y);
+                ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                ctx.lineTo(x+w,y+h-r);
+                ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                ctx.lineTo(x+r,y+h);
+                ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                ctx.lineTo(x,y+r);
+                ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                ctx.closePath();
+            }
+            function update() {
+                ctx.imageSmoothingEnabled = false;
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(loaded) {
+                    main();
+                } else {
+                    ctx.save();
+                    ctx.scale(0.5,0.5);
+                    var percent = loads/(imgs.length+audios.length);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'black';
+                    ctx.font = '120px Arial';
+                    ctx.fillText(title.toUpperCase(),500,300);
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,840,820,120);
+                    ctx.fillStyle = 'green';
+                    ctx.fillRect(100,850,800*percent,100);
+                    ctx.fillStyle = 'black';
+                    if(percent===1) {
+                        ctx.fillRect(300,635,400,150);
+                        if(Mouse.inBox(150,317.5,200,75)) {
+                            if(Mouse.click) {
+                                loaded = true;
+                            }
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                        } else {
+                            ctx.fillStyle = 'white';
+                        }
+                        ctx.fillRect(310,645,380,130);
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Play',500,745);
+                    } else {
+                        ctx.fillText('Loading...',500,750);
+                    }
+                    ctx.restore();
+                }
+                Mouse.click = false;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,20);
+
+            function main() {
+                audios[7].play();
+                if(page=='menu') {
+                    //menu.update();
+                } else {
+                    //game.update();
+                }
+                if(page=='menu') {
+                    drawMenu();
+                } else if(page=='level select') {
+                    drawLevels();
+                } else if(page=='credits') {
+                    drawCredits();
+                } else if(page=='playing') {
+                    playGame();
+                }
+            }
+            
+            /*var menu = {
+                page: 'home',
+                update: function() {
+                    if(this.page=='home') {
+                    drawMenu();
+                    } else if(this.page=='level select') {
+                    drawLevels();
+                    } else if(this.page=='credits') {
+                    drawCredits();
+                    }
+                }
+            }*/
+            
+            function drawMenu() {
+                ctx.drawImage(imgs[1],0,0,500,500);
+                //background image
+
+                ctx.filter = 'blur(4px)';
+                ctx.fillStyle = 'rgb(0,0,0,0.5)';
+                ctx.font = "70px Comic Sans MS";
+                ctx.textAlign = 'center';
+                ctx.fillText("Gravity Drill",250-(Mouse.x/10-25),100-(Mouse.y/10-10));
+                roundRect(180-(Mouse.x/10-25)-menuAnimations[0]/2,140-(Mouse.y/10-19)-menuAnimations[0]/2,140+menuAnimations[0],90+menuAnimations[0],20);
+                ctx.fill();
+                roundRect(145-(Mouse.x/10-25)-menuAnimations[1]/2,240-(Mouse.y/10-31)-menuAnimations[1]/2,210+menuAnimations[1],90+menuAnimations[1],20);
+                ctx.fill();
+                ctx.filter = 'none';
+                //shadows
+
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 4;
+                ctx.fillStyle = "rgb("+(50+menuAnimations[0]*4)+","+(150+menuAnimations[0]*4)+","+250+")";
+                roundRect(190-menuAnimations[0]/2,150-menuAnimations[0]/2,120+menuAnimations[0],70+menuAnimations[0],20);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "rgb("+(50+menuAnimations[1]*4)+","+(150+menuAnimations[1]*4)+","+250+")";
+                roundRect(155-menuAnimations[1]/2,250-menuAnimations[1]/2,190+menuAnimations[1],70+menuAnimations[1],20);
+                ctx.fill();
+                ctx.stroke();
+                //buttons
+
+                ctx.fillStyle = 'rgb(50,150,250)';
+                ctx.font = "60px Comic Sans MS";
+                ctx.fillText("Gravity Drill",250,100);
+                ctx.fillStyle = 'black';
+                ctx.font = 50+menuAnimations[0]/2+"px Comic Sans MS";
+                ctx.fillText("Play",250,200);
+                ctx.font = 50+menuAnimations[1]/3.5+"px Comic Sans MS";
+                ctx.fillText("Credits",250,300);
+                //text
+
+                if(Mouse.inBox(180,150,120,70)) {
+                    menuAnimations[0]++;
+                } else {
+                    menuAnimations[0]--;
+                }
+                if(menuAnimations[0]<0) {
+                    menuAnimations[0] = 0;
+                }
+                if(menuAnimations[0]>10) {
+                    menuAnimations[0] = 10;
+                }
+                if(Mouse.inBox(150,250,190,70)) {
+                    menuAnimations[1]++;
+                } else {
+                    menuAnimations[1]--;
+                }
+                if(menuAnimations[1]<0) {
+                    menuAnimations[1] = 0;
+                }
+                if(menuAnimations[1]>10) {
+                    menuAnimations[1] = 10;
+                }
+                //animations
+
+                var f = ctx.createRadialGradient(Mouse.x,Mouse.y,0,Mouse.x,Mouse.y,40);
+                f.addColorStop(0,'rgb(255,255,0)');
+                f.addColorStop(1,'rgba(255,255,0,0)');
+                ctx.fillStyle = f;
+                ctx.beginPath();
+                ctx.arc(Mouse.x,Mouse.y,40,0,2*Math.PI);
+                ctx.fill();
+                //mouse animation
+
+                if(Mouse.clickInBox(180,150,120,70)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    page = 'level select';
+                    menuAnimations = [0,0];
+                }
+                if(Mouse.clickInBox(150,250,190,70)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    page = 'credits';
+                    menuAnimations = [0,0];
+                }
+                //clicking
+            }
+            function drawCredits() {
+                ctx.textAlign = 'center';
+                ctx.drawImage(imgs[1],0,0,500,500);
+                //background image
+
+                ctx.fillStyle = 'rgb(50,150,250)';
+                ctx.font = "60px Comic Sans MS";
+                ctx.fillText("Credits",250,80);
+                ctx.font = "30px Comic Sans MS";
+                ctx.fillText("Programming By: John Butler",250,150);
+                ctx.fillText("Artwork By: John Butler",250,200);
+                ctx.fillText("Game Design By: John Butler",250,250);
+                ctx.fillText("Sound & Music By: Freesound",250,300);
+                ctx.fillText("Matt Quinn beat this game.",250,350);
+                //credits
+
+                ctx.filter = 'blur(4px)';
+                ctx.fillStyle = 'rgb(0,0,0,0.5)';
+                roundRect(160-(Mouse.x/10-25)-menuAnimations[1]/2,380-(Mouse.y/10-31)-menuAnimations[1]/2,180+menuAnimations[1],90+menuAnimations[1],20);
+                ctx.fill();
+                ctx.filter = 'none';
+                //shadows
+
+                ctx.lineWidth = 4;
+                ctx.fillStyle = "rgb("+(50+menuAnimations[1]*4)+","+(150+menuAnimations[1]*4)+","+250+")";
+                roundRect(180-menuAnimations[1]/2,380-menuAnimations[1]/2,140+menuAnimations[1],70+menuAnimations[1],20);
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = 'black';
+                //back button
+
+                ctx.fillStyle = 'black';
+                ctx.font = 50+menuAnimations[1]/3.5+"px Comic Sans MS";
+                ctx.fillText("Back",250,430);
+                //text
+
+                if(Mouse.inBox(175,380,140,70)) {
+                    menuAnimations[1]++;
+                } else {
+                    menuAnimations[1]--;
+                }
+                if(menuAnimations[1]<0) {
+                    menuAnimations[1] = 0;
+                }
+                if(menuAnimations[1]>10) {
+                    menuAnimations[1] = 10;
+                }
+                //animations
+
+                var f = ctx.createRadialGradient(Mouse.x,Mouse.y,0,Mouse.x,Mouse.y,40);
+                f.addColorStop(0,'rgb(255,255,0)');
+                f.addColorStop(1,'rgba(255,255,0,0)');
+                ctx.fillStyle = f;
+                ctx.beginPath();
+                ctx.arc(Mouse.x,Mouse.y,40,0,2*Math.PI);
+                ctx.fill();
+                //mouse animation
+
+                if(Mouse.clickInBox(175,380,140,70)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    page = 'menu';
+                    menuAnimations = [0,0];
+                }
+                //clicking
+            }
+            function drawLevels() {
+                ctx.fillStyle = 'rgb(80,180,250)';
+                ctx.fillRect(0,0,500,500);
+                //background image
+
+                ctx.lineWidth = 4;
+                ctx.fillStyle = "rgb("+(50+menuAnimations[1]*4)+","+(150+menuAnimations[1]*4)+","+250+")";
+                roundRect(180-menuAnimations[1]/2,400-menuAnimations[1]/2,140+menuAnimations[1],70+menuAnimations[1],20);
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = 'black';
+                //back button
+
+                ctx.fillStyle = 'black';
+                ctx.font = "60px Comic Sans MS";
+                ctx.fillText("Level Select",250,60);
+                ctx.font = 50+menuAnimations[1]/3.5+"px Comic Sans MS";
+                ctx.fillText("Back",250,450);
+                //text
+
+                if(Mouse.inBox(175,400,140,70)) {
+                    menuAnimations[1]++;
+                } else {
+                    menuAnimations[1]--;
+                }
+                if(menuAnimations[1]<0) {
+                    menuAnimations[1] = 0;
+                }
+                if(menuAnimations[1]>10) {
+                    menuAnimations[1] = 10;
+                }
+                //animations
+
+                var y = 0;
+                while(y < 4) {
+                    var x = 0;
+                    while(x < 5 && x+y*5<levels.length) {
+                        var d = distTo(x*90+70,y*70+125,Mouse.x,Mouse.y);
+                        ctx.fillStyle = 'rgb('+((100-d/5)+50)+','+((100-d/5)+150)+',255)';
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.beginPath();
+                        if(d<=30&&levelsUnlocked>=x+y*5) {
+                            ctx.arc(x*90+70,y*70+125,35,0,2*Math.PI);
+                        } else {
+                            ctx.arc(x*90+70,y*70+125,30,0,2*Math.PI);
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        if(levelsUnlocked<x+y*5) {
+                            ctx.fillStyle = 'black';
+                            ctx.fillRect(x*90+57,y*70+115,30,30);
+                            ctx.beginPath();
+                            ctx.arc(x*90+72,y*70+115,12,0,2*Math.PI);
+                            ctx.stroke();
+                        } else {
+                            ctx.font = "30px Comic Sans MS";
+                            ctx.fillText(x+y*5+1,x*90+70,y*70+135);
+                            if(Mouse.click&&d<=30) {
+                                audios[3].currentTime = 0;
+                                audios[3].play();
+                                page = 'playing';
+                                level = x+y*5;
+                                resetCurrentLevel();
+                            }
+                            drawStar(x*90+45,y*70+140,5,7,14);
+                            if(levelStars[x+y*5]>0) {
+                                ctx.fillStyle = 'rgb(255,255,0)';
+                            } else {
+                                ctx.fillStyle = 'white';
+                            }
+                            ctx.fill();
+                            ctx.stroke();
+                            drawStar(x*90+70,y*70+150,5,7,14);
+                            if(levelStars[x+y*5]>1) {
+                                ctx.fillStyle = 'rgb(255,255,0)';
+                            } else {
+                                ctx.fillStyle = 'white';
+                            }
+                            ctx.fill();
+                            ctx.stroke();
+                            drawStar(x*90+95,y*70+140,5,7,14);
+                            if(levelStars[x+y*5]>2) {
+                                ctx.fillStyle = 'rgb(255,255,0)';
+                            } else {
+                                ctx.fillStyle = 'white';
+                            }
+                            ctx.fill();
+                            ctx.stroke();
+                        }
+                        x++;
+                    }
+                    y++;
+                }   
+                //level buttons
+
+                if(Mouse.clickInBox(175,400,140,70)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    page = 'menu';
+                    menuAnimations = [0,0];
+                }
+                //clicking
+            }
+            function playGame() {
+                if(word.endsWith("MININGDIAMONDS")) {
+                    word = '';
+                    var num = 0;
+                    var drill = [0,0,0,0];
+                    while(num < currentLevel.blocks.length) {
+                        if(currentLevel.blocks[num][2]) {
+                            currentLevel.blocks[num][2] = 3;
+                            num++;
+                        } else {
+                            drill[0] = currentLevel.blocks[num][0];
+                            drill[1] = currentLevel.blocks[num][1];
+                            drill[3] = currentLevel.blocks[num][3];
+                            drill[4] = currentLevel.blocks[num][4];
+                            currentLevel.blocks.splice(num,1);
+                        }
+                    }
+                    currentLevel.blocks.push(drill);
+                }
+                ctx.fillStyle = 'rgb(80,180,250)';
+                ctx.fillRect(0,0,500,500);
+                ctx.imageSmoothingEnabled = false;
+                //background image
+                drawBlocks();
+                drawLevelBorder();
+                drawLevelText();
+                drawParticles();
+                drawInGameMenu(false);
+                if(Keys.up[32]) {
+                    if(pause) {
+                        pause = false;
+                    } else {
+                        pause = true;
+                    }
+                }
+                if(pause) {
+                    drawPauseMenu();
+                } else if(gameState!=0) {
+                    drawGameMenu(gameState);
+                } else {
+                    updateGame();
+                }
+            }
+            function resetCurrentLevel() {
+                fallingIntoSaw = false;
+                gameboard.rotate = 0;
+                currentLevel = JSON.parse(JSON.stringify(levels[level]));
+                gameboard.reset();
+                gameState = 0;
+                particles = [];
+                moves = 0;
+                moving = 0;
+                rotating = 0;
+                falling = 0;
+                var n = 0;
+                while(n < currentLevel.blocks.length) {
+                    currentLevel.blocks[n][3] = 0;
+                    n++;
+                }
+            }
+            function drawLevelText() {
+                ctx.save();
+                ctx.translate(250,270);
+                ctx.rotate((gameboard.rotate+rotating*4.5)*Math.PI/180);
+                ctx.font = "35px Comic Sans MS";
+                ctx.fillStyle = 'black';
+                if(level==0) {
+                    ctx.fillText('Arrows or ASD to move.',-205,-120);
+                    ctx.fillText('Get all Gems to Advance.',-215,180);
+                }
+                if(level==1) {
+                    ctx.fillText("You can't drill",-195,150);
+                    ctx.fillText("through stone.",-195,200);
+                }
+                if(level==2) {
+                    ctx.fillText('Q and E to rotate the board.',-235,-120);
+                }
+                if(level==3) {
+                    ctx.fillText('Stairs.',-195,-160);
+                }
+                if(level==4) {
+                    ctx.fillText('Space To Pause',-195,-160);
+                    ctx.fillText('R to Restart',-195,-110);
+                }
+                if(level==5) {
+                    ctx.fillText("These Ones",-195,30);
+                    ctx.fillText("Don't Move.",-195,80);
+                }
+                if(level==6) {
+                    ctx.fillText('Sliding Door.',-100,190);
+                }
+                if(level==10) {
+                    ctx.fillText("Probably Shouldn't",-195,-175);
+                    ctx.fillText("Touch That.",-195,-135);
+                }
+                if(level==13) {
+                    ctx.fillText('Vault.',-195,-160);
+                }
+                ctx.restore();
+            }
+            function drawLevelBorder() {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = 'black';
+                if(rotating) {
+                    ctx.save();
+                    ctx.translate(250,270);
+                    ctx.rotate(rotating*4.5*Math.PI/180);
+                    ctx.strokeRect(gameboard.xoffset-252,gameboard.yoffset-272,gameboard.width+4,gameboard.height+4);
+                    ctx.restore();
+                } else {
+                    ctx.strokeRect(gameboard.xoffset-2,gameboard.yoffset-2,gameboard.width+4,gameboard.height+4);
+                }
+            }
+            function drawBlocks() {
+                var num = 0;
+                while(num < currentLevel.blocks.length) {
+                    var cors = rotate(250,270,gameboard.xoffset+(currentLevel.blocks[num][0]+0.5)*gameboard.blocksize-0.5,gameboard.yoffset+(currentLevel.blocks[num][1]+0.5)*gameboard.blocksize-0.5,-rotating*4.5);
+                    ctx.save();
+                    ctx.translate(cors[0],cors[1]);
+                    cors[0]-=gameboard.blocksize/2;
+                    cors[1]-=gameboard.blocksize/2;
+                    ctx.rotate((gameboard.rotate+rotating*4.5)*Math.PI/180);
+
+                    if(currentLevel.blocks[num][2]==0||currentLevel.blocks[num][2]==4) {
+                        ctx.fillStyle = 'rgb(80,180,255)';
+                        if(color[3]!=0&&moving||(currentLevel.blocks[num][2]==4&&(falling||currentLevel.blocks[num][3]))) {
+                            ctx.restore();
+                            ctx.fillRect(cors[0],cors[1],gameboard.blocksize+1,gameboard.blocksize+1);
+                            var cors = rotate(250,270,gameboard.xoffset+(currentLevel.blocks[num][0]+0.5)*gameboard.blocksize-0.5,gameboard.yoffset+(currentLevel.blocks[num][1]+0.5)*gameboard.blocksize-0.5,-rotating*4.5);
+                            ctx.save();
+                            ctx.translate(cors[0],cors[1]);
+                            ctx.rotate((gameboard.rotate+rotating*4.5)*Math.PI/180);
+                            cors[0]-=gameboard.blocksize/2;
+                            cors[1]-=gameboard.blocksize/2;
+                        }
+                    }
+                    ctx.drawImage(imgs[currentLevel.blocks[num][2]],-gameboard.blocksize/2,-gameboard.blocksize/2,gameboard.blocksize,gameboard.blocksize);
+                    if(currentLevel.blocks[num][4]) {
+                        ctx.strokeStyle = 'rgb(255,255,0)';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(-gameboard.blocksize/2+2,-gameboard.blocksize/2+2,gameboard.blocksize-4,gameboard.blocksize-4);
+                    }
+
+                    ctx.restore();
+                    num++;
+                }
+            }
+            function drawPauseMenu() {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0,0,500,500);
+                //background
+
+                ctx.lineWidth = 4;
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.fillRect(140,30,210,80);
+                ctx.strokeRect(140,30,210,80);
+                if(Mouse.inBox(130,150,230,80)) {
+                    ctx.fillStyle = 'rgb(200,200,200)';
+                }
+                ctx.fillRect(130,150,230,80);
+                ctx.strokeRect(130,150,230,80);
+                ctx.fillStyle = 'white';
+                if(Mouse.inBox(165,260,160,80)) {
+                    ctx.fillStyle = 'rgb(200,200,200)';
+                }
+                ctx.fillRect(165,260,160,80);
+                ctx.strokeRect(165,260,160,80);
+                ctx.fillStyle = 'white';
+                if(Mouse.inBox(130,380,230,80)) {
+                    ctx.fillStyle = 'rgb(200,200,200)';
+                }
+                ctx.fillRect(130,380,230,80);
+                ctx.strokeRect(130,380,230,80);
+                //buttons & boxes
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'black';
+                ctx.font = "60px Comic Sans MS";
+                ctx.fillText("Paused",250,90);
+                ctx.fillText("Resume",250,210);
+                ctx.fillText("Quit",250,320);
+                ctx.fillText("Restart",250,440);
+                //text
+
+                if(Mouse.clickInBox(130,150,230,80)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    pause = false;
+                }
+                if(Mouse.clickInBox(165,260,160,80)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    pause = false;
+                    page = 'level select';
+                }
+                if(Mouse.clickInBox(130,380,230,80)) {
+                    audios[3].currentTime = 0;
+                    audios[3].play();
+                    pause = false;
+                    resetCurrentLevel();
+                }
+                //clicking
+            }
+            function drawGameMenu(state) {
+                ctx.lineWidth = 5;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0,0,500,500);
+                //background
+
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.fillRect(100,100,300,300);
+                ctx.strokeRect(100,100,300,300);
+                //white box
+
+                ctx.fillStyle = 'black';
+                ctx.font = "50px Comic Sans MS";
+                if(gameState==-1) {
+                    ctx.fillText("You Lose!",140,150);
+                } else {
+                    ctx.fillText("You Win!",150,150);
+                }
+                //top text
+
+                ctx.fillStyle = 'rgb(255,255,0)';
+                drawStar(250,250,5,25,50);
+                if(stars>1&&gameState==1) {
+                    ctx.fill();
+                }
+                ctx.stroke();
+                drawStar(340,225,5,25,50);
+                if(stars>2&&gameState==1) {
+                    ctx.fill();
+                }
+                ctx.stroke();
+                drawStar(160,225,5,25,50);
+                if(stars>0&&gameState==1) {
+                    ctx.fill();
+                }
+                ctx.stroke();
+                //stars
+
+                if(gameState == 1 && levels.length-1 != level) {
+                    ctx.strokeRect(140,310,60,60);
+                    ctx.strokeRect(220,310,60,60);
+                    ctx.strokeRect(300,310,60,60);
+                    ctx.fillStyle = 'rgb(0,0,0,0.5)';
+                    if(Mouse.inBox(140,310,60,60)) {
+                        ctx.fillRect(140,310,60,60);
+                    }
+                    if(Mouse.inBox(220,310,60,60)) {
+                        ctx.fillRect(220,310,60,60);
+                    }
+                    if(Mouse.inBox(300,310,60,60)) {
+                        ctx.fillRect(300,310,60,60);
+                    }
+                } else {
+                    ctx.strokeRect(170,310,60,60);
+                    ctx.strokeRect(270,310,60,60);
+                    ctx.fillStyle = 'rgb(0,0,0,0.5)';
+                    if(Mouse.inBox(170,310,60,60)) {
+                        ctx.fillRect(170,310,60,60);
+                    }
+                    if(Mouse.inBox(270,310,60,60)) {
+                        ctx.fillRect(270,310,60,60);
+                    }
+                }
+                //buttons
+
+                ctx.fillStyle = 'black';
+                if(gameState == 1 && levels.length-1 != level) {
+                    ctx.fillRect(150,320,40,10);
+                    ctx.fillRect(150,335,40,10);
+                    ctx.fillRect(150,350,40,10);
+                    ctx.beginPath();
+                    ctx.arc(250,340,20,Math.PI/2,2*Math.PI);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(260,335);
+                    ctx.lineTo(270,340);
+                    ctx.lineTo(275,330);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(310,340);
+                    ctx.lineTo(350,340);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(340,330);
+                    ctx.lineTo(350,340);
+                    ctx.lineTo(340,350);
+                    ctx.stroke();
+                } else {
+                    ctx.fillRect(180,320,40,10);
+                    ctx.fillRect(180,335,40,10);
+                    ctx.fillRect(180,350,40,10);
+                    ctx.beginPath();
+                    ctx.arc(300,340,20,Math.PI/2,2*Math.PI);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(310,335);
+                    ctx.lineTo(320,340);
+                    ctx.lineTo(325,330);
+                    ctx.stroke();
+                }
+                //icons
+
+                if(gameState == 1 && levels.length-1!=level) {
+                    if(Mouse.clickInBox(140,310,60,60)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        levelSelect = true;
+                        playing = false;
+                    }
+                    if(Mouse.clickInBox(220,310,60,60)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        resetCurrentLevel();
+                    }
+                    if(Mouse.clickInBox(300,310,60,60)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        level++;
+                        resetCurrentLevel();
+                    }
+                } else {
+                    if(Mouse.clickInBox(170,310,60,60)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        gameState = 0;
+                        levelSelect = true;
+                        playing = false;
+                    }
+                    if(Mouse.clickInBox(270,310,60,60)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        resetCurrentLevel();
+                        gameState = 0;
+                    }
+                }
+                //clicking
+            }
+            function updateGame() {
+                drawInGameMenu(true);
+                gameState = findGameState();
+                updateParticles();
+                updateBlocks();
+                deleteBlocks();
+                updateMovement();
+                deleteBlocks();
+                if(rotating>0) {
+                    rotating--;
+                }
+                if(rotating<0) {
+                    rotating++;
+                }
+                drawInGameMenu();
+            }
+            function deleteBlocks() {
+                var f = findDrill();
+                if(f) {
+                    var b = findBlockInCors(currentLevel.blocks[f][0],currentLevel.blocks[f][1]);
+                }
+                if(f) {
+                    if(b!==false) {
+                        if(currentLevel.blocks[b][2]==4) {
+                            audios[2].play();
+                            currentLevel.blocks.splice(f,1);
+                        } else {
+                            if(currentLevel.blocks[b][2]==3) {
+                                audios[0].currentTime = 0;
+                                audios[0].play();
+                            }
+                            currentLevel.blocks.splice(b,1);
+                        }
+                    }
+                }
+            }
+            function findGameBoardCors(x,y) {
+                return [gameboard.xoffset+x*gameboard.blocksize,gameboard.yoffset+y*gameboard.blocksize,gameboard.blocksize];
+            }
+            function drawParticles() {
+                var num = 0;
+                while(num < particles.length) {
+                    ctx.fillStyle = 'rgba('+particles[num][3][0]+','+particles[num][3][1]+','+particles[num][3][2]+','+particles[num][3][3]+')';
+                    ctx.fillRect(particles[num][0],particles[num][1],8,8);
+                    num++;
+                }
+            }
+            function updateParticles() {
+                var num = 0;
+                while(num < particles.length) {
+                    particles[num][2][0] = particles[num][2][0]/1.2;
+                    particles[num][2][1] = particles[num][2][1]/1.2;
+                    particles[num][0] += particles[num][2][0];
+                    particles[num][1] += particles[num][2][1];
+                    particles[num][3][3] -= 0.1;
+                    if(particles[num][3][3] <= 0) {
+                        particles.splice(num,1);
+                    } else {
+                        num++;
+                    }
+                }
+            }
+            function findBlockInCors(x,y,drill) {
+                var num = 0;
+                var response = false;
+                while(num < currentLevel.blocks.length) {
+                    if(drill) {
+                        if(currentLevel.blocks[num][0]==x&&currentLevel.blocks[num][1]==y) {
+                            response = num;
+                        }
+                    } else {
+                        if(currentLevel.blocks[num][0]==x&&currentLevel.blocks[num][1]==y&&currentLevel.blocks[num][2]!=0) {
+                            response = num;
+                        }
+                    }
+                    num++;
+                }
+                return response;
+            }
+            function findDrill() {
+                var num = 0;
+                var response = false;
+                while(num < currentLevel.blocks.length) {
+                    if(currentLevel.blocks[num][2]==0) {
+                        response = num;
+                    }
+                    num++;
+                }
+                return response;
+            }
+            function updateMovement() {
+                var f = findDrill();
+                if(f) {
+                    if(fallingIntoSaw) {
+                        var cors = findGameBoardCors(currentLevel.blocks[f][0],currentLevel.blocks[f][1]);
+                        particles.push([cors[0]+cors[2]/2,Math.floor((cors[1]+cors[2])/100)*100,[Math.random()*10-5,Math.random()*4-5],[color[0],color[1],color[2],color[3]]]);
+                    }
+                    if(Keys.up[82]) {
+                        resetCurrentLevel();
+                    }
+                    if(!moving&&!falling&&!rotating) {
+                        if((Keys.up[37]||Keys.up[65])&&currentLevel.blocks[f][0]!=0) {
+                            moveDrill(-1,0,f);
+                            if(findBlockInCors(currentLevel.blocks[f][0]-1,currentLevel.blocks[f][1])===false) {
+                                audios[6].currentTime = 0;
+                                audios[6].play();
+                            }
+                        }
+                        if((Keys.up[39]||Keys.up[68])&&currentLevel.blocks[f][0]!=currentLevel.width-1) {
+                            moveDrill(1,0,f);
+                            if(findBlockInCors(currentLevel.blocks[f][0]+1,currentLevel.blocks[f][1])===false) {
+                                audios[6].currentTime = 0;
+                                audios[6].play();
+                            }
+                        }
+                        if((Keys.up[40]||Keys.up[83])&&currentLevel.blocks[f][1]!=currentLevel.height-1) {
+                            moveDrill(0,1,f);
+                        }
+                        if(Keys.up[81]) {
+                            audios[4].currentTime = 0;
+                            audios[4].play();
+                            moves++;
+                            rotateBoard("left");
+                        }
+                        if(Keys.up[69]) {
+                            audios[4].currentTime = 0;
+                            audios[4].play();
+                            moves++;
+                            rotateBoard("right");
+                        }
+                    }
+                    if(moving) {
+                        var cors = findGameBoardCors(currentLevel.blocks[f][0],currentLevel.blocks[f][1]);
+                        if(moving[0]) {
+                            if(moving[0]>0) {
+                                moving[0] -= 1;
+                                currentLevel.blocks[f][0]+=0.05;
+                                if(color[0]!=200) {
+                                    particles.push([cors[0]+cors[2],cors[1]+cors[2]/2,[Math.random()*4-5,Math.random()*10-5],[color[0],color[1],color[2],color[3]]]);
+                                } else {
+                                    particles.push([Math.floor((cors[0]+cors[2])/100)*100,cors[1]+cors[2]/2,[Math.random()*4-5,Math.random()*10-5],[color[0],color[1],color[2],color[3]]]);
+                                }
+                            } else {
+                                moving[0] += 1;
+                                currentLevel.blocks[f][0]-=0.05;
+                                if(color[0]!=200) {
+                                    particles.push([cors[0],cors[1]+cors[2]/2,[Math.random()*4+1,Math.random()*10-5],[color[0],color[1],color[2],color[3]]]);
+                                } else {
+                                    particles.push([Math.floor((cors[0]+cors[2])/100)*100,cors[1]+cors[2]/2,[Math.random()*4+1,Math.random()*10-5],[color[0],color[1],color[2],color[3]]]);
+                                }
+                            }
+                            if(moving[0] == 0) {
+                                moving = false;
+                                roundDrillCors();
+                            }
+                        }
+                        if(moving[1]) {
+                            moving[1] -= 1;
+                            particles.push([cors[0]+cors[2]/2,cors[1]+cors[2],[Math.random()*10-5,Math.random()*4-5],[color[0],color[1],color[2],color[3]]]);
+                            currentLevel.blocks[f][1]+=0.05;
+                            if(moving[1] == 0) {
+                                moving = false;
+                                roundDrillCors();
+                            }
+                        }
+                    }
+                }
+            }
+            function roundDrillCors() {
+                var f = findDrill();
+                currentLevel.blocks[f][0] = Math.round(currentLevel.blocks[f][0]);
+                currentLevel.blocks[f][1] = Math.round(currentLevel.blocks[f][1]);
+            }
+            function moveDrill(x,y,n) {
+                color = [0,0,0,0];
+                var b = findBlockInCors(Math.round(currentLevel.blocks[n][0]+x),Math.round(currentLevel.blocks[n][1]+y));
+                if(b===false) {
+                    moving = [x*20,y*20];
+                    moves++;
+                } else {
+                    if(currentLevel.blocks[b][2]==1) {
+                        audios[1].currentTime = 0;
+                        audios[1].play();
+                        color = [100,50,50,2];
+                        moving = [x*20,y*20];
+                        moves++;
+                    } else if(currentLevel.blocks[b][2]==3) {
+                        audios[1].currentTime = 0;
+                        audios[1].play();
+                        color = [0,255,255,2];
+                        moving = [x*20,y*20];
+                        moves++;
+                    } else if(currentLevel.blocks[b][2]==4) {
+                        audios[1].currentTime = 0;
+                        audios[1].play();
+                        color = [200,200,200,2];
+                        moving = [x*20,y*20];
+                        moves++;
+                    }
+                }
+            }
+            function updateBlocks() {
+                if(falling) {
+                    falling -= 1;
+                    var num = 0;
+                    while(num < currentLevel.blocks.length) {
+                        if(currentLevel.blocks[num][1]!=currentLevel.height-1&&currentLevel.blocks[num][4]!=1) {
+                            if(findBlockInCors(currentLevel.blocks[num][0],currentLevel.blocks[num][1]+1,true)===false) {
+                                currentLevel.blocks[num][1] += 0.05;
+                            } else if(currentLevel.blocks[findBlockInCors(currentLevel.blocks[num][0],currentLevel.blocks[num][1]+1,true)][3]) {
+                                currentLevel.blocks[num][1] += 0.05;
+                            }
+                        }
+                        num++;
+                    }
+                    if(falling==0) {
+                        fallingIntoSaw = false;
+                        falling = false;
+                        roundBlockCors();
+                    }
+                }
+                if(!falling&&!moving&&!rotating) {
+                    var n = 0;
+                    while(n < currentLevel.height) {
+                        var num = 0;
+                        while(num < currentLevel.blocks.length) {
+                            if(currentLevel.blocks[num][1]!=currentLevel.height-1&&currentLevel.blocks[num][4]!=1) {
+                                if(findBlockInCors(currentLevel.blocks[num][0],currentLevel.blocks[num][1]+1,true)===false) {
+                                    currentLevel.blocks[num][3] = 1;
+                                    falling = 20;
+                                } else {
+                                    var b = findBlockInCors(currentLevel.blocks[num][0],currentLevel.blocks[num][1]+1,true);
+                                    if((currentLevel.blocks[b][2]==4&&currentLevel.blocks[num][2]==0)||(currentLevel.blocks[num][2]==4&&currentLevel.blocks[b][2]==0)) {
+                                        currentLevel.blocks[num][3] = 1;
+                                        currentLevel.blocks[b][3] = 1;
+                                        falling = 20;
+                                        if(currentLevel.blocks[num][2]==0) {
+                                            fallingIntoSaw = true;
+                                            color = [200,200,200,2];
+                                        }
+                                    }
+                                }
+                            }
+                            num++;
+                        }
+                        n++;
+                    }
+                }
+            }
+            function roundBlockCors() {
+                var num = 0;
+                while(num < currentLevel.blocks.length) {
+                    currentLevel.blocks[num][0] = Math.round(currentLevel.blocks[num][0]);
+                    currentLevel.blocks[num][1] = Math.round(currentLevel.blocks[num][1]);
+                    num++;
+                }
+                num = 0;
+                while(num < currentLevel.blocks.length) {
+                    var f = findBlockInCors(currentLevel.blocks[num][0],currentLevel.blocks[num][1]+1);
+                    if(currentLevel.blocks[num][1]==currentLevel.height-1&&currentLevel.blocks[num][3]) {
+                        audios[5].currentTime = 0;
+                        audios[5].play();
+                    } else if(f!==false&&currentLevel.blocks[num][3]) {
+                        if(currentLevel.blocks[f][3]==0&&!(currentLevel.blocks[f][2]==4&&currentLevel.blocks[num][2]==0)) {
+                            audios[5].currentTime = 0;
+                            audios[5].play();
+                        }
+                    }
+                    currentLevel.blocks[num][3] = 0;
+                    num++;
+                }
+                num = 0;
+                while(num < currentLevel.blocks.length) {
+                    currentLevel.blocks[num][3] = 0;
+                    num++;
+                }
+            }
+            function rotateBoard(direction) {
+                if(direction=="left") {
+                    rotating = 20;
+                    gameboard.rotate -= 90;
+                } else {
+                    rotating = -20;
+                    gameboard.rotate += 90;
+                }
+                var w = currentLevel.width;
+                var h = currentLevel.height;
+                currentLevel.width = h;
+                currentLevel.height = w;
+                gameboard.reset();
+                var num = 0;
+                while(num < currentLevel.blocks.length) {
+                    var x = currentLevel.blocks[num][0];
+                    var y = currentLevel.blocks[num][1];
+                    if(direction=="left") {
+                        currentLevel.blocks[num][0] = y;
+                        currentLevel.blocks[num][1] = x;
+                        currentLevel.blocks[num][1] = currentLevel.height-currentLevel.blocks[num][1]-1;
+                    } else {
+                        currentLevel.blocks[num][0] = y;
+                        currentLevel.blocks[num][1] = x;
+                        currentLevel.blocks[num][0] = currentLevel.width-currentLevel.blocks[num][0]-1;
+                    }
+                    num++;
+                }
+            }
+            function findGameState() {
+                var num = 0;
+                var gems = 0;
+                var drill = false;
+                var response = 0;
+                while(num < currentLevel.blocks.length) {
+                    if(currentLevel.blocks[num][2]==0) {
+                        drill = true;
+                    }
+                    if(currentLevel.blocks[num][2]==3) {
+                        gems++;
+                    }
+                    num++;
+                }
+                if(gems==0) {
+                    response = 1;
+                    finishLevel();
+                }
+                if(!drill) {
+                    response = -1;
+                }
+                return response;
+            }
+            function finishLevel() {
+                if(level==levelsUnlocked) {
+                    levelsUnlocked++;
+                }
+                stars = 0;
+                if(moves <= levelMoves[level][2]) {
+                    stars++;
+                }
+                if(moves <= levelMoves[level][1]) {
+                    stars++;
+                }
+                if(moves <= levelMoves[level][0]) {
+                    stars++;
+                }
+                if(stars > levelStars[level]) {
+                    levelStars[level] = stars;
+                }
+            }
+            function drawInGameMenu(update) {
+                if(!update) {
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = 'black';
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0,0,500,50);
+                    ctx.strokeRect(-3,-3,506,53);
+                    ctx.strokeRect(455,5,40,40);
+                    ctx.strokeRect(410,5,40,40);
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(460,10,12,30);
+                    ctx.fillRect(477,10,13,30);
+                    ctx.strokeStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(430,25,15,Math.PI/2,0);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(441,22);
+                    ctx.lineTo(446,27);
+                    ctx.lineTo(449,20);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    if(Mouse.inBox(455,5,40,40)) {
+                        ctx.fillRect(455,5,40,40);
+                    }
+                    if(Mouse.inBox(410,5,40,40)) {
+                        ctx.fillRect(410,5,40,40);
+                    }
+                    ctx.fillStyle = 'black';
+                    ctx.font = "30px Comic Sans MS";
+                    ctx.textAlign = 'left';
+                    if(moves<100) {
+                        ctx.fillText("Moves: "+moves,0,35);
+                    } else {
+                        ctx.fillText("Moves: 99+",0,35);
+                    }
+                    ctx.fillStyle = 'rgb(255,255,0)';
+                    ctx.fillRect(160,5,240*Math.max(1-moves/(levelMoves[level][2]+1),0),40);
+                    drawStar(160+240*(1-levelMoves[level][2]/(levelMoves[level][2]+1)),25,5,5,10);
+                    if(moves<=levelMoves[level][2]) {
+                        ctx.fill();
+                    }
+                    ctx.stroke();
+                    drawStar(160+240*(1-levelMoves[level][1]/(levelMoves[level][2]+1)),25,5,5,10);
+                    if(moves<=levelMoves[level][1]) {
+                        ctx.fill();
+                    }
+                    ctx.stroke();
+                    drawStar(160+240*(1-levelMoves[level][0]/(levelMoves[level][2]+1)),25,5,5,10);
+                    if(moves<=levelMoves[level][0]) {
+                        ctx.fill();
+                    }
+                    ctx.stroke();
+                    ctx.strokeRect(160,5,240,40);
+                }
+                if(update) {
+                    if(Mouse.clickInBox(455,5,40,40)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        pause = 1;
+                    }
+                    if(Mouse.clickInBox(410,5,40,40)) {
+                        audios[3].currentTime = 0;
+                        audios[3].play();
+                        resetCurrentLevel();
+                    }
+                }
+            }
+            function drawStar(cx, cy, spikes, outerRadius, innerRadius) {
+                var rot = Math.PI * 3 / 2;
+                var x = cx;
+                var y = cy;
+                var step = Math.PI / spikes;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - innerRadius);
+                for (i = 0; i < spikes; i++) {
+                    x = cx + Math.cos(rot) * innerRadius;
+                    y = cy + Math.sin(rot) * innerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+
+                    x = cx + Math.cos(rot) * outerRadius;
+                    y = cy + Math.sin(rot) * outerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+                }
+                ctx.lineTo(cx, cy - innerRadius);
+                ctx.closePath();
+            }
+            var page = 'menu';
+            var color = [0,0,0,0];
+            var particles = [];
+            var currentLevel = {};
+            var levels = [];
+            levels[0] = {width:5,height:1,blocks:[[1,0,1,0],[2,0,1,0],[3,0,1,0],[4,0,3,0],[0,0,0,0]]};
+            levels[1] = {width:5,height:5,blocks:[[1,0,1,0],[2,0,2,0],[3,0,1,0],[4,0,1,0],[0,1,1,0],[1,1,1,0],[2,1,1,0],[3,1,1,0],[4,1,2,0],[0,2,2,0],[1,2,1,0],[2,2,2,0],[3,2,1,0],[4,2,1,0],[0,3,1,0],[1,3,1,0],[2,3,1,0],[3,3,2,0],[4,3,1,0],[0,4,1,0],[1,4,2,0],[2,4,1,0],[3,4,2,0],[4,4,3,0],[0,0,0,0]]};
+            levels[2] = {width:5,height:2,blocks:[[1,1,1,0],[2,1,1,0],[3,1,2,0],[4,1,3,0],[0,1,0,0]]};
+            levels[3] = {width:5,height:5,blocks:[[2,4,2,0],[3,3,2,0],[4,2,2,0],[4,1,3,0],[4,3,2,0],[3,4,2,0],[4,4,2,0],[0,4,0,0]]};
+            levels[4] = {width:5,height:5,blocks:[[2,4,2,0],[3,3,2,0],[4,2,3,0],[4,3,1,0],[3,4,3,0],[4,4,1,0],[0,4,0,0]]};
+            levels[5] = {width:5,height:5,blocks:[[0,1,2,0,1],[1,1,2,0,1],[2,1,2,0,1],[3,1,2,0,1],[4,1,1,0,1],[4,4,3,0],[0,0,0,0]]};
+            levels[6] = {width:6,height:4,blocks:[[0,1,2,0,1],[1,0,2,0,1],[1,1,2,0,1],[1,2,1,0,1],[1,3,2,0,1],[3,0,2,0,1],[3,1,2,0,1],[3,2,2,0,1],[3,3,1,0,1],[5,0,3,0,1],[2,2,2,0],[2,3,2,0],[0,3,0,0]]};
+            levels[7] = {width:7,height:7,blocks:[[0,3,2,0,1],[1,0,2,0,1],[1,1,2,0,1],[1,2,2,0,1],[1,3,2,0,1],[1,4,2,0,1],[1,5,1,0,1],[1,6,2,0,1],[2,2,3,0],[2,3,2,0],[2,4,2,0],[2,5,2,0],[2,6,2,0],[3,0,1,0,1],[3,1,2,0,1],[3,2,2,0,1],[3,3,2,0,1],[3,4,2,0,1],[3,5,2,0,1],[3,6,1,0,1],[4,4,2,0],[4,5,2,0],[4,6,2,0],[5,0,2,0,1],[5,1,2,0,1],[5,2,2,0,1],[5,3,1,0,1],[5,4,2,0,1],[5,5,2,0,1],[5,6,2,0,1],[6,2,2,0,1],[6,4,2,0,1],[0,6,0,0]]};
+            levels[8] = {width:5,height:5,blocks:[[2,4,2,0],[3,3,2,0],[4,2,2,0],[4,3,2,0],[3,4,2,0],[4,4,3,0],[0,4,0,0]]};
+            levels[9] = {width:5,height:5,blocks:[[1,4,2,0],[2,3,2,0],[3,2,1,0],[4,1,2,0],[2,4,2,0],[3,3,2,0],[4,2,1,0],[4,3,3,0],[3,4,3,0],[4,4,3,0],[0,4,0,0]]};
+            levels[10] = {width:5,height:3,blocks:[[1,2,1,0],[3,2,1,0],[1,1,1,0],[2,1,1,0],[3,1,1,0],[4,1,1,0],[4,2,3,0],[0,2,0,0],[2,2,4,0]]};
+            levels[11] = {width:5,height:5,blocks:[[1,4,2,0],[2,3,2,0],[3,2,2,0],[4,1,2,0],[2,4,2,0],[3,3,2,0],[4,2,2,0],[4,4,3,0],[0,4,0,0],[4,3,4,0],[3,4,4,0]]};
+            levels[12] = {width:5,height:5,blocks:[[1,4,1,0],[3,2,4,0],[4,1,4,0],[2,4,2,0],[3,3,1,0],[4,2,1,0],[4,4,3,0],[0,4,0,0],[4,3,4,0],[3,4,4,0],[2,3,4,0]]};
+            levels[13] = {width:5,height:5,blocks:[[1,1,2,0],[2,1,2,0],[0,2,2,0],[0,3,2,0],[1,4,2,0],[2,4,2,0],[3,2,2,0],[3,3,2,0],[1,2,3,0],[2,2,3,0],[1,3,3,0],[2,3,3,0],[3,1,0,0],[0,1,4,0],[0,4,4,0],[3,4,4,0]]};
+            levels[14] = {width:6,height:6,blocks:[[0,3,2,0],[0,4,2,0],[1,5,2,0],[2,5,2,0],[2,2,3,0,1],[3,2,3,0,1],[2,3,3,0,1],[3,3,3,0,1],[1,4,0,0],[0,5,4,0]]};
+            levels[15] = {width:6,height:6,blocks:[[0,3,2,0],[0,4,2,0],[1,5,2,0],[2,5,2,0],[2,2,3,0,1],[3,2,3,0,1],[2,3,3,0,1],[3,3,3,0,1],[1,4,0,0],[0,5,4,0],[5,0,4,0,1]]};
+            levels[16] = {width:8,height:8,blocks:[[0,0,2,0,1],[1,1,2,0,1],[2,2,2,0,1],[5,5,2,0,1],[6,6,2,0,1],[6,1,2,0,1],[5,2,2,0,1],[4,3,3,0,1],[3,4,3,0,1],[2,5,2,0,1],[1,6,2,0,1],[3,2,1,0,1],[4,2,1,0,1],[2,3,1,0,1],[2,4,1,0,1],[3,5,1,0,1],[4,5,1,0,1],[5,3,1,0,1],[5,4,1,0,1],[7,7,0,0],[3,3,4,0],[4,4,4,0]]};
+            levels[17] = {width:8,height:8,blocks:[[5,2,2,0,0],[4,4,2,0,0],[3,1,2,0,0],[2,3,2,0,0],[3,2,3,0,1],[5,3,3,0,1],[2,4,3,0,1],[4,5,3,0,1],[0,7,0,0]]};
+            var level = 0;
+            var levelsUnlocked = 19;
+            var levelStars = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+            var moves = 0;
+            var levelMoves = [[4,5,6],[8,9,10],[3,4,5],[5,6,7],[8,9,10],[4,5,6],[8,9,10],[15,17,19],[6,7,8],[8,10,12],[5,6,7],[9,11,13],[12,14,16],[10,12,14],[10,12,14],[10,12,14],[29,33,35],[15,19,22]];
+            var gameboard = {xoffset:0,yoffset:0,width:0,height:0,blocksize:0,rotate:0,reset:function() {
+                var s = Math.min(currentLevel.width,currentLevel.height);
+                this.blocksize = 410/Math.max(currentLevel.width,currentLevel.height);
+                this.xoffset = (currentLevel.height-s)*gameboard.blocksize/2+45;
+                this.yoffset = (currentLevel.width-s)*gameboard.blocksize/2+70;
+                this.width = currentLevel.width*gameboard.blocksize;
+                this.height = currentLevel.height*gameboard.blocksize;
+            }};
+            var gameState = 0;
+            var pause = false;
+            var menuAnimations = [0,0];
+            var fallingIntoSaw = false;
+            var rotating = 0;
+            var falling = false;
+            var moving = false;
+            var stars = 0;
+            var page = 'menu';
+        </script>
+    </body>
+</html>

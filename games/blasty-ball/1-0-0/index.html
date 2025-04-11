@@ -1,0 +1,644 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.title = "Blast-i-Ball";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var loads = 0;
+            var loadingScreen = true;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = [];
+            var audios = [];
+            if(audios.length+imgs.length==0) {
+                loadingScreen = false;
+            }
+            var keys = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin:0px;overflow:hidden;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                event.preventDefault();
+                keys[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('contextmenu',function(event) {
+                event.preventDefault();
+                _mouse.rightClick = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                rightClick: false,
+                down: false
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function doAll() {
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                if(!loadingScreen) {
+                    program();
+                } else {
+                    _canvas.font = "40px Arial";
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Loading "+Math.floor(loads/(audios.length+imgs.length)*100)+"%",500,200);
+                    _canvas.fillStyle = 'green';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(400,250,loads/(audios.length+imgs.length)*200,50);
+                    _canvas.strokeRect(400,250,200,50);
+                    if(!navigator.onLine) {
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("No Internet",500,450);
+                    }
+                    if(loads==audios.length+imgs.length) {
+                        _canvas.strokeRect(437,350,125,50);
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("PLAY",500,390);
+                        _canvas.fillStyle = 'rgb(0,0,0,0.5)';
+                        if(_mouse.InBox(437,350,125,50)) {
+                            _canvas.fillRect(437,350,125,50);
+                            if(_mouse.click) {
+                                loadingScreen = false;
+                            }
+                        }
+                    }
+                }
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+                _mouse.rightClick = false;
+            }
+
+            //start the program
+            window.setInterval(doAll,20);
+
+            function program() {
+                game.update();
+            }
+            var game = {
+                update: function() {
+                    this.draw();
+                    if(this.startTime>0) {
+                        this.startTime--;
+                    }
+                    var n = 0;
+                    while(n < this.ballsToSpawn.length) {
+                        var ballsToSpawn = this.ballsToSpawn[n];
+                        if(ballsToSpawn.balls.length>0&&ballsToSpawn.time==0) {
+                            ballsToSpawn.time = 100;
+                        }
+                        if(ballsToSpawn.time>0) {
+                            ballsToSpawn.time--;
+                            if(ballsToSpawn.time==0) {
+                                this.objects.push(ballsToSpawn.balls[0]);
+                                ballsToSpawn.balls.shift();
+                            }
+                        }
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < this.objects.length) {
+                        var obj = this.objects[n];
+                        obj.mass = Math.pow(obj.radius,2)*Math.PI;
+                        obj.x += obj.xmove;
+                        obj.y += obj.ymove;
+                        obj.xmove *= obj.friction;
+                        obj.ymove *= obj.friction;
+                        if(obj.y<obj.radius) {
+                            obj.y = 2*obj.radius-obj.y;
+                            obj.ymove *= -1;
+                        }
+                        if(obj.y+obj.radius>500) {
+                            obj.y = 1000-2*obj.radius-obj.y;
+                            obj.ymove *= -1;
+                        }
+                        if(obj.y-obj.radius<160||obj.y+obj.radius>360) {
+                            if(obj.x-obj.radius<20) {
+                                obj.x = 40+2*obj.radius-obj.x;
+                                obj.xmove *= -1;
+                            }
+                            if(obj.x+obj.radius>980) {
+                                obj.x = 1960-2*obj.radius-obj.x;
+                                obj.xmove *= -1;
+                            }
+                        }
+                        var staticObstacles = [{x:20,y:0,r:50},{x:980,y:0,r:50},{x:20,y:500,r:50},{x:980,y:500,r:50},{x:0,y:160,r:20},{x:0,y:340,r:20},{x:1000,y:160,r:20},{x:1000,y:340,r:20}];
+                        var n2 = 0;
+                        while(n2 < staticObstacles.length) {
+                            var obj2 = staticObstacles[n2];
+                            var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                            if(dist<=obj2.r+obj.radius) {
+                                var dir = dirTo(obj2.x,obj2.y,obj.x,obj.y);
+                                var penetrationDist = obj2.r+obj.radius-dist;
+                                var speed = distTo(obj.xmove,obj.ymove,0,0);
+                                var move1 = distToMove(speed,dir);
+                                var move2 = distToMove(penetrationDist,dir);
+                                obj.xmove = move1[0];
+                                obj.ymove = move1[1];
+                                obj.x += move2[0];
+                                obj.y += move2[1];
+                            }
+                            n2++;
+                        }
+                        var n2 = 0;
+                        while(n2 < this.objects.length) {
+                            if(n!=n2) {
+                                var obj2 = this.objects[n2];
+                                var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                if(dist<obj.radius+obj2.radius) {
+                                    var penetrationDist = dist-obj.radius-obj2.radius;
+                                    var speed = distTo(0,0,obj.xmove,obj.ymove)+distTo(0,0,obj2.xmove,obj2.ymove);
+                                    var dir = dirTo(obj.x,obj.y,obj2.x,obj2.y);
+                                    var move1 = distToMove(speed/2,dir+180);
+                                    var move2 = distToMove(penetrationDist/2,dir);
+                                    obj.xmove = move1[0]
+                                    obj.ymove = move1[1]
+                                    obj2.xmove = -move1[0]
+                                    obj2.ymove = -move1[1]
+                                    obj.x += move2[0]
+                                    obj.y += move2[1]
+                                    obj2.x -= move2[0]
+                                    obj2.y -= move2[1]
+                                }
+                                if(obj2.type=='player'&&obj2.blast&&dist<obj2.radius*3+obj.radius&&obj2.focus==n) {
+                                    var dir = dirTo(obj2.x,obj2.y,obj.x,obj.y);
+                                    var move = distToMove(10,dir);
+                                    obj.xmove = move[0];
+                                    obj.ymove = move[1];
+                                }
+                            }
+                            n2++;
+                        }
+                        if(obj.type=='player') {
+                            var move = [0,0];
+                            var blast = false;
+                            if(this.ai[obj.playerId]) {
+                                var targetCors = [470,250];
+                                if(obj.focus!==null) {
+                                    var n2 = 0;
+                                    while(n2 < this.objects.length) {
+                                        if(this.objects[n2].type=='ball') {
+                                            var obj2 = this.objects[n2];
+                                            var dis = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                            if(dis<60&&!obj.blasting) {
+                                                blast = true;
+                                            }
+                                            if(obj.x<obj2.x&&Math.abs(obj.y-obj2.y)<=60||dis>120) {
+                                                targetCors = [obj2.x,obj2.y];
+                                            } else if(obj.x<obj2.x&&Math.abs(obj.y-obj2.y)>60) {
+                                                targetCors = [obj2.x-61,obj2.y];
+                                            } else if(obj.x>=obj2.x&&Math.abs(obj.y-obj2.y)>60) {
+                                                targetCors = [obj2.x-61,obj.y];
+                                            } else if(obj.x>=obj2.x&&Math.abs(obj.y-obj2.y)<=60) {
+                                                if(obj.y<=obj2.y) {
+                                                    targetCors = [obj.x,obj2.y+61];
+                                                } else {
+                                                    targetCors = [obj.x,obj2.y+61];
+                                                }
+                                            }
+                                            break;
+                                        }
+                                        n2++;
+                                    }
+                                }
+                                var dir = dirTo(obj.x,obj.y,targetCors[0],targetCors[1]);
+                                move = distToMove(1,dir);
+                            } else {
+                                if(keys[obj.keyBinds[0]]) {
+                                    move[0]--;
+                                }
+                                if(keys[obj.keyBinds[1]]) {
+                                    move[1]--;
+                                }
+                                if(keys[obj.keyBinds[2]]) {
+                                    move[0]++;
+                                }
+                                if(keys[obj.keyBinds[3]]) {
+                                    move[1]++;
+                                }
+                                if(keys[obj.keyBinds[4]]) {
+                                    blast = true;
+                                }
+                            }
+                            if(blast&&!obj.blasting) {
+                                obj.blast = true;
+                            } else {
+                                obj.blast = false;
+                            }
+                            obj.blasting = blast;
+                            if(!obj.locked) {
+                                obj.xmove += move[0];
+                                obj.ymove += move[1];
+                            }
+                            var closestObject = [Infinity,null];
+                            var n2 = 0;
+                            while(n2 < this.objects.length) {
+                                if(n!=n2) {
+                                    var obj2 = this.objects[n2];
+                                    var dis = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                    if(dis<closestObject[0]) {
+                                        closestObject = [dis,n2];
+                                    }
+                                }
+                                n2++;
+                            }
+                            if(closestObject[1]!=null) {
+                                obj.focus = closestObject[1];
+                                var obj2 = this.objects[closestObject[1]];
+                                var dir = dirTo(obj.x,obj.y,obj2.x,obj2.y);
+                                obj.angle += turn(obj.angle,dir)/5;
+                            }
+                        }
+                        if(obj.x+obj.radius<0||obj.x-obj.radius>1000) {
+                            this.objects.splice(n,1);
+                            if(obj.type=='ball') {
+                                this.spawnBall('ball',{x:500,y:250});
+                                if(obj.x<500) {
+                                    this.score(1);
+                                } else {
+                                    this.score(0);
+                                }
+                            } else {
+                                this.score(obj.playerId);
+                                this.respawnPlayer(obj.playerId);
+                            }
+                        } else {
+                            n++;
+                        }
+                    }
+                },
+                reset: function() {
+                    this.startTime = 100;
+                    this.objects = [];
+                    this.ballsToSpawn = [{time:0,balls:[]},{time:0,balls:[]},{time:0,balls:[]},{time:0,balls:[]},{time:0,balls:[]},{time:0,balls:[]}];
+                    this.spawnBall('ball',{x:500,y:250});
+                    this.respawnPlayer(0);
+                    this.respawnPlayer(1);
+                    this.player1Score = 0;
+                    this.player2Score = 0;
+                },
+                spawnBall: function(type,location) {
+                    var ball = {type:type,x:location.x,y:location.y,xmove:0,ymove:0,friction:0.99,radius:10};
+                    if(location.x==500) {
+                        this.ballsToSpawn[2].balls.push(ball);
+                    } else if(location.x==100) {
+                        this.ballsToSpawn[0].balls.push(ball);
+                    } else if(location.x==900) {
+                        this.ballsToSpawn[1].balls.push(ball);
+                    }
+                    if(this.spawnBallTime==0) {
+                        this.spawnBallTime = 100;
+                    }
+                },
+                player: function() {
+                    return {type:'player',playerId:0,x:0,y:0,angle:0,keyBinds:[],xmove:0,ymove:0,friction:0.8,radius:15,focus:0};
+                },
+                draw: function() {
+                    _canvas.fillStyle = 'rgb(255,230,230)';
+                    _canvas.fillRect(0,0,500,500);
+                    _canvas.fillStyle = 'rgb(240,240,255)';
+                    _canvas.fillRect(500,0,500,500);
+                    _canvas.strokeStyle = 'black';
+                    _canvas.fillStyle = 'black';
+                    _canvas.lineWidth = 2;
+                    var n = 0;
+                    var circles = [{x:500,y:250,r:100},{x:500,y:250,r:15},{x:100,y:250,r:20},{x:900,y:250,r:20},{x:160,y:70,r:15},{x:160,y:430,r:15},{x:840,y:70,r:15},{x:840,y:430,r:15}];
+                    var green = [false,2,1,0,false,false,false,false];
+                    while(n < circles.length) {
+                        _canvas.strokeStyle = 'black';
+                        if(green[n]!==false&&this.ballsToSpawn[green[n]].time!=0&&this.ballsToSpawn[green[n]].time<25) {
+                            _canvas.strokeStyle = 'lime';
+                        }
+                        _canvas.beginPath();
+                        _canvas.arc(circles[n].x,circles[n].y,circles[n].r,0,2*Math.PI);
+                        _canvas.stroke();
+                        n++;
+                    }
+                    _canvas.beginPath();
+                    _canvas.moveTo(100,230);
+                    _canvas.lineTo(100,270);
+                    _canvas.stroke();
+                    _canvas.beginPath();
+                    _canvas.moveTo(900,230);
+                    _canvas.lineTo(900,270);
+                    _canvas.stroke();
+                    _canvas.beginPath();
+                    _canvas.moveTo(160,55);
+                    _canvas.lineTo(160,85);
+                    _canvas.stroke();
+                    _canvas.beginPath();
+                    _canvas.moveTo(160,445);
+                    _canvas.lineTo(160,415);
+                    _canvas.stroke();
+                    _canvas.beginPath();
+                    _canvas.moveTo(840,55);
+                    _canvas.lineTo(840,85);
+                    _canvas.stroke();
+                    _canvas.beginPath();
+                    _canvas.moveTo(840,445);
+                    _canvas.lineTo(840,415);
+                    _canvas.stroke();
+                    circles = [{x:20,y:0,r:50},{x:980,y:0,r:50},{x:20,y:500,r:50},{x:980,y:500,r:50},{x:0,y:160,r:20},{x:0,y:340,r:20},{x:1000,y:160,r:20},{x:1000,y:340,r:20}];
+                    n = 0;
+                    while(n < circles.length) {
+                        _canvas.beginPath();
+                        _canvas.arc(circles[n].x,circles[n].y,circles[n].r,0,2*Math.PI);
+                        _canvas.fill();
+                        n++;
+                    }
+                    _canvas.beginPath();
+                    _canvas.moveTo(500,0);
+                    _canvas.lineTo(500,500);
+                    _canvas.stroke();
+                    _canvas.fillStyle = 'black';
+                    _canvas.fillRect(0,0,20,160);
+                    _canvas.fillRect(0,340,20,190);
+                    _canvas.strokeRect(0,160,150,180);
+                    _canvas.fillRect(980,0,20,160);
+                    _canvas.fillRect(980,340,20,190);
+                    _canvas.strokeRect(850,160,150,180);
+                    var n = 0;
+                    while(n < this.ballsToSpawn.length) {
+                        if(this.ballsToSpawn[n].balls.length==0) {
+                            n++;
+                            continue;
+                        }
+                        var ball = this.ballsToSpawn[n].balls[0];
+                        var time = this.ballsToSpawn[n].time;
+                        if(time==0) {
+                            time = 100;
+                        }
+                        var x = ball.x;
+                        var y = ball.y;
+                        _canvas.save();
+                        _canvas.beginPath();
+                        var r = 14;
+                        if(x==100||x==900) {
+                            r = 19;
+                        }
+                        _canvas.arc(x,y,r,0,2*Math.PI);
+                        _canvas.clip();
+                        _canvas.strokeStyle = 'black';
+                        _canvas.lineWidth = 2;
+                        if(y==250) {
+                            if(x==500) {
+                                var t = (100-time)/4;
+                                this.drawBall(ball);
+                                _canvas.fillStyle = 'rgba(0,0,0,'+(time/100)+')';
+                                _canvas.fillRect(x-15,y-15,30,30);
+                                _canvas.fillStyle = 'rgb(240,240,255)';
+                                _canvas.fillRect(x+t,y-15,15,30);
+                                _canvas.strokeRect(x+t,y-15,15,30);
+                                _canvas.fillStyle = 'rgb(255,230,230)';
+                                _canvas.fillRect(x-15-t,y-15,15,30);
+                                _canvas.strokeRect(x-15-t,y-15,15,30);
+                            } else {
+                                var t = (100-time)/2;
+                                var color;
+                                if(x==100) {
+                                    color = 'rgb(255,230,230)';
+                                } else if(x==900) {
+                                    color = 'rgb(240,240,255)';
+                                }
+                                this.drawPlayer(ball);
+                                _canvas.fillStyle = 'rgba(0,0,0,'+(time/100)+')';
+                                _canvas.fillRect(x-20,y-20,40,40);
+                                _canvas.fillStyle = color;
+                                _canvas.fillRect(x+t,y-20,20,40);
+                                _canvas.strokeRect(x+t,y-20,20,40);
+                                _canvas.fillRect(x-20-t,y-20,20,40);
+                                _canvas.strokeRect(x-20-t,y-20,20,40);
+                                _canvas.fillStyle = color;
+                            }
+                        }
+                        _canvas.restore();
+                        n++;
+                    }
+                    _canvas.textAlign = 'center';
+                    _canvas.textBaseline = 'middle';
+                    _canvas.font = '35px Courier New';
+                    _canvas.fillStyle = 'rgb(255,0,0)';
+                    _canvas.fillText(getText(this.player1Score),40,250);
+                    _canvas.fillStyle = 'rgb(0,0,255)';
+                    _canvas.fillText(getText(this.player2Score),960,250);
+                    var n = 0;
+                    while(n < this.objects.length) {
+                        var obj = this.objects[n];
+                        if(obj.type=='player') {
+                            this.drawPlayer(obj);
+                        }
+                        if(obj.type=='ball') {
+                            this.drawBall(obj);
+                        }
+                        n++;
+                    }
+                    if(this.startTime>0) {
+                        _canvas.fillStyle = 'rgba(255,255,255,0.7)';
+                        _canvas.fillRect(430,60,140,80);
+                        var s = this.startTime;
+                        _canvas.fillStyle = 'black';
+                        var text = '3';
+                        if(s<75) {
+                            text = '2';
+                        }
+                        if(s<50) {
+                            text = '1';
+                        }
+                        if(s<25) {
+                            _canvas.fillStyle = 'rgba(0,255,0,'+(s/25)+')';
+                            text = 'Go!';
+                        }
+                        _canvas.font = '60px Courier New';
+                        _canvas.textAlign = 'center';
+                        _canvas.textBaseline = 'middle';
+                        _canvas.fillText(text,500,100);
+                    }
+                },
+                drawPlayer: function(obj) {
+                    _canvas.fillStyle = 'black';
+                    _canvas.save();
+                    _canvas.translate(obj.x,obj.y);
+                    _canvas.rotate(obj.angle*Math.PI/180);
+                    if(obj.blasting) {
+                        _canvas.fillRect(-obj.radius/2,-obj.radius*2,obj.radius,obj.radius*2);
+                        _canvas.fillRect(-obj.radius*4/5,-obj.radius*7/3,obj.radius*8/5,obj.radius/3);
+                    } else {
+                        _canvas.fillRect(-obj.radius/2,-obj.radius*4/3,obj.radius,obj.radius*4/3);
+                        _canvas.fillRect(-obj.radius*4/5,-obj.radius*5/3,obj.radius*8/5,obj.radius/3);
+                    }
+                    _canvas.restore();
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 2;
+                    _canvas.fillStyle = 'rgb(150,0,0)';
+                    if(obj.playerId==0) {
+                        _canvas.fillStyle = 'rgb(0,0,150)';
+                    }
+                    _canvas.beginPath();
+                    _canvas.arc(obj.x,obj.y,obj.radius,0,2*Math.PI);
+                    _canvas.fill();
+                    _canvas.stroke();
+                },
+                drawBall: function(obj) {
+                    _canvas.beginPath();
+                    _canvas.fillStyle = 'black';
+                    _canvas.arc(obj.x,obj.y,10,0,2*Math.PI);
+                    _canvas.fill();
+                },
+                score: function(playerID) {
+                    if(playerID==0) {
+                        this.player1Score++;
+                    } else {
+                        this.player2Score++;
+                    }
+                },
+                respawnPlayer: function(playerID) {
+                    var player = this.player();
+                    player.y = 250;
+                    player.playerId = playerID;
+                    if(playerID==0) {
+                        player.angle = 270;
+                        player.keyBinds = this.player1Keys;
+                        player.x = 900;
+                    } else {
+                        player.angle = 90;
+                        player.keyBinds = this.player2Keys;
+                        player.x = 100;
+                    }
+                    this.ballsToSpawn[playerID].balls.push(player);
+                    if(this.spawnBallTime==0) {
+                        this.spawnBallTime = 100;
+                    }
+                },
+                ai: [0,0],
+                player1Score: 0,
+                player2Score: 0,
+                ballsToSpawn: [],
+                player1Keys: [37,38,39,40,32],
+                player2Keys: [65,87,68,83,49],
+                objects: [],
+                startTime: 100
+            };
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function getText(number) {
+                number%=100;
+                if(number<10) {
+                    number = '0'+number;
+                }
+                return number;
+            }
+            game.reset();
+            //Balls To Spawn
+            //0: Red Respawn
+            //1: Blue Respawn
+            //2: Middle
+            //3: Top-Left Powerup
+            //4: Top-Right Powerup
+            //5: Bottom-Left Powerup
+            //6: Bottom-Right Powerup
+        </script>
+    </body>
+</html>

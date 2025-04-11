@@ -1,0 +1,267 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Constellations';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            var points = [];
+            var n = 0;
+            while(n < 100) {
+                var point = {};
+                point.x = Math.random()*1000;
+                point.y = Math.random()*1000;
+                point.angle = Math.random()*360;
+                points.push(point);
+                n++;    
+            }
+            function main() {
+                if(Keys.down[32]) {
+                    paused = !paused;
+                }
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0,0,1000,1000);
+                ctx.strokeStyle = 'white';
+                ctx.fillStyle = 'white';
+                var n = 0;
+                while(n < points.length) {
+                    var point = points[n];
+                    var move = distToMove(1,point.angle);
+                    if(!paused) {
+                        point.x += move[0];
+                        point.y += move[1];
+                    }
+                    ctx.globalAlpha = 1;
+                    ctx.fillRect(point.x-2,point.y-2,4,4);
+                    while(point.x<-100) {
+                        point.x += 1200;
+                    }
+                    while(point.y<-100) {
+                        point.y += 1200;
+                    }
+                    while(point.x>1100) {
+                        point.x -= 1200;
+                    }
+                    while(point.y>1100) {
+                        point.y -= 1200;
+                    }
+                    var n2 = n+1;
+                    while(n2 < points.length) {
+                        var point2 = points[n2];
+                        var dist = distTo(point.x,point.y,point2.x,point2.y);
+                        if(dist<150) {
+                            ctx.beginPath();
+                            ctx.moveTo(point.x,point.y);
+                            ctx.lineTo(point2.x,point2.y);
+                            ctx.globalAlpha = Math.min((150-dist)/100,1);
+                            ctx.stroke();
+                            var n3 = n2+1;
+                            while(n3 < points.length) {
+                                var point3 = points[n3];
+                                var dist2 = distTo(point2.x,point2.y,point3.x,point3.y);
+                                if(dist2+dist<200) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(point.x,point.y);
+                                    ctx.lineTo(point2.x,point2.y);
+                                    ctx.lineTo(point3.x,point3.y);
+                                    ctx.closePath();
+                                    ctx.globalAlpha = Math.min((200-dist2-dist)/100,1)/10;
+                                    ctx.fill();
+                                }
+                                n3++;
+                            }
+                        }
+                        n2++;
+                    }
+                    n++;
+                }
+            }
+
+            var paused = false;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Plotless Story Generator</title>
+    </head>
+    <body style='background-color:white'>
+        <button onclick='generate()'>Click To Generate Plotless Story</button>
+        <p id='p'></p>
+        <script>
+            var nouns = ['fridge','table','chair','book','computer','fish','mammal','bird','pheasant','chicken','bean bag','dinosaur','printer','desk','piano','can of beans','can of soup','medicine','wallpaper','paint','lamp','cereal','fire hydrant','police station','fire station','man','woman','child','boy','girl','pencil','wrapper','dog','cat','toilet','toy','bookshelf','car','train','door','monster','floor tile','whiteboard marker','marshmallow','pie','oven','clipboard','spoon','fork','knife'];
+            var adjectives = ['red','orange','yellow','green','blue','purple','grey','black','white','brown','black','silly','happy','anxious','sad','angry','obnoxious','jumpy','excited','depressed','emotional','slimy','ugly','pretty','smooth','rough','dry','wet','bumpy','circular','round','square','pentagonal','octagonal','scary','caring','scared','kind','mean','jittery','flattened','aggrivated','nocturnal','shapeless','pointless','flat','fluffy','huge','big','tiny','small','ginormous','miniscule','microscopic','poofy','goofy'];
+            var verbs = ['ran','jumped','glided','slid','flew','scampered','bounced','swam','jingled','sang'];
+            var others = ['by','through','into','out of','under','over','behind','in front of','around'];
+            var times = ['quickly','slowly'];
+            var starters = ['Once upon a time','One day','One time','Once','A long time ago'];
+            var pluralnouns = ['fridges','tables','chairs','books','computers','fishes','mammals','birds','pheasants','chickens','bean bags','dinosaurs','printers','desks','pianos','cans of beans','cans of soup','medicine','wallpaper','paint','lamps','cereal','fire hydrants','police stations','fire stations','men','women','children','boys','girls','pencils','wrappers','dogs','cats','toilets','toys','bookshelfs','cars','trains','doors','monsters','floor tiles','whiteboard markers','marshmallows','pies','ovens','clipboards','spoons','forks','knifes'];
+            var ttd = ['paint','draw','swim','eat','get obese','die','lie','live','act mean','act kind','fall','fly','run','scamper','sing','jingle','dance','read','tell jokes','act funny','jump off cliffs','bully people','print out essays','compose music','go to school','go to heaven','listen to the ocean','go to the beach','run away','run off cliffs','pop bubbles'];
+            var dord = ['did not want to','liked to','did not like to','did not love to','loved to','hated to'];
+            var yorn = ['Yes','No','Maybe',"I don't know",'Go ask someone else'];
+            var feelings = ['sad','angry','depressed','silly','unkind','menacing','kind','funny'];
+            var t = ['thought','knew','did not know','did not think'];
+            var as = ['yelled at','asked','mumbled to','questioned'];
+            var sp = ['yelled','said','mumbled','spoke','telepathically communicated','texted','called'];
+            var tord = ['told','did not tell'];
+            var lorq = ['louder','quieter'];
+            function generate() {
+                var m1 = randomOf(adjectives) + ' ' + randomOf(nouns);
+                var m2 = randomOf(adjectives) + ' ' + randomOf(nouns);
+                var m3 = randomOf(adjectives) + ' ' + randomOf(nouns);
+                var f1 = randomOf(feelings);
+                var v1 = randomOf(verbs);
+                var o1 = randomOf(others);
+                var ttd1 = randomOf(ttd);
+                var story = randomOf(starters) + ' there was a ' + m1;
+                if(rnd(1,3)==1) {
+                    story = story + '. The ' + m1 + ' ' + randomOf(dord) + ' ' + randomOf(ttd);
+                    story = story + '. The ' + m1 + ' was ' + m1.split(' ')[0] + '. The ' + m1 + ' ' + randomOf(dord) + ' be ' + m1.split(' ')[0];
+                } else if(rnd(1,2)==1) {
+                    story = story + '. The ' + m1 + ' ' + randomOf(dord) + ' ' + randomOf(ttd) + '. The ' + m1 + ' also ' + randomOf(dord) + ' ' + randomOf(ttd);
+                    story = story + '. The ' + m1 + ' was ' + m1.split(' ')[0] + '. The ' + m1 + ' ' + randomOf(dord) + ' be ' + m1.split(' ')[0];
+                } else {
+                    story = story + '. The ' + m1 + ' was ' + m1.split(' ')[0] + ' because the ' + m1 + ' ' + randomOf(dord) + ' ' + randomOf(ttd)  + '. The ' + m1 + ' ' + randomOf(dord) + ' be ' + m1.split(' ')[0];
+                }
+                story = story + '. The ' + m1 + ' ' + v1 + ' ' + o1 + ' the ' + m3;
+                if(rnd(1,4) == 1) {
+                    story = story + '. While the ' + m1 + ' was doing that, it met the ' + m2 + '.';
+                } else if(rnd(1,3) == 1) {
+                    story = story + '. While the ' + m1 + ' was there, it met the ' + m2 + '.';
+                } else if(rnd(1,2) == 1){
+                    story = story + '. While the ' + m1 + ' ' + v1 + ' ' + o1 + ' the ' + m3 + ', it met the ' + m2 + '.';
+                } else {
+                    story = story + '. Then the ' + m1 + ' met the ' + m2 + '.';
+                }
+                if(rnd(1,2)==1) {
+                    story = story + ' The ' + m1 + ' ' + randomOf(as) + ' the ' + m2 +' to see if the ' + m2 + ' ' + randomOf(t) +' it was ' + m1.split(' ')[0] + '. The ' + m2 + ' said, "' + randomOf(yorn) + '" in a ' + f1 + ' tone. The ' + m1 + ' felt ' + randomOf(feelings) + ' because the ' + m2 + ' was ' + f1 + '.';
+                }
+                if(rnd(1,2)==1) {
+                    story = story + ' The ' + m1 + ' ' + randomOf(as) + ' the ' + m2 + ' to see if the ' + m2+ ' ' + randomOf(dord) + ' ' + ttd1 + '. The ' + m2 + ' ' + randomOf(sp) + ' to the ' + m1 + ' that it ' + randomOf(dord) + ' ' + ttd1 + '. The ' + m1 + ' ' + randomOf(tord) + ' the ' + m2 + ' to ' + ttd1 + '.';
+                } else { 
+                    story = story + ' The ' + m1 + ' ' + randomOf(as) + ' the ' + m2 + ' to see why the ' + m2 + ' was ' + m2.split(' ')[0] + '.';
+                    if(rnd(1,2) == 1) {
+                        story = story + ' The ' + m2 + ' did not want to tell the ' + m1 + ' why it was ' + m2.split(' ')[0] + '.';
+                    } else {
+                        story = story + ' The ' + m2 + ' ' + randomOf(sp) + ' to the ' + m1 + ' that it was ' + m2.split(' ')[0] + ' because it ' + randomOf(dord) + ' ' + randomOf(ttd) + '.';
+                    }
+                }
+                if(rnd(1,2)==1) {
+                    story = story + ' The ' + m1 + ' ' + randomOf(sp) + ' to the ' + m2 + ' to see if they could be ' + randomOf(feelings) + ' friends.';
+                    if(rnd(1,2)==1) {
+                        story = story + ' The ' + m2 + ' ' + randomOf(sp) + ', "' + randomOf(yorn) + '."';
+                    } else {
+                        if(rnd(1,3)==1) {
+                            story = story + ' The ' + m2 + ' did not say anything.';
+                        } else if(rnd(1,2)==1) {
+                            story = story + ' The ' + m2 + ' did not want to tell the ' + m1 +' if they could be friends or not.';
+                        } else {
+                            story = story + ' The ' + m1 + ' could not hear what the ' + m2 + ' was saying. The ' + m1 + ' ' + randomOf(tord) + ' the ' + m2 + ' to be ' + randomOf(lorq) + '.';
+                        }
+                    }
+                }
+                if(randomOf(1,2) == 1) {
+                    story = story + ' So the ' + m1 + ' and the ' + m2 + ' ' + randomOf(verbs) + ' ' + randomOf(others) + ' the ' + randomOf(adjectives) + ' ' + randomOf(nouns) + '.';
+                }
+                story = story + ' The End.';
+                document.getElementById('p').innerHTML = story;
+            }
+            function randomOf(a) {
+                return a[rnd(0,a.length-1)];
+            }
+            function rnd(min, max) {
+                return Math.floor(Math.random() * (max - min + 1) ) + min;
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id='canvas'></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = 'Day';
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        window.setInterval(update, 10);
+        Loading.loaded = true;
+        Loading.intro = 0;
+
+        function main() {
+            game.update();
+        }
+
+        var game = {
+            switchKeys: false,
+            throughtCheckpoint1: false,
+            checkpoint1: false,
+            levelX: 0,
+            levelY: 0,
+            playerDead: false,
+            respawnTime: 0,
+            won: false,
+            johnbutlergames: false,
+            showTimer: true,
+            update: function () {
+                if (word.endsWith("JOHNBUTLERGAMES")) {
+                    this.johnbutlergames = !this.johnbutlergames;
+                }
+                if (Keys.keys[82]) {
+                    this.reset();
+                }
+                if (this.levelX == -4 && this.levelY == 0 && player.y < 500) {
+                    this.checkpoint1 = true;
+                }
+                if (!this.playerDead) {
+                    player.update();
+                } else {
+                    this.respawnTime--;
+                    if (this.respawnTime == 0) {
+                        this.respawn();
+                    }
+                }
+                if (this.levelX != -5 || this.levelY != 1) {
+                    this.switchKeys = false;
+                }
+                if (this.currentLevel.f !== undefined) {
+                    this.currentLevel.f();
+                }
+                var n = 0;
+                while (n < this.currentLevel.blocks.length) {
+                    var b = this.currentLevel.blocks[n];
+                    if (b.f !== undefined) {
+                        b.f();
+                    }
+                    n++;
+                }
+                particles.update();
+                this.draw();
+                if (!this.won && player.moved) {
+                    timer++;
+                }
+                if (Keys.down[84]) {
+                    game.showTimer = !game.showTimer;
+                }
+            },
+            draw: function () {
+                if (this.levelX == -6 && game.levelY == 1) {
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'center';
+                    ctx.font = "60px Arial";
+                    ctx.fillText('Not Your Time: ' + timer / 100, 500, 400);
+                }
+                //time
+
+                var n = 0;
+                while (n < this.currentLevel.blocks.length) {
+                    var b = this.currentLevel.blocks[n];
+                    this.drawBlock(b);
+                    //draw block
+                    n++;
+                }
+                //draw blocks
+
+                if (!this.playerDead) {
+                    player.draw();
+                }
+                //draw player
+
+                particles.draw();
+                //draw particles
+
+                if (game.showTimer) {
+                    var text = new String(timer / 100);
+                    if (!text.includes(".")) text += ".00";
+                    var split = text.split(".")[1];
+                    if (split.length < 2) text += "0";
+                    ctx.font = "30px Arial";
+                    var width = ctx.measureText(text).width;
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(980 - width, 0, width + 20, 37);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "right";
+                    ctx.fillText(text, 990, 30);
+                }
+            },
+            reset: function () {
+                this.levelX = 0;
+                this.levelY = 0;
+                this.checkpoint1 = false;
+                player.x = 480;
+                player.y = 500;
+                player.xmove = 0;
+                player.ymove = 0;
+                player.moved = false;
+                timer = 0;
+                this.won = false;
+                this.playerDead = false;
+                this.refreshLevel();
+            },
+            respawn: function () {
+                this.levelX = 0;
+                this.levelY = 0;
+                player.x = 480;
+                player.y = 500;
+                player.xmove = 0;
+                player.ymove = 0;
+                this.playerDead = false;
+                this.refreshLevel();
+            },
+            refreshLevel: function () {
+                particles.particles = [];
+                this.currentLevel = this.getLevel(this.levelX, this.levelY);
+                var n = 0;
+                while (n < this.currentLevel.blocks.length) {
+                    var b = this.currentLevel.blocks[n];
+                    if (b.collide === undefined) {
+                        b.collide = true;
+                    }
+                    n++;
+                }
+            },
+            getLevel: function (x, y) {
+                var level = { x: x, y: y, blocks: [] };
+                var n = 0;
+                while (n < this.levels.length) {
+                    var l = this.levels[n];
+                    if (l.x == x && l.y == y) {
+                        var keys = Object.keys(l);
+                        var n = 0;
+                        while (n < keys.length) {
+                            if (level[keys[n]] === undefined) {
+                                level[keys[n]] = l[keys[n]];
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while (n < l.blocks.length) {
+                            level.blocks.push(JSON.parse(JSON.stringify(l.blocks[n])));
+                            if (l.blocks[n].f !== undefined) {
+                                level.blocks[level.blocks.length - 1].f = l.blocks[n].f;
+                            }
+                            n++;
+                        }
+                        break;
+                    }
+                    n++;
+                }
+                return level;
+            },
+            drawBlock: function (block) {
+                var red = "red";
+                var zeroRed = "rgba(255,0,0,0)";
+                if (this.johnbutlergames) {
+                    red = "blue";
+                    zeroRed = "rgba(0,0,255,0)";
+                }
+                ctx.textAlign = 'center';
+                if (block.type == 'block') {
+                    ctx.fillStyle = 'black';
+                    if (block.iRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.iRadius);
+                        grd.addColorStop(0, 'black');
+                        grd.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.fillStyle = grd;
+                    }
+                    if (block.sRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.sRadius);
+                        grd.addColorStop(0, 'black');
+                        grd.addColorStop(1, red);
+                        ctx.fillStyle = grd;
+                    }
+                    if (block.fRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.fRadius);
+                        grd.addColorStop(1, 'black');
+                        grd.addColorStop(0, 'rgb(0,0,0,0)');
+                        ctx.fillStyle = grd;
+                    }
+                    ctx.fillRect(block.x, block.y, block.w, block.h);
+                } else if (block.type == 'lava') {
+                    ctx.fillStyle = red;
+                    if (block.iRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.iRadius);
+                        grd.addColorStop(0, red);
+                        grd.addColorStop(1, zeroRed);
+                        ctx.fillStyle = grd;
+                    }
+                    if (block.sRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.sRadius);
+                        grd.addColorStop(1, 'black');
+                        grd.addColorStop(0, red);
+                        ctx.fillStyle = grd;
+                    }
+                    if (block.fRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.fRadius);
+                        grd.addColorStop(1, red);
+                        grd.addColorStop(0, 'rgb(0,0,0,0)');
+                        ctx.fillStyle = grd;
+                    }
+                    ctx.fillRect(block.x, block.y, block.w, block.h);
+                } else if (block.type == 'text') {
+                    ctx.fillStyle = 'black';
+                    if (block.iRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.iRadius);
+                        grd.addColorStop(0, 'black');
+                        grd.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.fillStyle = grd;
+                    }
+                    if (block.fRadius !== undefined) {
+                        var p = player;
+                        var grd = ctx.createRadialGradient(p.x + p.w / 2, p.y + p.h / 2, 50, p.x + p.w / 2, p.y + p.h / 2, block.fRadius);
+                        grd.addColorStop(1, 'black');
+                        grd.addColorStop(0, 'rgb(0,0,0,0)');
+                        ctx.fillStyle = grd;
+                    }
+                    ctx.font = block.size + 'px Arial';
+                    ctx.fillText(block.text, block.x, block.y);
+                }
+            },
+            currentLevel: {},
+            levels: [
+                {
+                    x: 0,
+                    y: 0,
+                    blocks: [
+                        { x: 0, y: 700, w: 750, h: 300, type: 'block' },
+                        { x: 0, y: 775, w: 851, h: 225, type: 'block' },
+                        { x: 850, y: 850, w: 150, h: 150, type: 'block' },
+                        { x: 500, y: 200, text: 'Day', size: 100, type: 'text', collide: false },
+                        { x: 500, y: 400, text: 'Go this way to win', size: 50, type: 'text', collide: false },
+                        { x: 500, y: 450, text: '---------->', size: 50, type: 'text', collide: false }, { x: 0, y: 600, w: 100, h: 100, type: 'block' }
+                    ]
+                },
+                {
+                    x: 1,
+                    y: 0,
+                    f: function () {
+                        game.won = true;
+                    },
+                    blocks: [
+                        { x: 0, y: 850, w: 1000, h: 200, type: 'block' },
+                        { x: 1019, y: 0, w: 10, h: 1000, type: 'block' },
+                        { x: 500, y: 150, type: 'text', size: 100, text: 'You Win!' },
+                        { x: 500, y: 250, type: 'text', size: 60, text: 'Congratulations!' },
+                        { x: 500, y: 500, type: 'text', size: 50, text: "I hope you liked this game." },
+                        { x: 500, y: 750, type: 'text', size: 50, text: 'By John Butler.' }
+                    ]
+                },
+                {
+                    x: -1,
+                    y: 0,
+                    blocks: [
+                        { x: 0, y: 900, w: 1000, h: 100, type: 'lava' },
+                        { x: 500, y: 200, text: "It's Day", size: 100, type: 'text', collide: false },
+                        { x: 500, y: 400, text: 'What did you expect?', size: 50, type: 'text', collide: false }
+                    ]
+                }
+            ]
+        }
+
+        var player = {
+            x: 0,
+            y: 0,
+            w: 40,
+            h: 40,
+            xmove: 0,
+            ymove: 0,
+            resting: false,
+            moved: false,
+            die: function () {
+                if (game.playerDead) return;
+                game.playerDead = true;
+                game.respawnTime = 150;
+                var n = 0;
+                while (n < 20) {
+                    var particle = {};
+                    particle.x = this.x + this.w / 2 - 5 + Math.random() * 10 - 5;
+                    particle.y = this.y + this.h / 2 - 5 + Math.random() * 10 - 5;
+                    particle.w = 10;
+                    particle.h = 10;
+                    particle.color = 'blue';
+                    particle.alpha = 2;
+                    particle.decay = 0.08 - Math.random() / 20;
+                    particle.xmove = Math.random() * 30 - 15;
+                    particle.ymove = Math.random() * 30 - 20;
+                    particles.particles.push(particle);
+                    n++;
+                }
+                var n = 0;
+                while (n < 2) {
+                    var particle = {};
+                    particle.x = this.x + this.w / 2;
+                    particle.y = this.y + this.h / 2;
+                    particle.r = 5;
+                    particle.w = 10;
+                    particle.h = 10;
+                    particle.color = 'black';
+                    particle.shape = 'circle';
+                    particle.alpha = 150;
+                    particle.decay = 1;
+                    particle.xmove = Math.random() * 7.5 * (n * 2 - 1);
+                    particle.ymove = Math.random() * 15 - 10;
+                    particles.particles.push(particle);
+                    n++;
+                }
+            },
+            update: function () {
+                var n = 0;
+                while (n < game.currentLevel.blocks.length) {
+                    var b = game.currentLevel.blocks[n];
+                    if (b.collide && b.type == 'lava') {
+                        if (blocksCollidingEdge(this, b)) {
+                            player.die();
+                        }
+                    }
+                    n++;
+                }
+                //check for lava collisions
+
+                this.ymove += 0.08;
+                if (Keys.keys[37] || Keys.keys[65]) {
+                    if (game.switchKeys) {
+                        this.xmove += 0.15;
+                    } else {
+                        this.xmove -= 0.15;
+                    }
+                    this.moved = true;
+                }
+                if (Keys.keys[39] || Keys.keys[68]) {
+                    if (game.switchKeys) {
+                        this.xmove -= 0.15;
+                    } else {
+                        this.xmove += 0.15;
+                    }
+                    this.moved = true;
+                }
+
+                updateBlock(this, game.currentLevel.blocks);
+                //physics
+
+                this.resting = false;
+                var n = 0;
+                while (n < game.currentLevel.blocks.length) {
+                    var b = game.currentLevel.blocks[n];
+                    if (blocksCollidingEdge(this, b) && b.collide) {
+                        if (this.x >= b.x + b.w || this.x + this.w <= b.x) {
+                            this.xmove = 0;
+                        }
+                        if (this.y + this.h <= b.y) {
+                            if (this.x < b.x + b.w && this.x + this.w > b.x) {
+                                this.resting = true;
+                            }
+                        } else if (this.x < b.x + b.w && this.x + this.w > b.x) {
+                            this.ymove = 1 / 10000;
+                        }
+                    }
+                    n++;
+                }
+                if (this.resting) {
+                    this.ymove = 0;
+                    if (game.switchKeys) {
+                        if (Keys.keys[40] || Keys.keys[83]) {
+                            this.ymove = -6;
+                            this.moved = true;
+                        }
+                    } else {
+                        if (Keys.keys[38] || Keys.keys[87]) {
+                            this.ymove = -6;
+                            this.moved = true;
+                        }
+                    }
+                }
+                //calculate player move
+
+                this.xmove *= 0.96;
+                this.ymove *= 0.98;
+                //dampen
+
+                if (this.x < -this.w / 2) {
+                    this.x += 1000;
+                    game.levelX--;
+                    game.refreshLevel();
+                }
+                if (this.x > 1000 - this.w / 2) {
+                    this.x -= 1000;
+                    game.levelX++;
+                    game.refreshLevel();
+                }
+                if (this.y < -this.h / 2) {
+                    this.y += 1000;
+                    game.levelY--;
+                    game.refreshLevel();
+                }
+                if (this.y > 1000 - this.h / 2) {
+                    this.y -= 1000;
+                    game.levelY++;
+                    game.refreshLevel();
+                }
+                //move player through level walls
+            },
+            draw: function () {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                //draw block
+
+                ctx.fillStyle = 'black';
+                var dir = dirTo(0, 0, this.xmove, this.ymove);
+                var speed = distTo(0, 0, this.xmove, this.ymove);
+                speed = Math.min(speed, 5);
+                var move = distToMove(speed, dir);
+                ctx.beginPath();
+                ctx.arc(move.x * 1.5 + this.x + this.w / 2 - 7, move.y * 2 + this.y + this.h / 2 - 7, 3.7, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(move.x * 1.5 + this.x + this.w / 2 + 7, move.y * 2 + this.y + this.h / 2 - 7, 3.7, 0, 2 * Math.PI);
+                ctx.fill();
+                //draw eyes
+            }
+        }
+
+        var particles = {
+            particles: [],
+            update: function () {
+                var n = 0;
+                while (n < this.particles.length) {
+                    var p = this.particles[n];
+                    p.angle += p.turn;
+                    p.ymove += 0.08;
+                    p.xmove *= 0.96;
+                    p.ymove *= 0.98;
+                    p.alpha -= p.decay;
+                    updateBlock(p, game.currentLevel.blocks);
+                    if (p.alpha <= 0) {
+                        this.particles.splice(n, 1);
+                    } else {
+                        n++;
+                    }
+                }
+            },
+            draw: function () {
+                var n = 0;
+                while (n < this.particles.length) {
+                    var p = this.particles[n];
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.min(p.alpha, 1);
+                    if (p.shape == 'circle') {
+                        ctx.beginPath();
+                        ctx.arc(p.x + p.r, p.y + p.r, p.r, 0, 2 * Math.PI);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(p.x, p.y, p.w, p.h);
+                    }
+                    n++;
+                }
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function updateBlock(block, staticBlocks) {
+            block.x += block.xmove;
+            var n = 0;
+            while (n < staticBlocks.length) {
+                var b = staticBlocks[n];
+                if (blocksColliding(block, b) && b.collide) {
+                    if (block.x + block.w / 2 < b.x + b.w / 2) {
+                        block.x = b.x - block.w;
+                    } else {
+                        block.x = b.x + b.w;
+                    }
+                }
+                n++;
+            }
+            //resolve x collisions
+
+            block.y += block.ymove;
+            var n = 0;
+            while (n < staticBlocks.length) {
+                var b = staticBlocks[n];
+                if (blocksColliding(block, b) && b.collide) {
+                    if (block.y + block.h / 2 < b.y + b.h / 2) {
+                        block.y = b.y - block.h;
+                    } else {
+                        block.y = b.y + b.h;
+                    }
+                }
+                n++;
+            }
+            //resolve y collisions
+        }
+
+        game.reset();
+
+        var timer = 0;
+    </script>
+</body>
+
+</html>

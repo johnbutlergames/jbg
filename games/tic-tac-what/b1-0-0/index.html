@@ -1,0 +1,90 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var Levels = [];
+    </script>
+    <script src="components/game.js"></script>
+    <script src="levels/1.js"></script>
+    <script src="levels/2.js"></script>
+    <script src="levels/3.js"></script>
+    <script src="levels/4.js"></script>
+    <script src="levels/5.js"></script>
+    <script src="levels/6.js"></script>
+    <script src="levels/7.js"></script>
+    <script src="levels/8.js"></script>
+    <script src="levels/9.js"></script>
+    <script src="levels/10.js"></script>
+    <script src="levels/11.js"></script>
+    <script src="levels/12.js"></script>
+    <script src="levels/13.js"></script>
+    <script src="levels/14.js"></script>
+    <script src="levels/15.js"></script>
+    <script src="levels/16.js"></script>
+    <script src="levels/17.js"></script>
+    <script src="levels/18.js"></script>
+    <script src="levels/19.js"></script>
+    <script src="levels/20.js"></script>
+    <script src="components/opponent-ai.js"></script>
+    <script src="components/board.js"></script>
+    <script src="components/platformer.js"></script>
+    <script src="components/symbols.js"></script>
+    <script src="components/fill-board.js"></script>
+    <script src="components/object-count.js"></script>
+    <script src="components/score-four.js"></script>
+    <script src="components/rotate-maze.js"></script>
+    <script src="components/flappy.js"></script>
+    <script src="components/garden.js"></script>
+    <script>
+        var title = "Tic Tac What?";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {
+            "wateringCan1": "images/watering-can1.png",
+            "wateringCan2": "images/watering-can2.png",
+            "wateringCan3": "images/watering-can3.png",
+            "wateringCan4": "images/watering-can4.png",
+            "wateringCan5": "images/watering-can5.png",
+            "wateringCan6": "images/watering-can6.png",
+            "wateringCan7": "images/watering-can7.png",
+            "faucet": "images/faucet.png",
+        };
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            game.update();
+            game.draw();
+        }
+
+        function bounceIn(t) {
+            t = Math.min(Math.max(t, 0), 1);
+            return Math.sqrt(t / 4) - t ** 6 + 1.5 * t;
+        }
+
+        rotate = function (cx, cy, x, y, a) {
+            a = -Math.PI / 180 * a;
+            return {
+                x: (Math.cos(a) * (x - cx)) + (Math.sin(a) * (y - cy)) + cx,
+                y: (Math.cos(a) * (y - cy)) - (Math.sin(a) * (x - cx)) + cy
+            };
+        }
+
+        function easeIn(n) {
+            return Math.min(Math.max(n, 0), 1) ** 0.5;
+        }
+
+        var game = new Game();
+        game.init();
+        game.level = 16 - 1;
+        game.reloadLevel();
+    </script>
+</body>
+
+</html>

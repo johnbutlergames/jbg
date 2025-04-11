@@ -1,0 +1,164 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Math With Cows";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function cubicBezierY(xTarget, x1, y1, x2, y2, epsilon = 0.0001) {
+            let tMin = 0;
+            let tMax = 1;
+            let t = 0.5;
+
+            function bezierX(t) {
+                const oneMinusT = 1 - t;
+                return (oneMinusT ** 3) * 0 + 3 * (oneMinusT ** 2) * t * x1 + 3 * oneMinusT * (t ** 2) * x2 + (t ** 3) * 1;
+            }
+
+            while (tMax - tMin > epsilon) {
+                const xAtT = bezierX(t);
+                if (xAtT < xTarget) {
+                    tMin = t;
+                } else {
+                    tMax = t;
+                }
+                t = (tMin + tMax) / 2;
+            }
+            const oneMinusT = 1 - t;
+            const y = (oneMinusT ** 3) * 0 + 3 * (oneMinusT ** 2) * t * y1 + 3 * oneMinusT * (t ** 2) * y2 + (t ** 3) * 1;
+
+            return y;
+        }
+        function easePop(t) {
+            if (t >= 1) return 1;
+            if (t <= 0) return 0;
+            return cubicBezierY(t, .16, 1.24, .88, 1.16);
+        }
+
+        function main() {
+            updateText();
+            drawText();
+        }
+
+        var charsToAdd = [];
+        window.addEventListener("keydown", function (event) {
+            charsToAdd.push(event.key);
+        })
+        function updateText() {
+            var accepted = "0123456789+-*/^.xX";
+            for (var char of charsToAdd) {
+                if (accepted.includes(char)) addChar(char);
+            }
+            charsToAdd = [];
+            for (var char of text) {
+                if (!char.a) char.a = 0;
+                char.a++;
+            }
+            if (Keys.down[8]) backspace();
+
+            updateTextPosition();
+        }
+        function updateTextPosition() {
+            var spacing = 10;
+            var damping = 0.9;
+            var x = 0;
+            for (var n = 0; n < text.length; n++) {
+                var char = text[n];
+                char.targetPos = {
+                    x: x,
+                    y: 0
+                }
+                char.x = char.x * damping + char.targetPos.x * (1 - damping);
+                char.y = char.y * damping + char.targetPos.y * (1 - damping);
+                x += char.width;
+                if (n != text.length - 1) {
+                    var nextChar = text[n + 1];
+                    var numeric = "0123456789.";
+                    if (!numeric.includes(char.value) || !numeric.includes(nextChar.value)) x += spacing;
+                }
+            }
+        }
+        function addChar(char) {
+            if ("xX*".includes(char)) char = "×";
+            if (char == "/") char = "÷";
+            var lastChar = text[text.length - 1];
+            var numeric = "0123456789.";
+            if (!numeric.includes(char) && !numeric.includes(lastChar.value)) {
+                if (char == lastChar.value) return;
+                backspace();
+            }
+            if (lastChar.originalValue && numeric.includes(char)) {
+                text.push({
+                    value: "+",
+                    x: lastChar.x + lastChar.width,
+                    y: 0,
+                    width: findWidth("+")
+                });
+            }
+            var lastChar = text[text.length - 1];
+            if (!numeric.includes(lastChar.value) && char == ".") {
+                text.push({
+                    value: "0",
+                    x: lastChar.x + lastChar.width,
+                    y: 0,
+                    width: findWidth("0")
+                });
+            }
+            var lastChar = text[text.length - 1];
+            text.push({
+                value: char,
+                x: lastChar.x + lastChar.width,
+                y: 0,
+                width: findWidth(char)
+            });
+        }
+        function backspace() {
+            if (!text[text.length - 1].originalValue) {
+                removeChar(text[text.length - 1]);
+            }
+        }
+        function removeChar(char) {
+            char.delete = true;
+            text = text.filter(e => !e.delete);
+        }
+        function drawText() {
+            ctx.save();
+            ctx.translate(500, 500);
+            ctx.font = "50px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            for (var char of text) {
+                ctx.fillStyle = "black";
+                if (char.originalValue) ctx.fillStyle = "blue";
+                ctx.save();
+                ctx.translate(char.x + char.width / 2, char.y);
+                var a = easePop(char.a / 20);
+                ctx.scale(a, a);
+                ctx.fillText(char.value, 0, 0);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        function findWidth(c) {
+            ctx.font = "50px Arial";
+            return ctx.measureText(c).width;
+        }
+
+        var text = [
+            { value: "1", originalValue: true, x: 0, y: 0, width: findWidth("1") }
+        ];
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Velocity';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.addEventListener('mousemove',function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            });
+            canvas.addEventListener('click',function(event) {
+                Mouse.click = true;
+            });
+            canvas.addEventListener('mousedown',function(event) {
+                Mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                Mouse.down = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            });
+            window.addEventListener('keyup',function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            });
+            var loads = 0;
+            var loaded = false;
+            if(imgs.length+audios.length==0) {
+                loaded = true;
+            }
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function pointInPoly(point, poly) {
+                var x = point.x, y = point.y;
+                var inside = false;
+                for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                    var xi = poly[i].x, yi = poly[i].y;
+                    var xj = poly[j].x, yj = poly[j].y;
+                    var intersect = ((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi);
+                    if (intersect) inside = !inside;
+                }
+                return inside;
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function distToSeg(x, y, x1, y1, x2, y2) {
+                var A = x - x1;
+                var B = y - y1;
+                var C = x2 - x1;
+                var D = y2 - y1;
+                var dot = A * C + B * D;
+                var len_sq = C * C + D * D;
+                var param = -1;
+                if (len_sq != 0) {
+                    param = dot / len_sq;
+                }
+                var xx, yy;
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+                var dx = x - xx;
+                var dy = y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            function reflect(incidenceAngle, surfaceAngle){
+                var a = surfaceAngle * 2 - incidenceAngle;
+                return a >= 360 ? a - 360 : a < 0 ? a + 360 : a;
+            }
+            function bounce(point,poly) {
+                var lines = [];
+                var n = 0;
+                while(n < poly.points.length) {
+                    var p = poly.points[n];
+                    var p2 = poly.points[(n+1)%poly.points.length];
+                    lines.push({x1:p.x,y1:p.y,x2:p2.x,y2:p2.y});
+                    n++;
+                }
+                var closest = [false,Infinity];
+                var n = 0;
+                while(n < lines.length) {
+                    var l = lines[n];
+                    var dist = distToSeg(point.x-point.xmove,point.y-point.ymove,l.x1,l.y1,l.x2,l.y2);
+                    if(closest[0]===false||dist<closest[1]) {
+                        closest = [n,dist];
+                    }
+                    n++;
+                }
+                if(closest[0]!==false) {
+                    var line = lines[closest[0]];
+                    var dir = dirTo(line.x1,line.y1,line.x2,line.y2);
+                    var angle = reflect(dirTo(0,0,point.xmove,point.ymove),dir);
+                    var speed = distTo(0,0,point.xmove,point.ymove);
+                    var move = distToMove(speed,angle);
+                    point.xmove = move[0];
+                    point.ymove = move[1];
+                }
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(loaded) {
+                    main();
+                } else {
+                    var percent = loads/(imgs.length+audios.length);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'black';
+                    ctx.font = '120px Arial';
+                    ctx.fillText(title.toUpperCase(),500,300);
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,840,820,120);
+                    ctx.fillStyle = 'green';
+                    ctx.fillRect(100,850,800*percent,100);
+                    ctx.fillStyle = 'black';
+                    if(percent===1) {
+                        ctx.fillRect(300,635,400,150);
+                        if(Mouse.inBox(300,635,400,150)) {
+                            if(Mouse.click) {
+                                loaded = true;
+                            }
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                        } else {
+                            ctx.fillStyle = 'white';
+                        }
+                        ctx.fillRect(310,645,380,130);
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Play',500,745);
+                    } else {
+                        ctx.fillText('Loading...',500,750);
+                    }
+                }
+                Mouse.click = false;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+                t++;
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    cam.update();
+                    this.objects.update();
+                    particles.update();
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(500-cam.x,500-cam.y);
+                    ctx.scale(cam.zoom,cam.zoom);
+
+                    this.objects.draw();
+                    particles.draw();
+
+                    ctx.restore();
+                },
+                objects: {
+                    objects: [{type:'player',x:100,y:0,angle:20,xmove:0,ymove:0,reload:0,reloadReset:10,damping:0.99,spread:20,engineAnimation:0,engineSpeed:0,trail:[]},{type:'polygon',points:[{x:-100,y:-100},{x:0,y:-100},{x:100,y:0},{x:100,y:100},{x:-100,y:100}],reflective:true}],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            obj.id = n;
+                            var d = this.updateObject(obj);
+                            if(d) {
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            this.drawObject(obj);
+                            n++;
+                        }
+                    },
+                    updateObject: function(obj) {
+                        var deleteObj = false;
+                        if(obj.type=='bullet') {
+                            obj.oldCors.x = obj.x;
+                            obj.oldCors.y = obj.y;
+                            obj.time -= 1;
+                            if(obj.time<0) {
+                                deleteObj = true;
+                            }
+
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                var obj2 = this.objects[n];
+                                if(obj2.type=='polygon') {
+                                    var dist = distTo(obj2.avg.x,obj2.avg.y,obj.x,obj.y);
+                                    if(dist<obj2.r) {
+                                        if(pointInPoly(obj,obj2.points)) {
+                                            if(obj2.reflective) {
+                                                bounce(obj,obj2);
+                                            } else {
+                                                deleteObj = true;
+                                            }
+                                            var n2 = 0;
+                                            while(n2 < 5) {
+                                                var p = {x:obj.x,y:obj.y,alpha:2,decay:0.1,color:'red',blur:5,size:5};
+                                                p.xmove = Math.random()*4-2;
+                                                p.ymove = Math.random()*4-2;
+                                                particles.particles.push(p);
+                                                n2++;
+                                            }
+                                            //particles
+                                        }
+                                    }
+                                }
+                                n++;
+                            }
+                            //polygon collisions
+                        }
+                        if(obj.type=='polygon') {
+                            if(obj.avg===undefined) {
+                                obj.avg = {x:0,y:0};
+                                var n = 0;
+                                while(n < obj.points.length) {
+                                    obj.avg.x += obj.points[n].x;
+                                    obj.avg.y += obj.points[n].y;
+                                    n++;
+                                }
+                                obj.avg.x /= obj.points.length;
+                                obj.avg.y /= obj.points.length;
+                            }
+                            if(obj.r===undefined) {
+                                obj.r = 0;
+                                var n = 0;
+                                while(n < obj.points.length) {
+                                    var p = obj.points[n];
+                                    obj.r = Math.max(distTo(obj.avg.x,obj.avg.y,p.x,p.y),obj.r);
+                                    n++;
+                                }
+                            }
+                        }
+                        if(obj.type=='player') {
+                            obj.engineAnimation += obj.engineSpeed;
+                            obj.engineSpeed *= 0.99;
+                            if(obj.spread==20) {
+                                if(Keys.keys[37]||Keys.keys[65]) {
+                                    obj.angle -= 3;
+                                }
+                                if(Keys.keys[39]||Keys.keys[68]) {
+                                    obj.angle += 3;
+                                }
+                                if(Keys.keys[38]||Keys.keys[87]) {
+                                    var move = distToMove(0.1,obj.angle);
+                                    obj.xmove += move[0];
+                                    obj.ymove += move[1];
+                                    obj.engineSpeed += 0.3;
+
+                                    var p = {alpha:2,decay:0.03,size:7};
+                                    p.color = '#ff6600';
+                                    var r = rotate(obj.x,obj.y,obj.x+Math.random()*5-2.5,obj.y+10,-obj.angle);
+                                    p.x = r[0];
+                                    p.y = r[1];
+                                    p.xmove = Math.random()-0.5;
+                                    p.ymove = Math.random()-0.5;
+                                    particles.particles.push(p);
+                                    //particles
+                                }
+                                //keyboard movement
+                            } else if(obj.spread==0) {
+                                var move = distToMove(0.3,obj.angle);
+                                obj.xmove += move[0];
+                                obj.ymove += move[1];
+                            }
+
+                            obj.reload--;
+                            obj.reload = Math.max(obj.reload,0);
+                            //reload
+
+                            if(Keys.keys[32]) {
+                                obj.spread-=3;
+                            } else {
+                                obj.spread+=3;
+                            }
+                            obj.spread = Math.min(Math.max(obj.spread,0),20);
+                            //spread
+
+                            obj.trail.push({x:obj.x,y:obj.y});
+                            if(obj.trail.length>20) {
+                                obj.trail.shift();
+                            }
+                            //trail
+                        }
+                        this.moveObject(obj,obj.xmove,obj.ymove);
+                        //move
+
+                        if(obj.damping) {
+                            obj.xmove *= obj.damping;
+                            obj.ymove *= obj.damping;
+                        } else {
+                            obj.xmove *= 0.95;
+                            obj.ymove *= 0.95;
+                        }
+                        //damping
+
+                        return deleteObj;
+                    },
+                    moveObject: function(obj,xmove,ymove) {
+                        if(obj.type=='player'||obj.type=='bullet') {
+                            obj.x += xmove;
+                            obj.y += ymove;
+                        }
+                    },
+                    drawObject: function(obj) {
+                        if(obj.type=='player') {
+                            var spread = obj.spread;
+
+                            ctx.save();
+                            ctx.translate(obj.x,obj.y);
+                            ctx.rotate(obj.angle*Math.PI/180);
+
+                            ctx.fillStyle = 'black';
+                            ctx.fillRect(-10,-10,20,20);
+                            ctx.fillRect(-5,10,10,4);
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                            ctx.fillRect(-7,-7,14,14);
+                            //body
+
+                            ctx.save();
+                            ctx.rotate(obj.engineAnimation*Math.PI/180);
+                            ctx.fillStyle = '#6600cc';
+                            ctx.beginPath();
+                            ctx.arc(0,-3.5,3,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.fillStyle = '#ff6600';
+                            ctx.beginPath();
+                            ctx.arc(0,3.5,3,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                            //engine
+
+                            var o = 10;
+                            ctx.fillStyle = 'black';
+                            ctx.beginPath();
+                            ctx.arc(-spread/2,0,20,Math.PI*0.5,Math.PI*1.5);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(spread/2,0,20,Math.PI*1.5,Math.PI*0.5);
+                            ctx.fill();
+                            ctx.strokeStyle = '#6600cc';
+                            ctx.lineWidth = o;
+                            ctx.beginPath();
+                            ctx.arc(-spread/2,0,21-o/2,Math.PI*0.5,Math.PI*1.5);
+                            ctx.stroke();
+                            ctx.strokeStyle = '#ff6600';
+                            ctx.beginPath();
+                            ctx.arc(spread/2,0,21-o/2,Math.PI*1.5,Math.PI*0.5);
+                            ctx.stroke();
+                            //wings
+                            
+                            ctx.restore();
+
+                            ctx.fillStyle = 'black';
+                            ctx.beginPath();
+                            ctx.moveTo(obj.trail[0].x-obj.x,obj.trail[0].y-obj.y);
+                            var n = 1;
+                            while(n < obj.trail.length) {
+                                var last = obj.trail[n-1];
+                                var p = obj.trail[n];
+                                var dir = dirTo(p.x,p.y,last.x,last.y);
+                                var d = obj.radius*n/10;
+                                var r = rotate(p.x,p.y,p.x,p.y-d,-dir+90);
+                                ctx.lineTo(r[0]-obj.x,r[1]-obj.y);
+                                n++;
+                            }
+                            var n = obj.trail.length-1;
+                            while(n > 0) {
+                                var last = obj.trail[n-1];
+                                var p = obj.trail[n];
+                                var dir = dirTo(p.x,p.y,last.x,last.y);
+                                var d = obj.radius*n/10;
+                                var r = rotate(p.x,p.y,p.x,p.y-d,-dir-90);
+                                ctx.lineTo(r[0]-obj.x,r[1]-obj.y);
+                                n--;
+                            }
+                            ctx.lineTo(obj.trail[0].x-obj.x,obj.trail[0].y-obj.y);
+                            ctx.fill();
+                            //trail
+                        }
+                        if(obj.type=='bullet') {
+                            ctx.shadowColor = 'red';
+                            ctx.shadowBlur = 3;
+                            ctx.lineWidth = 5;
+                            ctx.strokeStyle = 'red';
+                            ctx.beginPath();
+                            ctx.moveTo(obj.oldCors.x,obj.oldCors.y);
+                            ctx.lineTo(obj.x,obj.y);
+                            ctx.stroke();
+                            ctx.shadowBlur = 0;
+                        }
+                        if(obj.type=='polygon') {
+                            ctx.beginPath();
+                            ctx.fillStyle = 'black';
+                            ctx.moveTo(obj.points[0].x,obj.points[0].y);
+                            var n = 1;
+                            while(n < obj.points.length) {
+                                ctx.lineTo(obj.points[n].x,obj.points[n].y);
+                                n++;
+                            }
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.strokeStyle = 'rgb(150,150,150)';
+                            ctx.lineWidth = 10;
+                            ctx.lineJoin = 'miter';
+                            ctx.lineCap = 'round';
+                            ctx.stroke();
+                            ctx.strokeStyle = 'rgb(100,100,100)';
+                            ctx.lineWidth = 8;
+                            ctx.setLineDash([1,20]);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+                    },
+                    find: function(params) {
+                        var valid = [];
+                        var keys = Object.keys(params);
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            var validObj = true;
+                            var n2 = 0;
+                            while(n2 < keys.length) {
+                                if(obj[keys[n2]]!=params[keys[n2]]) {
+                                    validObj = false;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if(validObj) {
+                                valid.push(obj);
+                            }
+                            n++;
+                        }
+                        return valid;
+                    }
+                }
+            }
+
+            var cam = {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                update: function() {
+                    var players = game.objects.find({type:'player'});
+                    //find players
+
+                    if(players.length>0) {
+                        var player = players[0];
+                        var speed = distTo(0,0,player.xmove,player.ymove);
+                        var clamp = 1-speed/100;
+                        this.x = this.x*clamp+player.x*(1-clamp);
+                        this.y = this.y*clamp+player.y*(1-clamp);
+                        //move cam
+                    }
+                }
+            }
+
+            var particles = {
+                particles: [],
+                update: function() {
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        p.alpha -= p.decay;
+                        //decay
+
+                        p.x += p.xmove;
+                        p.y += p.ymove;
+                        //move
+
+                        p.xmove *= 0.98;
+                        p.ymove *= 0.98;
+                        //damping
+
+                        if(p.alpha<=0) {
+                            this.particles.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                },
+                draw: function() {
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        if(p.blur!==undefined) {
+                            ctx.shadowBlur = p.blur;
+                        } else {
+                            ctx.shadowBlur = 0;
+                        }
+                        ctx.shadowColor = p.color;
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.alpha;
+                        var size = 4;
+                        if(p.size!==undefined) {
+                            size = p.size;
+                        }
+                        ctx.fillRect(p.x-size/2,p.y-size/2,size,size);
+                        n++;
+                    }
+                    ctx.globalAlpha = 1;
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            var t = 0;
+        </script>
+    </body>
+</html>

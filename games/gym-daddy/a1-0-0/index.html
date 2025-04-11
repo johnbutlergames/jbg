@@ -1,0 +1,162 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Gym Daddy";
+            var dimensions = {width:1500,height:1000};
+            var images = {
+                "barbell": "images/barbell.png",
+                "bodybuildersquatup": "images/bodybuilder-squat-up.png",
+                "bodybuildersquatdown": "images/bodybuilder-squat-down.png"
+            };
+            var audios = {};
+            var arcadeClassicFont = new FontFace("arcadeclassic","url(arcade-classic.ttf)");
+            arcadeClassicFont.load().then(function(font){
+                document.fonts.add(font);
+            });
+
+            initialize();
+            Loading.loaded = true;
+            Loading.intro = 0;
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+                t++;
+            }
+
+            var menu = {
+                page: "title screen",
+                switchPage: "title screen",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 40,
+                transitionTileIndexes: [],
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        //switch page animation
+
+                        var n = a*250;
+                        for(var x=0;x<15;x++) {
+                            for(var y=0;y<10;y++) {
+                                if(n<this.transitionTileIndexes[x*10+y]) continue;
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(x*100,y*100,100,100);
+                            }
+                        }
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+                        if(Mouse.clickInBox(750-200/2,500-135/2,200,135)) {
+                            this.switchPage = "game";
+                            game.reset();
+                        }
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+                        ctx.font = "150px arcadeclassic";
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Gym   Daddy",750,130);
+
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 10;
+                        ctx.fillStyle = "white";
+                        ctx.rect(750-200/2,500-135/2,200,135,20);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.fillStyle = "black";
+                        ctx.font = "70px arcadeclassic";
+                        ctx.fillText("Play",750,500);
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                },
+                reset: function() {
+                    this.transitionTileIndexes = [];
+                    for(var n=0;n<150;n++) {
+                        var index = Math.floor(Math.random()*this.transitionTileIndexes.length);
+                        this.transitionTileIndexes.splice(index,0,n);
+                    }
+                }
+            }
+
+            var game = {
+                squatted: false,
+                update: function() {
+                },
+                updateEffects: function() {
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(750,500);
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.scale(3,3);
+
+                    if(Keys.keys[32]) {
+                        this.squatted = true;
+                        ctx.drawImage(images.barbell,-100,-35,200,100);
+                        ctx.drawImage(images.bodybuildersquatdown,-100,-100,200,200);
+                    } else {
+                        ctx.drawImage(images.barbell,-100,-70,200,100);
+                        ctx.drawImage(images.bodybuildersquatup,-100,-100,200,200);
+                    }
+
+                    ctx.restore();
+
+                    if(t%100<50&&!this.squatted) {
+                        ctx.fillStyle = "black";
+                        ctx.font = "50px arcadeclassic";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Press   Space   to   Squat",750,900);
+                    }
+                },
+                reset: function() {
+                }
+            }
+
+            game.reset();
+            menu.reset();
+            var t = 0;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,810 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var text = '';
+            var title = 'Snake';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                text += String.fromCharCode(event.keyCode);
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=='game') {
+                    game.update();
+                } else if(page=='menu') {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,1000,1000);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '100px Comic Sans MS';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Snake',500,150);
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillText('Highscore: '+highscore,500,500);
+                    ctx.font = '50px Comic Sans MS';
+                    ctx.fillText('By John Butler',500,950);
+
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(380,250,240,130)) {
+                        ctx.fillStyle = 'rgb(60,60,60)';
+                        if(Mouse.click) {
+                            page = 'game';
+                            game.reset();
+                        }
+                    }
+                    roundRect(380,250,240,130,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = '80px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Play',500,340);
+                    //play button
+
+                    ctx.save();
+                    ctx.translate(150,180);
+                    game.reset();
+                    game.update(true);
+                    game.drawSnake();
+                    ctx.restore();
+
+                    ctx.lineJoin = 'round';
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = 'white';
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(650,650,100,100)) {
+                        ctx.fillStyle = 'rgb(60,60,60)';
+                        if(Mouse.click) {
+                            game.snakeSkin++;
+                        }
+                    }
+                    ctx.fillRect(650,650,100,100);
+                    ctx.strokeRect(650,650,100,100);
+                    ctx.beginPath();
+                    ctx.moveTo(670,670);
+                    ctx.lineTo(730,700);
+                    ctx.lineTo(670,730);
+                    ctx.closePath();
+                    ctx.stroke();
+                    //right button
+
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(250,650,100,100)) {
+                        ctx.fillStyle = 'rgb(60,60,60)';
+                        if(Mouse.click) {
+                            game.snakeSkin--;
+                        }
+                    }
+                    ctx.fillRect(250,650,100,100);
+                    ctx.strokeRect(250,650,100,100);
+                    ctx.beginPath();
+                    ctx.moveTo(330,670);
+                    ctx.lineTo(270,700);
+                    ctx.lineTo(330,730);
+                    ctx.closePath();
+                    ctx.stroke();
+                    //left button
+
+                    if(game.snakeSkin<0&&game.snakeSkin!=-2) {
+                        game.snakeSkin = game.snakeSkins.length-1;
+                    }
+                    game.snakeSkin %= game.snakeSkins.length;
+                    //snake skin chooser
+
+                    if(text.endsWith('JOHNBUTLERGAMES')) {
+                        game.snakeSkin = -2;
+                    }
+
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(20,20,200,80)) {
+                        ctx.fillStyle = 'rgb(60,60,60)';
+                        if(Mouse.click) {
+                            game.ai = !game.ai;
+                        }
+                    }
+                    roundRect(20,20,200,80,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = '40px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    if(game.ai) {
+                        ctx.fillText('AI: ON',120,75);
+                    } else {
+                        ctx.fillText('AI: OFF',120,75);
+                    }
+                    //AI switcher
+                }
+                time++;
+            }
+
+            var game = {
+                snakeSkin: 0,
+                snakeSkins: [{s:{r:0,g:200,b:0},e:{r:0,g:150,b:150}},{s:{r:255,g:0,b:0},e:{r:255,g:200,b:0}},{s:{r:0,g:0,b:200},e:{r:0,g:0,b:100}},{s:{r:150,g:0,b:200},e:{r:100,g:0,b:150}},{s:{r:200,g:200,b:200},e:{r:100,g:100,b:120}},{s:{r:200,g:200,b:0},e:{r:200,g:100,b:0}},{s:{r:100,g:100,b:100},e:{r:100,g:100,b:100}},{s:{r:255,g:0,b:200},e:{r:200,g:0,b:150}},{s:{r:100,g:50,b:0},e:{r:75,g:40,b:0}},['rgb(200,0,0)','rgb(50,50,50)'],['rgb(200,200,0)','rgb(50,50,50)'],['rgb(200,0,0)','rgb(200,200,0)','rgb(50,50,50)']],
+                apples: [],
+                collectedApples: [],
+                updateSpeed: 20,
+                gameOver: false,
+                gameOverAnimation: false,
+                snake: {
+                    update: function() {
+                        this.oldSegments = JSON.parse(JSON.stringify(this.segments));
+                        this.direction = this.newDirection;
+                        var move = distToMove(1,this.direction);
+                        move[0] = Math.round(move[0]);
+                        move[1] = Math.round(move[1]);
+                        var head = this.segments[0];
+                        this.segments.unshift({x:head.x+move[0],y:head.y+move[1]});
+                        head = this.segments[0];
+                        var ateApple = false;
+                        var n = 0;
+                        while(n < game.apples.length) {
+                            var apple = game.apples[n];
+                            if(apple.x == head.x && apple.y == head.y) {
+                                game.collectedApples.push({x:game.apples[n].x,y:game.apples[n].y,decay:1});
+                                game.apples.splice(n,1);
+                                ateApple = true;
+                                game.spawnApple();
+                                n--;
+                            }
+                            n++;
+                        }
+                        if(!ateApple) {
+                            this.segments.pop();
+                        }
+                        var collided = false;
+                        var n = 1;
+                        while(n < this.segments.length) {
+                            var segment = this.segments[n];
+                            if(segment.x==head.x&&segment.y==head.y) {
+                                collided = true;
+                                break;
+                            }
+                            n++;
+                        }
+                        if(head.x<0||head.y<0||head.x>19||head.y>19) {
+                            collided = true;
+                        }
+                        if(collided) {
+                            game.gameOver = true;
+                            if(game.ai) {
+                                AIHighscore = Math.max(this.segments.length-4,AIHighscore);
+                            } else {
+                                highscore = Math.max(this.segments.length-4,highscore);
+                                localStorage.setItem('snakehighscore',highscore);
+                            }
+                        }
+                    },
+                    newDirection: 0,
+                    direction: 0,
+                    segments: [],
+                    oldSegments: [],
+                    drawSegments: []
+                },
+                update: function(noDraw) {
+                    if(!noDraw) {
+                        this.draw();
+                    }
+                    if(time%this.updateSpeed==0) {
+                        if(!this.gameOver) {
+                            this.snake.update();
+                        }
+                    }
+                    if(this.gameOver) {
+                        this.gameOverAnimation -= 1/this.updateSpeed;
+                    }
+                    if(this.ai&&page=='game') {
+                        var apple = this.apples[0];
+                        var head = this.snake.segments[0];
+                        var blocks = [];
+                        var x = 0;
+                        while(x < 20) {
+                            var row = [];
+                            var y = 0;
+                            while(y < 20) {
+                                row.push(false);
+                                y++;
+                            }
+                            blocks.push(row);
+                            x++;
+                        }
+                        var n = 1;
+                        while(n < this.snake.segments.length) {
+                            var s = this.snake.segments[n];
+                            blocks[s.x][s.y] = true;
+                            n++;
+                        }
+                        var path = findPath(blocks,[head.x,head.y],[apple.x,apple.y],20,20);
+                        if(path[0]) {
+                            var next = path[1][path[1].length-2];
+                            if(next) {
+                                this.snake.newDirection = Math.round(dirTo(head.x,head.y,next[0],next[1]));
+                            }
+                        } else {
+                            var nodes = path[1];
+                            var closest = [Infinity,false];
+                            var n = 0;
+                            while(n < nodes.length) {
+                                var node = nodes[n];
+                                var dist = distTo(node.x,node.y,apple.x,apple.y);
+                                if(dist<closest[0]) {
+                                    closest = [dist,n];
+                                }
+                                n++;
+                            }
+                            if(closest[1]!==false) {
+                                var node = nodes[closest[1]];
+                                path = findPath(blocks,[node.x,node.y],[head.x,head.y],20,20);
+                                var next = path[1][1];
+                                if(next) {
+                                    this.snake.newDirection = Math.round(dirTo(head.x,head.y,next[0],next[1]));
+                                }
+                            }
+                        }
+                    } else {
+                        if((Keys.keys[65]||Keys.keys[37])&&this.snake.direction!=90) {
+                            this.snake.newDirection = 270;
+                        }
+                        if((Keys.keys[87]||Keys.keys[38])&&this.snake.direction!=180) {
+                            this.snake.newDirection = 0;
+                        }
+                        if((Keys.keys[68]||Keys.keys[39])&&this.snake.direction!=270) {
+                            this.snake.newDirection = 90;
+                        }
+                        if((Keys.keys[83]||Keys.keys[40])&&this.snake.direction!=0) {
+                            this.snake.newDirection = 180;
+                        }
+                    }
+                    this.snake.drawSegments = [];
+                    var n = 0;
+                    while(n < this.snake.segments.length) {
+                        var percent = (time%this.updateSpeed)/this.updateSpeed;
+                        if(this.gameOver) {
+                            if(this.gameOverAnimation>0) {
+                                percent = Math.sin(percent*3)/2;
+                            } else {
+                                percent = 0;
+                            }
+                        }
+                        var segment = this.snake.segments[n];
+                        var oldSegment = this.snake.oldSegments[n];
+                        var drawSegment = {};
+                        drawSegment.x = segment.x;
+                        drawSegment.y = segment.y;
+                        if(oldSegment!=undefined) {
+                            drawSegment.x = segment.x*percent+oldSegment.x*(1-percent);
+                            drawSegment.y = segment.y*percent+oldSegment.y*(1-percent);
+                        }
+                        this.snake.drawSegments.push(drawSegment);
+                        n++;
+                    }
+                },
+                drawSnake: function() {
+                    var n = 0;
+                    while(n < this.snake.drawSegments.length) {
+                        var next = this.snake.drawSegments[n+1];
+                        var segment = this.snake.drawSegments[n];
+                        var realSegment = this.snake.segments[n+1];
+                        var percent = n/(this.snake.segments.length-1);
+                        if(this.snake.segments.length<12) {
+                            percent = n/12;
+                        }
+                        var size = 50-percent*35;
+                        if(next) {
+                            if(game.snakeSkin!=-2) {
+                                var skin = game.snakeSkins[game.snakeSkin];
+                                if(Array.isArray(skin)) {
+                                    ctx.strokeStyle = skin[n%skin.length];
+                                } else {
+                                    var color = blend(skin.s,skin.e,percent);
+                                    ctx.strokeStyle = 'rgb('+color.r+','+color.g+','+color.b+')';
+                                }
+                            } else {
+                                ctx.strokeStyle = 'hsl('+(n*60)+',100%,40%)';
+                            }
+                            ctx.lineWidth = size;
+                            ctx.lineCap = 'round';
+                            ctx.beginPath();
+                            ctx.moveTo(segment.x*50+25,segment.y*50+25);
+                            if(realSegment) {
+                                ctx.lineTo(realSegment.x*50+25,realSegment.y*50+25);
+                            }
+                            ctx.lineTo(next.x*50+25,next.y*50+25);
+                            ctx.stroke();
+                        }
+                        n++;
+                    }
+                    //snake body
+
+                    if(this.snake.drawSegments.length>1) {
+                        var head = this.snake.drawSegments[0];
+                        var next = this.snake.drawSegments[1];
+                        var angle = dirTo(head.x,head.y,next.x,next.y);
+                        ctx.save();
+                        ctx.translate(head.x*50+25,head.y*50+25);
+                        ctx.rotate(angle*Math.PI/180);
+                        if(this.gameOver&&this.gameOverAnimation<1) {
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 4;
+                            ctx.lineCap = 'round';
+                            ctx.beginPath();
+                            ctx.moveTo(16,0);
+                            ctx.lineTo(4,12);
+                            ctx.moveTo(16,12);
+                            ctx.lineTo(4,0);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(-4,0);
+                            ctx.lineTo(-16,12);
+                            ctx.moveTo(-4,12);
+                            ctx.lineTo(-16,0);
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = 'white';
+                            ctx.beginPath();
+                            ctx.arc(-10,6,6,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(10,6,6,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.fillStyle = 'black';
+                            ctx.beginPath();
+                            ctx.arc(-10,7,5,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(10,7,5,0,2*Math.PI);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    }
+                    //snake eyes
+                },
+                draw: function() {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,1000,1000);
+                    //background
+
+                    ctx.fillStyle = 'rgb(200,0,0)';
+                    var n = 0;
+                    while(n < this.collectedApples.length) {
+                        var apple = this.collectedApples[n];
+                        ctx.beginPath();
+                        ctx.arc(apple.x*50+25,apple.y*50+25,25-25*(1-apple.decay),0,2*Math.PI);
+                        ctx.fill();
+                        apple.decay -= 0.05;
+                        if(apple.decay<=0) {
+                            this.collectedApples.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    //eaten apple effects
+
+                    this.drawSnake();
+
+                    ctx.fillStyle = 'rgb(200,0,0)';
+                    var n = 0;
+                    while(n < this.apples.length) {
+                        var apple = this.apples[n];
+                        ctx.beginPath();
+                        ctx.arc(apple.x*50+25,apple.y*50+25,25+Math.sin(time/15)*2,0,2*Math.PI);
+                        ctx.fill();
+                        n++;
+                    }
+                    //apples
+
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'left';
+                    ctx.font = '40px Comic Sans MS';
+                    if(this.ai) {
+                        ctx.fillText("AI's Score: "+(this.snake.segments.length-4),20,50);
+                    } else {
+                        ctx.fillText('Score: '+(this.snake.segments.length-4),20,50);
+                    }
+                    ctx.textAlign = 'center';
+                    //score
+
+                    if(this.gameOver) {
+                        ctx.fillStyle = 'rgb(10,10,10)';
+                        ctx.strokeStyle = 'white';
+                        ctx.save();
+                        ctx.translate(500,500);
+                        var s = Math.min((Math.abs(6-this.gameOverAnimation)/10)**10,1);
+                        ctx.scale(s,s);
+                        ctx.lineWidth = 3/s;
+                        roundRect(-300,-300,600,600,10);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.font = 'bold 50px Comic Sans MS';
+                        ctx.fillText('Game Over!',0,-220);
+                        ctx.font = '40px Comic Sans MS';
+                        if(this.ai) {
+                            ctx.fillText("AI's score was: "+(this.snake.segments.length-4),0,-140);
+                            ctx.fillText("AI's Highscore: "+AIHighscore,0,-60);
+                        } else {
+                            ctx.fillText('Your score was: '+(this.snake.segments.length-4),0,-140);
+                            ctx.fillText('Highscore: '+highscore,0,-60);
+                        }
+                        //text
+
+                        ctx.fillStyle = 'black';
+                        if(this.gameOverAnimation<-4&&Mouse.inBox(380,500,240,80)) {
+                            ctx.fillStyle = 'rgb(60,60,60)';
+                            if(Mouse.click) {
+                                this.reset();
+                            }
+                        }
+                        roundRect(-120,0,240,80,10);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        if(this.gameOverAnimation<-4&&Mouse.inBox(380,650,240,80)) {
+                            ctx.fillStyle = 'rgb(60,60,60)';
+                            if(Mouse.click) {
+                                page = 'menu';
+                            }
+                        }
+                        roundRect(-120,150,240,80,10);
+                        ctx.fill();
+                        ctx.stroke();
+                        //button rectangles
+
+                        ctx.fillStyle = 'white';
+                        ctx.font = '40px Comic Sans MS';
+                        ctx.fillText('Retry',0,50);
+                        ctx.fillText('Quit',0,200);
+                        //button text
+
+                        ctx.restore();
+                    }
+                    //game over animation
+                    
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    roundRect(910,10,80,80,10);
+                    ctx.stroke();
+                    if(Mouse.inBox(910,10,80,80)) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                        ctx.fill();
+                        if(Mouse.click) {
+                            page = 'menu';
+                        }
+                    }
+                    ctx.fillStyle = 'white';
+                    ctx.font = '25px Comic Sans MS';
+                    ctx.fillText('Quit',950,57);
+                    //quit button
+                },
+                spawnApple: function() {
+                    var spawn = [];
+                    var x = 0;
+                    while(x < 20) {
+                        var y = 0;
+                        while(y < 20) {
+                            var inSnake = false;
+                            var n = 0;
+                            while(n < this.snake.segments.length) {
+                                var segment = this.snake.segments[n];
+                                if(segment.x==x&&segment.y==y) {
+                                    inSnake = true;
+                                    break;
+                                }
+                                n++;
+                            }
+                            if(!inSnake) {
+                                spawn.push({x:x,y:y});
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    if(spawn.length>0) {
+                        var r = Math.floor(Math.random()*spawn.length);
+                        this.apples.push({x:spawn[r].x,y:spawn[r].y});
+                    }
+                },
+                reset: function() {
+                    this.gameOver = false;
+                    this.gameOverAnimation = 1;
+                    this.snake.newDirection = 90;
+                    this.snake.segments = [];
+                    this.apples = [];
+                    this.spawnApple();
+                    var n = 0;
+                    while(n < 4) {
+                        this.snake.segments.push({x:8-n,y:10});
+                        this.snake.oldSegments.push({x:8-n,y:10});
+                        n++;
+                    }
+                },
+                ai: false
+            };
+            function findPath(blocks,start,end,width,height) {
+                var path = false;
+                var nodes = [{x:start[0],y:start[1]}];
+                var searchedNodes = [];
+                while(path===false&&nodes.length>0) {
+                    var node = nodes[0];
+                    var x = node.x;
+                    var y = node.y;
+                    if(x===end[0]&&y===end[1]) {
+                        path = [[node.x,node.y]];
+                        var nodeId = node.lastId;
+                        while(nodeId!==undefined) {
+                            var node = searchedNodes[nodeId];
+                            path.push([node.x,node.y]);
+                            nodeId = node.lastId;
+                        }
+                        return [true,path];
+                    } else {
+                        var possibleMoves = [];
+                        if(x>0) {
+                            possibleMoves.push([x-1,y]);
+                        }
+                        if(x<width-1) {
+                            possibleMoves.push([x+1,y]);
+                        }
+                        if(y>0) {
+                            possibleMoves.push([x,y-1]);
+                        }
+                        if(y<height-1) {
+                            possibleMoves.push([x,y+1]);
+                        }
+                        var n = 0;
+                        while(n < possibleMoves.length) {
+                            var valid = true;
+                            var p = possibleMoves[n];
+                            var n2 = 0;
+                            while(n2 < searchedNodes.length) {
+                                var s = searchedNodes[n2];
+                                if(s.x===p[0]&&s.y===p[1]) {
+                                    valid = false;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            n2 = 0;
+                            while(n2 < nodes.length) {
+                                var s = nodes[n2];
+                                if(s.x===p[0]&&s.y===p[1]) {
+                                    valid = false;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if(blocks[p[0]]&&blocks[p[0]][p[1]]) {
+                                valid = false;
+                            }
+                            if(!valid) {
+                                possibleMoves.splice(n,1);
+                            } else {
+                                n++;
+                            }
+                        }
+                        searchedNodes.push(node);
+                        var n = 0;
+                        while(n < possibleMoves.length) {
+                            nodes.push({lastId:searchedNodes.length-1,x:possibleMoves[n][0],y:possibleMoves[n][1]});
+                            n++;
+                        }
+                        nodes.shift();
+                    }
+                }
+                return [false,searchedNodes];
+            }
+            function roundRect(x, y, width, height, radius) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+            }
+            function blend(c1,c2,p) {
+                return {r:c1.r*(1-p)+c2.r*p,g:c1.g*(1-p)+c2.g*p,b:c1.b*(1-p)+c2.b*p};
+            }
+            var page = 'menu';
+            var time = 0;
+            var highscore = 0;
+            if(localStorage.getItem('snakehighscore')!=null) {
+                highscore = localStorage.getItem('snakehighscore');
+            }
+            var AIHighscore = 0;
+            game.reset();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,1340 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Gift Match";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {
+            "titleBackground1": "images/title-background1.png",
+            "titleBackground2": "images/title-background2.png",
+            "titleBackground3": "images/title-background3.png",
+            "title1": "images/title1.png",
+            "title2": "images/title2.png",
+            "title3": "images/title3.png",
+            "title4": "images/title4.png",
+            "title5": "images/title5.png",
+            "title5hover": "images/title5-hover.png",
+            "house1": "images/house1.png",
+            "house2": "images/house2.png",
+            "house3": "images/house3.png",
+            "house4": "images/house4.png",
+            "house5": "images/house5.png",
+            "house6": "images/house6.png",
+            "background": "images/background.png",
+            "floor": "images/floor.png",
+            "snowflake1": "images/snowflake1.png",
+            "snowflake1blur": "images/snowflake1blur.png",
+            "snowflake2": "images/snowflake2.png",
+            "snowflake2blur": "images/snowflake2blur.png",
+            "snowflake3": "images/snowflake3.png",
+            "snowflake3blur": "images/snowflake3blur.png",
+            "tree1": "images/tree1.png",
+            "tree2": "images/tree2.png",
+            "tree3": "images/tree3.png",
+            "tree4": "images/tree4.png",
+            "tree5": "images/tree5.png",
+            "tree6": "images/tree6.png",
+            "cursor": "images/cursor.png"
+        };
+        var audios = {
+            "presentExplode": "sound-effects/present-explode.mp3",
+            "presentSelect": "sound-effects/present-select.mp3",
+            "presentSelectExplode": "sound-effects/present-select-explode.mp3",
+            "collectScore1": "sound-effects/collect-score1.mp3",
+            "collectScore2": "sound-effects/collect-score2.mp3",
+            "collectScore3": "sound-effects/collect-score3.mp3",
+            "collectScore4": "sound-effects/collect-score4.mp3",
+            "collectScore5": "sound-effects/collect-score5.mp3",
+            "collectScore6": "sound-effects/collect-score6.mp3",
+            "collectScore7": "sound-effects/collect-score7.mp3",
+            "collectScore8": "sound-effects/collect-score8.mp3",
+            "collectScore9": "sound-effects/collect-score9.mp3",
+            "collectScore10": "sound-effects/collect-score10.mp3",
+            "collectScore11": "sound-effects/collect-score11.mp3",
+            "collectScore12": "sound-effects/collect-score12.mp3",
+            "zoomIn": "sound-effects/zoom-in.mp3",
+            "zoomOut": "sound-effects/zoom-out.mp3"
+        };
+
+        initialize();
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var t = 0;
+
+        function pointOnSideOfRotatedRectangle(rect, p) {
+            p.x -= rect.x;
+            p.y -= rect.y;
+            p = rotate(0, 0, p.x, p.y, rect.angle);
+            return (p.x > -rect.w / 2 && p.x < rect.w / 2) || (p.y > -rect.h / 2 && p.y < rect.h / 2);
+        }
+
+        var menu = {
+            page: "title screen",
+            switchPage: "title screen",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 30,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                    var x;
+                    if (this.page == this.switchPage) {
+                        x = -1500 * (1 - easeInOut(a));
+                    } else {
+                        x = 1500 * (1 - easeInOut(a));
+                    }
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(x, 0, 1500, 1000);
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+                ctx.fillStyle = "rgb(240,240,240)";
+                ctx.fillRect(0, 0, 1500, 1000);
+
+                var x = -Mouse.x + 750;
+                var y = -Mouse.y + 500;
+                ctx.save();
+                ctx.translate(750, 500);
+
+                ctx.save();
+                ctx.scale(1.1, 1.1);
+                ctx.drawImage(images.titleBackground3, -750 + x * 0.003, -500 + y * 0.003, 1500, 1000);
+                ctx.drawImage(images.titleBackground2, -750 + x * 0.007, -500 + y * 0.007, 1500, 1000);
+                ctx.drawImage(images.titleBackground1, -750 + x * 0.01, -500 + y * 0.01, 1500, 1000);
+                ctx.restore();
+                ctx.drawImage(images.title1, -750 + x * 0.02, -500 + y * 0.02, 1500, 1000);
+                ctx.drawImage(images.title2, -750 + x * 0.03, -500 + y * 0.03, 1500, 1000);
+                ctx.drawImage(images.title3, -750 + x * 0.04, -500 + y * 0.04, 1500, 1000);
+                ctx.drawImage(images.title4, -750 + x * 0.05, -500 + y * 0.05, 1500, 1000);
+                var dist = distTo(Mouse.x, Mouse.y, 785, 771);
+                if (dist < 116) {
+                    ctx.drawImage(images.title5hover, -750 + x * 0.06, -500 + y * 0.06, 1500, 1000);
+                } else {
+                    ctx.drawImage(images.title5, -750 + x * 0.06, -500 + y * 0.06, 1500, 1000);
+                }
+
+                ctx.restore();
+
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "20px Trebuchet MS";
+                ctx.fillText(`By John Butler`, 1420, 980);
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+                var dist = distTo(Mouse.x, Mouse.y, 785, 771);
+                if (dist < 116 && Mouse.click) {
+                    this.switchPage = "new game";
+                }
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.objects.update();
+                this.level.update();
+                this.particles.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                ctx.save();
+                ctx.translate(750, 500);
+                var s = this.level.levelTransitionMap.cam.gameScale;
+                ctx.scale(s, s);
+                ctx.translate(-750, -500);
+                this.level.drawBackground();
+                this.objects.draw();
+                ctx.restore();
+
+                this.particles.draw();
+                this.level.draw();
+            },
+            reset: function () {
+                this.level.reset();
+            },
+            objects: {
+                objects: [],
+                presentImages: [],
+                smoothMouse: {
+                    x: 0,
+                    y: 0
+                },
+                update: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        this.objects[n].id = n;
+                    }
+                    this.updatePresentObjects();
+                    this.objects = this.objects.filter(e => !e.delete);
+                    this.smoothMouse.x = this.smoothMouse.x * 0.96 + Mouse.x * 0.04;
+                    this.smoothMouse.y = this.smoothMouse.y * 0.96 + Mouse.y * 0.04;
+                },
+                updatePresentObjects: function () {
+                    var presents = this.objects.filter(e => e.type == "present");
+                    for (var o of presents) {
+                        if (o.popAnimation) {
+                            o.popAnimation++;
+                            if (o.popAnimation > 65) {
+                                audios.presentExplode.currentTime = 0;
+                                audios.presentExplode.play();
+                                var score = 10;
+                                game.particles.createParticlesForPresent(o, 5);
+                                o.delete = true;
+                            }
+                        }
+                        if (!o.selected) o.selected = 0;
+                        var distToMouse = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                        var mouseHovering = distToMouse < o.radius;
+                        var selected = game.level.selection.selected.id == o.id || o.popAnimation;
+                        if (selected) {
+                            o.selected++;
+                        } else {
+                            o.selected--;
+                        }
+                        o.selected = Math.max(Math.min(o.selected, 10), 0);
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawShadow(o);
+                    }
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+                    if (o.angle) ctx.rotate(o.angle * Math.PI / 180);
+
+                    if (o.type == "present") {
+                        if (game.level.wigglePresentsAnimation && o.correctPresentNumber !== undefined) {
+                            var a = game.level.wigglePresentsAnimation;
+                            var a2 = Math.sin(a / 3) * easeInBack(a / 100) * 5;
+                            ctx.rotate(a2 * Math.PI / 180);
+                        }
+                        var s = 1 + easeInOut(o.selected / 10) * 0.05;
+                        ctx.scale(s, s);
+                        this.drawPresent(o);
+                    }
+
+                    ctx.restore();
+                },
+                drawShadow: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+
+                    if (o.type == "present") this.drawPresentShadow(o);
+
+                    ctx.restore();
+                },
+                drawPresentShadow: function (o) {
+                    var shadowPoint = {
+                        x: o.x + 500,
+                        y: o.y
+                    }
+                    function distance(d) {
+                        return d * 0.03;
+                    }
+                    ctx.fillStyle = "rgba(0,0,0,0.2)";
+                    if (o.shape == "rectangle") {
+                        var onSide = pointOnSideOfRotatedRectangle(o, { x: shadowPoint.x, y: shadowPoint.y });
+                        var points = [
+                            { x: -o.w / 2, y: -o.h / 2 },
+                            { x: o.w / 2, y: -o.h / 2 },
+                            { x: o.w / 2, y: o.h / 2 },
+                            { x: -o.w / 2, y: o.h / 2 }
+                        ];
+                        points = points.map(function (p) {
+                            var r = rotate(0, 0, p.x, p.y, -o.angle);
+                            var dir = dirTo(shadowPoint.x, shadowPoint.y, r.x + o.x, r.y + o.y);
+                            var dist = distTo(shadowPoint.x, shadowPoint.y, r.x + o.x, r.y + o.y);
+                            var move = distToMove(distance(dist), dir);
+                            return { x: r.x + move.x, y: r.y + move.y, dist: dist };
+                        });
+                        var points2 = [
+                            { x: -o.w / 2, y: -o.h / 2 },
+                            { x: o.w / 2, y: -o.h / 2 },
+                            { x: o.w / 2, y: o.h / 2 },
+                            { x: -o.w / 2, y: o.h / 2 }
+                        ];
+                        points2 = points2.map(function (p) {
+                            var r = rotate(0, 0, p.x, p.y, -o.angle);
+                            var dist = distTo(shadowPoint.x, shadowPoint.y, r.x + o.x, r.y + o.y);
+                            return { x: r.x, y: r.y, dist: dist };
+                        });
+                        points2 = points2.sort((a, b) => a.dist - b.dist);
+                        if (!onSide) {
+                            points = points.sort((a, b) => a.dist - b.dist);
+                            points.shift();
+                            points2.shift();
+                            points2.pop();
+                        } else {
+                            points2.pop();
+                            points2.pop();
+                        }
+                        points.push(...points2);
+                        points = points.map(function (p) {
+                            p.angle = dirTo(0, 0, p.x, p.y);
+                            return p;
+                        });
+                        points.sort((a, b) => a.angle - b.angle);
+
+                        ctx.beginPath();
+                        for (var n = 0; n < points.length; n++) {
+                            var p = points[n];
+                            ctx.lineTo(p.x, p.y);
+                        }
+                        ctx.fill();
+                    } else {
+                        var shadowAngle = dirTo(shadowPoint.x, shadowPoint.y, o.x, o.y);
+                        var shadowDistance = distance(distTo(shadowPoint.x, shadowPoint.y, o.x, o.y));
+                        var s = 1 + shadowDistance * 0.003;
+                        ctx.rotate(shadowAngle * Math.PI / 180);
+                        ctx.translate(0, -shadowDistance);
+                        ctx.scale(s, s);
+                        ctx.beginPath();
+                        ctx.arc(0, 0, o.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                drawPresent: function (o) {
+                    ctx.save();
+                    if (o.popAnimation) {
+                        var phase = 2 - 0.5 * easeInOut((o.popAnimation - 30) / 25);
+                        var amplitude = easeInOut((o.popAnimation - 30) / 25) * 3;
+                        var angle = Math.sin(o.popAnimation * phase) * amplitude;
+                        if (phase == 0.5) {
+                            angle = ((o.popAnimation % 2) ? -1 : 1) * amplitude;
+                        }
+                        ctx.rotate(angle * Math.PI / 180);
+                        var x = o.bulgeImageCoordinates.x;
+                        var y = o.bulgeImageCoordinates.y;
+                        var w = o.bulgeImageCoordinates.w;
+                        var h = o.bulgeImageCoordinates.h;
+                        var step = w;
+                        var image = game.objects.presentImages[o.bulgeImageNumber];
+                        var frame = Math.floor(bulgeAnimation((o.popAnimation - 10) / 35) * 14);
+                        ctx.translate(x, y);
+                        ctx.drawImage(image, frame * step, 0, step, h, - o.w / 2, -o.h / 2, w, h);
+                    } else {
+                        var x = o.imageCoordinates.x;
+                        var y = o.imageCoordinates.y;
+                        var w = o.imageCoordinates.w;
+                        var h = o.imageCoordinates.h;
+                        var image = game.objects.presentImages[o.imageNumber];
+                        ctx.translate(x, y);
+                        ctx.drawImage(image, - o.w / 2, -o.h / 2, w, h);
+                    }
+                    ctx.restore();
+                }
+            },
+            particles: {
+                lastScoreCollect: 0,
+                scoreCollectNumber: 0,
+                objects: [],
+                update: function () {
+                    this.lastScoreCollect++;
+                    if (this.lastScoreCollect > 30) {
+                        this.scoreCollectNumber = 0;
+                    }
+                    for (var o of this.objects) {
+                        if (o.xmove) o.x += o.xmove;
+                        if (o.ymove) o.y += o.ymove;
+                        if (o.type == "present explosion particle") {
+                            var target = game.level.scoreNumberPosition;
+
+                            o.ymove += 0.05;
+                            o.timeUntilCapture--;
+                            o.timeAlive++;
+                            var dir = dirTo(o.x, o.y, target.x, target.y);
+                            var dist = distTo(o.x, o.y, target.x, target.y);
+                            o.distToTarget = dist;
+                            if (o.timeUntilCapture <= 0) {
+                                var move = distToMove(15 + (o.timeAlive / 20) ** 2, dir);
+                                o.xmove = move.x;
+                                o.ymove = move.y;
+                                if (dist < o.speed) {
+                                    o.delete = true;
+                                    game.level.addScore(o.score);
+                                    if (this.scoreCollectNumber == 11) {
+                                        if (this.lastScoreCollect > 4) {
+                                            this.lastScoreCollect = 0;
+                                            var audio = `collectScore12`;
+                                            audios[audio].currentTime = 0;
+                                            audios[audio].play();
+                                        }
+                                    } else {
+                                        if (this.lastScoreCollect > 4) {
+                                            this.lastScoreCollect = 0;
+                                            this.scoreCollectNumber++;
+                                            var audio = `collectScore${this.scoreCollectNumber + 1}`;
+                                            audios[audio].currentTime = 0;
+                                            audios[audio].play();
+                                        }
+                                    }
+                                }
+                            } else if (o.timeUntilCapture <= 20) {
+                                var move = distToMove(5, dir);
+                                var percent = 0.8;
+                                o.xmove = o.xmove * percent + move.x * (1 - percent);
+                                o.ymove = o.ymove * percent + move.y * (1 - percent);
+                            }
+                            o.speed = distTo(0, 0, o.xmove, o.ymove);
+                        }
+                        if (o.type == "present aura particle") {
+                            o.alpha -= 0.03;
+                            o.r *= 1.05;
+                            o.ymove += 0.05;
+                            if (o.alpha <= 0) o.delete = true;
+                        }
+                        if (o.type == "present slice particle") {
+                            o.xmove *= 0.9;
+                            o.ymove *= 0.9;
+                            o.alpha -= 0.1;
+                            if (o.alpha <= 0) o.delete = true;
+                        }
+                    }
+                    this.objects = this.objects.filter(e => !e.delete);
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        if (o.type == "present explosion particle") {
+                            ctx.save();
+                            ctx.globalAlpha = o.distToTarget / 50;
+                            ctx.fillStyle = o.color;
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, 7, 0, 2 * Math.PI);
+                            ctx.fill();
+                            if (o.border) {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                            }
+                            ctx.restore();
+                        } else if (o.type == "present aura particle") {
+                            ctx.save();
+                            ctx.globalAlpha = o.alpha * 0.7;
+                            ctx.fillStyle = o.color;
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, o.r, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                        } else if (o.type == "present slice particle") {
+                            ctx.save();
+                            ctx.globalAlpha = o.alpha;
+                            ctx.translate(o.x, o.y);
+                            ctx.rotate(o.oldAngle * Math.PI / 180);
+                            ctx.translate(-o.oldWidth / 2, -o.oldHeight / 2);
+                            var cx = o.clipCoordinates.x;
+                            var cy = o.clipCoordinates.y;
+                            var x = o.bulgeImageCoordinates.x + cx;
+                            var y = o.bulgeImageCoordinates.y + cy;
+                            var w = o.bulgeImageCoordinates.w;
+                            var h = o.bulgeImageCoordinates.h;
+                            var frame = 14;
+                            ctx.translate(x, y);
+                            ctx.drawImage(o.image, frame * w + cx, cy, w / 2, h / 2, 0, 0, w / 2, h / 2);
+                            ctx.restore();
+                        }
+                    }
+                },
+                createParticlesForPresent: function (o, score) {
+                    var particles = [];
+                    var particleSize = 20 + o.radius / 7;
+                    for (var x = 0; x < o.w / particleSize; x++) {
+                        for (var y = 0; y < o.h / particleSize; y++) {
+                            var o2 = {};
+                            o2.x = o.x - o.w / 2 + x * particleSize;
+                            o2.y = o.y - o.h / 2 + y * particleSize;
+                            var rotated = rotate(o.x, o.y, o2.x, o2.y, -o.angle);
+                            o2.x = rotated.x;
+                            o2.y = rotated.y;
+                            if (x == Math.floor(o.w / particleSize / 2) || y == Math.floor(o.h / particleSize / 2)) o2.onRibbon = true;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            o2.angle = dir;
+                            o2.dist = dist;
+                            particles.push(o2);
+                        }
+                    }
+                    if (o.shape == "circle") {
+                        for (var o2 of particles) {
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            if (dist > o.radius) o2.delete = true;
+                        }
+                        particles = particles.filter(e => !e.delete);
+                    }
+                    for (var n = 0; n < particles.length; n++) {
+                        var o2 = particles[n];
+                        o2.color = o.colorScheme.bodyColor;
+                        o2.type = "present explosion particle";
+                        o2.timeUntilCapture = Math.random() * 50 + 20;
+                        o2.timeAlive = 0;
+                        o2.score = score / particles.length;
+                        if (o2.onRibbon) {
+                            o2.color = o.ribbonScheme.ribbonColor;
+                        }
+                        var move = distToMove(Math.max(Math.random() * 3 + dist / 100 - 1, 0.4), o2.angle + Math.random() * 40 - 20);
+                        o2.xmove = move.x;
+                        o2.ymove = move.y - Math.random() * 5 - 2;
+                    }
+                    this.objects.push(...particles);
+
+                    var o2 = {};
+                    o2.type = "present aura particle";
+                    o2.x = o.x;
+                    o2.y = o.y;
+                    o2.alpha = 1;
+                    o2.r = o.radius / 2;
+                    o2.ymove = -4;
+                    o2.color = o.colorScheme.ribbonColor;
+                    this.objects.push(o2);
+
+                    for (var n = 0; n < 4; n++) {
+                        var o2 = {};
+                        o2.x = o.x;
+                        o2.y = o.y;
+                        o2.oldWidth = o.w;
+                        o2.oldHeight = o.h;
+                        o2.oldAngle = o.angle;
+                        var dir = n * 90 - 45 + o.angle;
+                        var move = distToMove(5, dir);
+                        o2.xmove = move.x;
+                        o2.ymove = move.y;
+                        o2.alpha = 1;
+
+                        o2.bulgeImageCoordinates = o.bulgeImageCoordinates;
+                        o2.clipCoordinates = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }][n];
+                        o2.clipCoordinates.x *= o.bulgeImageCoordinates.w / 2;
+                        o2.clipCoordinates.y *= o.bulgeImageCoordinates.h / 2;
+                        o2.image = game.objects.presentImages[o.bulgeImageNumber];
+                        o2.type = "present slice particle";
+                        this.objects.push(o2);
+                    }
+                }
+            },
+            level: {
+                started: false,
+                score: 0,
+                time: 0,
+                gameOver: false,
+                allPresentsMatched: false,
+                allAnimationsCompleted: false,
+                levelCompleteTimer: 0,
+                level: 1,
+                addedScoreTimer: 0,
+                timeSinceFoundSomething: 0,
+                wigglePresentsAnimation: 0,
+                mapTransition: 0,
+                scoreNumberPosition: {},
+                generateLoaded: false,
+                transferredGenerateData: false,
+                levelTransitionMap: {},
+                update: function () {
+                    this.updateLevelTransition();
+                    this.updateScoreNumber();
+                    this.updateTime();
+                    if (this.gameOver) this.updateGameOver();
+
+                    if (!this.generateLoaded) {
+                        game.generate.generateDuringFrame();
+                        this.generateLoaded = game.generate.loaded;
+                    } else if (!this.transferredGenerateData) {
+                        this.transferredGenerateData = true;
+                        game.generate.transferNewLevelGeneration();
+                    } else if (this.transferredGenerateData && !this.mapTransition) {
+                        this.selection.update();
+                        var correctPresents = game.objects.objects.filter(e => e.type == "present" && e.correctPresentNumber !== undefined);
+                        this.allPresentsMatched = correctPresents.length == 0;
+                        this.allAnimationsCompleted = game.particles.objects.length == 0;
+                        if (!this.levelCompleteTimer && this.allPresentsMatched && this.allAnimationsCompleted) {
+                            this.completeLevel();
+                        }
+                        if (this.levelCompleteTimer) this.levelCompleteTimer++;
+                        if (this.levelCompleteTimer == 10) {
+                            this.mapTransition = 1;
+                        }
+                    }
+                },
+                draw: function () {
+                    this.selection.draw();
+
+                    this.drawLevelTransition();
+
+                    this.drawText();
+                    if (this.gameOver) this.drawGameOver();
+                    this.drawTutorial();
+                },
+                reset: function () {
+                    this.levelCompleteTimer = 0;
+                    this.mapTransition = 99;
+                    this.time = 6000;
+                    this.score = 0;
+                    this.gameOver = false;
+                    this.resetLevelTransitionMap();
+                    this.level = 0;
+                    this.started = false;
+                    this.newLevel();
+                },
+                newLevel: function () {
+                    game.objects.objects = [];
+                    game.objects.presentImages = [];
+                    this.transferredGenerateData = false;
+                    this.generateLoaded = false;
+                    this.levelCompleteTimer = 0;
+                    this.timeSinceFoundSomething = 0;
+                    this.wigglePresentsAnimation = 0;
+                    this.allPresentsMatched = false;
+                    this.allAnimationsCompleted = false;
+                    this.selection.reset();
+                    game.generate.initNewLevelGeneration();
+                },
+                updateTime: function () {
+                    if (this.gameOver) return;
+                    if (this.mapTransition) return;
+                    if (this.allPresentsMatched) return;
+                    if (this.wigglePresentsAnimation) this.wigglePresentsAnimation--;
+                    this.timeSinceFoundSomething++;
+                    if (this.timeSinceFoundSomething > 500) {
+                        this.timeSinceFoundSomething = -200;
+                        this.wigglePresentsAnimation = 100;
+                    }
+                    this.started = this.started || Mouse.down;
+                    if (this.started) this.time--;
+                    this.time = Math.max(this.time, 0);
+                    if (this.time == 0) {
+                        this.endGame();
+                    }
+                },
+                endGame: function () {
+                    this.score = Math.round(this.score);
+                    this.gameOver = true;
+                    this.selection.selected = false;
+                    if (this.score > highscore) {
+                        highscore = this.score;
+                        updateHighscore();
+                    }
+                },
+                updateLevelTransition: function () {
+                    if (this.gameOver) {
+                        this.mapTransition++;
+                        if (this.mapTransition == 5) {
+                            audios.zoomOut.currentTime = 0;
+                            audios.zoomOut.play();
+                        }
+                        this.mapTransition = Math.min(this.mapTransition, 60);
+                    } else if (this.mapTransition) {
+                        this.mapTransition++;
+                        if (this.mapTransition == 100) {
+                            this.newLevel();
+                        }
+                        if (this.mapTransition == 5) {
+                            audios.zoomOut.currentTime = 0;
+                            audios.zoomOut.play();
+                        }
+                        if (this.mapTransition == 180) {
+                            audios.zoomIn.currentTime = 0;
+                            audios.zoomIn.play();
+                        }
+                        if (this.mapTransition == 230) this.mapTransition = 0;
+                    }
+
+                    this.updateCameraAnimation();
+
+                    for (var o of this.levelTransitionMap.snow) {
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.angle += o.turn;
+                        var x = this.levelTransitionMap.cam.x + 750;
+                        var y = this.levelTransitionMap.cam.y + 500;
+                        if (o.x < x - 900) o.x += 1800;
+                        if (o.x > x + 900) o.x -= 1800;
+                        if (o.y < y - 600) o.y += 1200;
+                        if (o.y > y + 600) o.y -= 1200;
+                    }
+                },
+                updateCameraAnimation: function () {
+                    if (!this.mapTransition) return;
+
+                    var lastHouse = this.levelTransitionMap.objects.find(e => e.houseNumber === this.level - 1);
+                    var targetHouse = this.levelTransitionMap.objects.find(e => e.houseNumber === this.level);
+                    if (!targetHouse) {
+                        targetHouse = { x: 0, y: 0, w: 0, h: 0, chimney: { x: 0, y: 0, w: 0 } };
+                    }
+                    if (!lastHouse) {
+                        lastHouse = targetHouse;
+                    }
+                    var cam = this.levelTransitionMap.cam;
+                    var a = this.mapTransition;
+
+                    var viewHouseTransition = easeInOut((a - 50) / 110);
+                    var viewChimneyTransition = easeInOut((a - 190) / 25);
+                    var chimneyWidthTransition = 1 - (easeInOut(a / 50) - easeInOut((a - 190) / 40));
+                    var chimneyOpacityTransition = easeInOut(a / 50) - easeInOut((a - 190) / 40);
+                    var camZoomTransition = 15 - (easeInOut(a / 50) * 0.2 + easeIn((a - 20) / 100) * 0.8 - easeInOut((a - 120) / 70) * 0.5 - easeInOut((a - 150) / 100) * 0.3 - easeInOut((a - 180) / 40) * 0.2) * 14;
+
+                    var w = targetHouse.chimney.w + 50 * chimneyWidthTransition;
+                    var focusedHouse;
+                    if (this.mapTransition > 150) {
+                        focusedHouse = targetHouse;
+                    } else {
+                        focusedHouse = lastHouse;
+                    }
+                    cam.clipRect = {
+                        x: focusedHouse.x + focusedHouse.chimney.x - w - cam.x,
+                        y: focusedHouse.y + focusedHouse.chimney.y - w - cam.y,
+                        w: w * 2,
+                        h: w * 2
+                    }
+                    cam.clipOpacity = chimneyOpacityTransition;
+                    cam.zoom = camZoomTransition;
+
+                    var x1 = targetHouse.x + targetHouse.w / 2;
+                    var y1 = targetHouse.y + targetHouse.h / 2;
+                    var x2 = targetHouse.x + targetHouse.chimney.x;
+                    var y2 = targetHouse.y + targetHouse.chimney.y;
+                    var a1 = viewHouseTransition;
+                    var a2 = viewChimneyTransition;
+                    cam.x = (cam.origin.x * (1 - a1) + x1 * a1) * (1 - a2) + x2 * a2;
+                    cam.y = (cam.origin.y * (1 - a1) + y1 * a1) * (1 - a2) + y2 * a2;
+                },
+                drawLevelTransition: function () {
+                    if (!this.mapTransition) return;
+
+                    var cam = this.levelTransitionMap.cam;
+                    var center = { x: 750, y: 500 };
+                    var rect = cam.clipRect;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.translate(center.x, center.y);
+                    ctx.scale(cam.zoom, cam.zoom);
+                    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+                    ctx.fillStyle = `rgba(0,0,0,${cam.clipOpacity})`;
+                    ctx.fill();
+                    ctx.translate(-center.x, -center.y);
+                    ctx.rect(0, 0, 1500, 1000);
+                    ctx.clip("evenodd");
+                    ctx.translate(center.x, center.y);
+
+                    ctx.translate(-cam.x, -cam.y);
+
+                    var xOffset = Math.floor(cam.x / 1500) - 2;
+                    var yOffset = Math.floor(cam.y / 1500) - 2;
+                    for (var x = xOffset; x < xOffset + 4; x++) {
+                        for (var y = yOffset; y < yOffset + 4; y++) {
+                            ctx.save();
+                            ctx.translate(x * 1500, y * 1000);
+                            ctx.drawImage(images.background, -750, -500, 1500, 1000);
+                            ctx.restore();
+                        }
+                    }
+
+                    for (var n = 0; n < this.levelTransitionMap.objects.length; n++) {
+                        var o = this.levelTransitionMap.objects[n];
+                        if (o.type == "house") {
+                            ctx.save();
+                            ctx.translate(o.x, o.y);
+
+                            ctx.drawImage(o.image, 0, 0, o.w, o.h);
+
+                            ctx.restore();
+                        } else if (o.type == "tree") {
+                            ctx.save();
+                            ctx.translate(o.x, o.y);
+                            ctx.drawImage(o.image, -40, -40, 80, 80);
+                            ctx.restore();
+                        }
+                    }
+
+                    for (var o of this.levelTransitionMap.snow) {
+                        ctx.save();
+                        ctx.translate(o.x - 750, o.y - 500);
+                        ctx.rotate(o.angle * Math.PI / 180);
+                        var s = 1 + o.z / 3;
+                        ctx.scale(s, s);
+                        ctx.drawImage(o.image, -1, -1, 2, 2);
+                        ctx.restore();
+                    }
+
+                    ctx.restore();
+                },
+                resetLevelTransitionMap: function () {
+                    this.levelTransitionMap = {
+                        cam: {
+                            x: 0,
+                            y: 0,
+                            zoom: 1,
+                            origin: {
+                                x: 0,
+                                y: 0
+                            },
+                            clipRect: {
+                                x: 0,
+                                y: 0,
+                                w: 0,
+                                h: 0
+                            },
+                            gameScale: 1,
+                            clipOpacity: 0
+                        },
+                        objects: [],
+                        snow: []
+                    };
+                    this.generateTransitionMapChunk();
+                    var snowAngle = 110;
+                    for (var n = 0; n < 150; n++) {
+                        var o = {};
+                        o.imageNumber = Math.floor(Math.random() * 3) + 1;
+                        o.image = images[`snowflake${o.imageNumber}`];
+                        o.z = (n / 20) ** 1.5;
+                        if (n > 140) {
+                            o.z = 40;
+                            if (n == 149) {
+                                o.z = 150;
+                            }
+                            o.image = images[`snowflake${o.imageNumber}blur`];
+                        }
+                        o.x = Math.random() * 1500;
+                        o.y = Math.random() * 1000;
+                        o.angle = snowAngle + Math.random() * 10 - 5;
+                        o.turn = Math.random() * 10 - 5;
+                        o.speed = (1 + Math.random()) * 0.4;
+                        o.speed *= 1 + o.z / 3;
+                        var move = distToMove(o.speed, o.angle);
+                        o.xmove = move.x;
+                        o.ymove = move.y;
+                        this.levelTransitionMap.snow.push(o);
+                    }
+                },
+                generateTransitionMapChunk: function () {
+                    for (var n = 0; n < 20; n++) {
+                        var o = {};
+                        o.type = "house";
+                        o.houseNumber = n;
+                        o.houseImage = Math.floor(Math.random() * 6);
+                        o.x = n * 400 + Math.random() * 100;
+                        o.y = Math.random() * 200 - 100;
+                        if (n === 0) {
+                            o.x = 0;
+                            o.y = 0;
+                        }
+                        o.w = 80;
+                        o.h = 80;
+                        if (o.houseImage === 0) {
+                            o.image = images.house1;
+                            o.chimney = {
+                                x: 65,
+                                y: 22.8,
+                                w: 2
+                            };
+                        } else if (o.houseImage === 1) {
+                            o.image = images.house2;
+                            o.chimney = {
+                                x: 17,
+                                y: 22.8,
+                                w: 2
+                            };
+                        } else if (o.houseImage === 2) {
+                            o.image = images.house3;
+                            o.chimney = {
+                                x: 31,
+                                y: 8.3,
+                                w: 2
+                            };
+                        } else if (o.houseImage === 3) {
+                            o.image = images.house4;
+                            o.chimney = {
+                                x: 56,
+                                y: 8.3,
+                                w: 2
+                            };
+                        } else if (o.houseImage === 4) {
+                            o.image = images.house5;
+                            o.chimney = {
+                                x: 30.5,
+                                y: 17.5,
+                                w: 2
+                            };
+                        } else if (o.houseImage === 5) {
+                            o.image = images.house6;
+                            o.chimney = {
+                                x: 55.4,
+                                y: 18.2,
+                                w: 2
+                            };
+                        }
+                        var houseY = o.y;
+                        this.levelTransitionMap.objects.push(o);
+
+                        for (var n2 = 0; n2 < 5; n2++) {
+                            var o = {};
+                            o.type = "tree";
+                            var treeImages = [images.tree1, images.tree2, images.tree3];
+                            if (Math.random() < 0.2) treeImages = [images.tree4, images.tree5, images.tree6];
+                            o.image = treeImages[Math.floor(Math.random() * treeImages.length)];
+                            o.x = n * 400 - 200 + n2 * 60 + Math.random() * 50;
+                            o.y = Math.random() * 400 + houseY - 600;
+                            if (Math.random() < 0.5) o.y += 700;
+                            this.levelTransitionMap.objects.push(o);
+                        }
+                    }
+                },
+                completeLevel: function () {
+                    this.levelCompleteTimer = 1;
+                    this.level++;
+                    var cam = this.levelTransitionMap.cam;
+                    cam.origin.x = cam.x;
+                    cam.origin.y = cam.y;
+                },
+                updateScoreNumber: function () {
+                    ctx.font = "bold 50px Arial";
+                    var width = ctx.measureText(Math.round(this.score)).width;
+                    this.scoreNumberPosition = { x: 1450 - width / 2, y: 42, w: width };
+                    this.addedScoreTimer--;
+                    this.addedScoreTimer = Math.max(this.addedScoreTimer, 0);
+                },
+                addScore: function (amount) {
+                    this.score += amount;
+                    if (this.addedScoreTimer) {
+                        this.addedScoreTimer += 1 / this.addedScoreTimer;
+                    } else {
+                        this.addedScoreTimer = 3;
+                    }
+                    this.addedScoreTimer = Math.min(this.addedScoreTimer, 5);
+                },
+                drawText: function () {
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 50px Arial";
+                    ctx.fillText("Score: ", this.scoreNumberPosition.x - this.scoreNumberPosition.w / 2, 42);
+
+                    ctx.textAlign = "center";
+                    ctx.save();
+                    ctx.translate(this.scoreNumberPosition.x, this.scoreNumberPosition.y);
+                    var s = 1 + this.addedScoreTimer / 10;
+                    ctx.scale(s, s);
+                    ctx.fillText(Math.round(this.score), 0, 0);
+                    ctx.restore();
+
+                    ctx.textAlign = "left";
+                    ctx.fillText(`Time: ${Math.floor(this.time / 100)}`, 40, 42);
+                },
+                drawTutorial: function () {
+                    if (this.level !== 0) return;
+                    if (this.mapTransition) return;
+                    var matchingPresents = game.objects.objects.filter(e => e.correctPresentNumber !== undefined);
+                    if (matchingPresents.length < 2) return;
+                    var o = matchingPresents[0];
+                    var o2 = matchingPresents[1];
+                    var time = t % 400;
+                    var a1 = easeInOut((time - 20) / 150);
+                    var a2 = easeInOut(time / 20) - easeInOut((time - 170) / 20);
+                    var x = o.x * (1 - a1) + o2.x * a1;
+                    var y = o.y * (1 - a1) + o2.y * a1;
+                    ctx.save();
+                    ctx.globalAlpha = a2;
+                    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+                    ctx.lineWidth = 50;
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    ctx.moveTo(o.x, o.y);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    ctx.translate(x, y);
+                    ctx.drawImage(images.cursor, -50, -50, 100, 100);
+                    ctx.restore();
+                },
+                updateGameOver: function () {
+                    if (Mouse.clickInBox(750 - 300 / 2, 600, 300, 140)) {
+                        menu.switchPage = "new game";
+                    }
+                    if (Mouse.clickInBox(750 - 300 / 2, 800, 300, 140)) {
+                        menu.switchPage = "title screen";
+                    }
+                },
+                drawGameOver: function () {
+                    ctx.fillStyle = "rgba(255,240,240,0.7)";
+                    ctx.fillRect(750 / 2, 100, 750, 900);
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 100px Arial";
+                    ctx.fillText("Time's Up!", 750, 220);
+
+                    ctx.font = "bold 70px Arial";
+                    ctx.fillText(`Score: ${this.score}`, 750, 400);
+                    ctx.fillText(`Highscore: ${highscore}`, 750, 500);
+
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.lineJoin = "round";
+                    ctx.strokeRect(750 - 300 / 2, 600, 300, 140);
+                    ctx.strokeRect(750 - 300 / 2, 800, 300, 140);
+
+                    ctx.fillText(`Retry`, 750, 600 + 70);
+                    ctx.fillText(`Quit`, 750, 800 + 70);
+                },
+                drawBackground: function () {
+                    ctx.fillStyle = "rgb(30,30,30)";
+                    ctx.fillRect(-1500, -1000, 4500, 3000);
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(25, 75, 1450, 900);
+                    ctx.clip();
+
+                    ctx.fillStyle = "rgb(240,240,240)";
+                    ctx.fillRect(0, 0, 1500, 1000);
+                    var colorScheme;
+                    var darkColors = game.generate.possibleColorSchemes.filter(e => !e.light);
+                    if (darkColors.length == 0) {
+                        colorScheme = game.generate.possibleColorSchemes[0];
+                    } else {
+                        colorScheme = darkColors[0];
+                    }
+                    if (colorScheme.name == "white") colorScheme = game.generate.possibleColorSchemes[1];
+                    var xCount = 0;
+                    for (var x = 0; x < 1500; x += 100) {
+                        var yCount = 0;
+                        for (var y = 0; y < 1000; y += 100) {
+                            if ((xCount + yCount) % 2) {
+                                ctx.save();
+                                ctx.translate(x, y);
+                                ctx.globalAlpha = 0.05;
+                                if (colorScheme.light) ctx.globalAlpha = 0.1;
+                                ctx.fillStyle = colorScheme.ribbonColor;
+                                ctx.fillRect(0, 0, 100, 100);
+                                ctx.restore();
+                            }
+
+                            yCount++;
+                        }
+                        xCount++;
+                    }
+
+                    ctx.restore();
+                },
+                selection: {
+                    selected: false,
+                    selection: {},
+                    correctSelections: [],
+                    update: function () {
+                        this.updateSelections();
+                        if (audios.presentSelect.volume == 0) {
+                            audios.presentSelect.pause();
+                            audios.presentSelect.currentTime = 0;
+                        } else {
+                            audios.presentSelect.play();
+                            if (audios.presentSelect.currentTime == 1) audios.presentSelect.currentTime = 0;
+                        }
+                        if (game.level.gameOver || (game.level.allPresentsMatched && game.level.allAnimationsCompleted)) {
+                            this.selected = false;
+                            audios.presentSelect.pause();
+                            audios.presentSelect.volume = 0;
+                        }
+                        if (this.selected) {
+                            this.updateActiveSelecting();
+                            var v = audios.presentSelect.volume;
+                            v += 0.05;
+                            v = Math.min(v, 1);
+                            audios.presentSelect.volume = v;
+                        } else {
+                            this.updateStartSelecting();
+                            var v = audios.presentSelect.volume;
+                            v -= 0.04;
+                            v = Math.max(v, 0);
+                            audios.presentSelect.volume = v;
+                        }
+                    },
+                    updateStartSelecting() {
+                        if (!Mouse.downStart) return;
+                        for (var o of game.objects.objects) {
+                            if (o.type != "present") continue;
+                            if (o.popAnimation) continue;
+                            var dist = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                            if (dist > o.radius) continue;
+                            this.selected = o;
+                            this.selection = {
+                                start: o,
+                                end: { x: Mouse.x, y: Mouse.y, r: 0 },
+                                lines: []
+                            };
+                            break;
+                        }
+                    },
+                    updateActiveSelecting() {
+                        if (!Mouse.down) {
+                            this.selected = false;
+                            this.selection = {};
+                            return;
+                        }
+                        this.selection.end.x = Mouse.x;
+                        this.selection.end.y = Mouse.y;
+                        this.selection.end.mouse = true;
+                        if (this.selected.correctPresentNumber === undefined) return;
+                        for (var o of game.objects.objects) {
+                            if (o.type != "present") continue;
+                            var dist = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                            if (dist > o.radius) continue;
+                            if (o.correctPresentNumber !== this.selected.correctPresentNumber) continue;
+                            if (o.correctPresentId == this.selected.correctPresentId) continue;
+                            game.level.timeSinceFoundSomething = 0;
+                            this.selected.popAnimation = 1;
+                            o.popAnimation = 1;
+                            this.selected = false;
+                            this.selection.animateToPresent = true;
+                            this.selection.end = { x: Mouse.x, y: Mouse.y, radius: 0, shape: "circle" };
+                            this.selection.realEnd = o;
+                            this.correctSelections.push(this.selection);
+                            audios.presentSelectExplode.currentTime = 0;
+                            audios.presentSelectExplode.play();
+                        }
+                    },
+                    updateSelections: function () {
+                        var selections = [this.selection, ...this.correctSelections];
+                        for (var selection of selections) {
+                            if (selection.lines) {
+                                var rate = 15;
+                                if (selection.animateToPresent) rate = 7;
+                                if (t % rate === 0) {
+                                    var width = Math.random() * 0.2 + 0.2;
+                                    if (Math.random() < 0.5 && selection.animateToPresent) {
+                                        selection.lines.push({ width: width, x1: 1, x2: 1 + width, y: Math.random(), direction: -1 });
+                                    } else {
+                                        selection.lines.push({ width: width, x1: -width, x2: 0, y: Math.random(), direction: 1 });
+                                    }
+                                }
+                                var dist = distTo(selection.start.x, selection.start.y, selection.end.x, selection.end.y);
+                                for (var o of selection.lines) {
+                                    o.x1 += 10 / (dist + 100) * o.direction;
+                                    o.x2 += 10 / (dist + 100) * o.direction;
+                                    if (o.x1 > 1) o.delete = true;
+                                    if (o.x2 < 0) o.delete = true;
+                                }
+                                selection.lines = selection.lines.filter(e => !e.delete);
+                            }
+                            if (!selection.alpha) selection.alpha = 1;
+                            if (selection.start?.delete) {
+                                selection.alpha -= 0.1;
+                            }
+                            if (selection.animateToPresent) {
+                                selection.end.x = selection.end.x * 0.9 + selection.realEnd.x * 0.1;
+                                selection.end.y = selection.end.y * 0.9 + selection.realEnd.y * 0.1;
+                                var realRadius;
+                                if (selection.realEnd.shape == "circle") realRadius = selection.realEnd.radius;
+                                if (selection.realEnd.shape == "rectangle") realRadius = Math.min(selection.realEnd.w, selection.realEnd.h) / 2;
+                                selection.end.radius = selection.end.radius * 0.9 + realRadius * 0.1;
+                            }
+                            if (selection.alpha <= 0) selection.delete = true;
+                        }
+                        this.correctSelections = this.correctSelections.filter(e => !e.delete);
+                    },
+                    draw: function () {
+                        var selections = [...this.correctSelections];
+                        if (this.selected) {
+                            selections.push(this.selection);
+                        }
+
+                        for (var n = 0; n < selections.length; n++) {
+                            var selection = selections[n];
+                            var o = selection.start;
+                            var o2 = selection.end;
+                            if (selection.animateToPresent) o2 = selection.realEnd;
+
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.translate(o.x, o.y);
+                            ctx.rotate(o.angle * Math.PI / 180);
+                            var s = 1 + easeInOut(o.selected / 10) * 0.05;
+                            ctx.scale(s, s);
+                            game.generate.drawPresentBodyShape(ctx, o, true);
+                            ctx.scale(1 / s, 1 / s);
+                            ctx.rotate(-o.angle * Math.PI / 180);
+                            ctx.translate(-o.x, -o.y);
+                            if (!o2.mouse) {
+                                ctx.translate(o2.x, o2.y);
+                                ctx.rotate(o2.angle * Math.PI / 180);
+                                var s = 1 + easeInOut(o2.selected / 10) * 0.05;
+                                ctx.scale(s, s);
+                                game.generate.drawPresentBodyShape(ctx, o, true);
+                                ctx.scale(1 / s, 1 / s);
+                                ctx.rotate(-o2.angle * Math.PI / 180);
+                                ctx.translate(-o2.x, -o2.y);
+                            }
+                            ctx.rect(0, 0, 1500, 1000);
+                            ctx.clip("evenodd");
+
+                            var o2 = selection.end;
+                            var points = [];
+                            var radius1, radius2;
+                            if (o.shape == "circle") {
+                                radius1 = o.radius;
+                            } else if (o.shape == "rectangle") {
+                                radius1 = Math.min(o.w, o.h) / 2;
+                            }
+                            if (o2.shape == "circle") {
+                                radius2 = o2.radius;
+                            } else if (o2.shape == "rectangle") {
+                                radius2 = Math.min(o2.w, o2.h) / 2;
+                            } else if (o2.mouse) {
+                                radius2 = 0;
+                            }
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(1, dir + 90);
+                            points.push({ x: o.x + move.x * radius1, y: o.y + move.y * radius1 });
+                            points.push({ x: o.x - move.x * radius1, y: o.y - move.y * radius1 });
+                            points.push({ x: o2.x - move.x * radius2, y: o2.y - move.y * radius2 });
+                            points.push({ x: o2.x + move.x * radius2, y: o2.y + move.y * radius2 });
+
+                            ctx.save();
+                            ctx.globalAlpha = (0.2 + (o.colorScheme.light ? 0.2 : 0)) * (selection.alpha || 1);
+                            ctx.fillStyle = o.colorScheme.bodyColor;
+                            ctx.beginPath();
+                            for (var p of points) {
+                                ctx.lineTo(p.x, p.y);
+                            }
+                            ctx.fill();
+                            ctx.restore();
+
+                            ctx.save();
+                            ctx.globalAlpha = 1 * selection.alpha;
+                            ctx.strokeStyle = o.ribbonScheme.ribbonColor;
+                            ctx.lineWidth = 4;
+                            ctx.lineCap = "round";
+                            for (var line of selection.lines) {
+                                var start = {
+                                    x: o.x - move.x * radius1 + move.x * radius1 * 2 * line.y,
+                                    y: o.y - move.y * radius1 + move.y * radius1 * 2 * line.y
+                                }
+                                var end = {
+                                    x: o2.x - move.x * radius2 + move.x * radius2 * 2 * line.y,
+                                    y: o2.y - move.y * radius2 + move.y * radius2 * 2 * line.y
+                                }
+                                var x1 = Math.max(Math.min(line.x1, 1), 0);
+                                var x2 = Math.max(Math.min(line.x2, 1), 0);
+                                ctx.beginPath();
+                                ctx.moveTo(start.x * (1 - x1) + end.x * x1, start.y * (1 - x1) + end.y * x1);
+                                ctx.lineTo(start.x * (1 - x2) + end.x * x2, start.y * (1 - x2) + end.y * x2);
+                                ctx.stroke();
+                            }
+                            ctx.restore();
+
+                            ctx.restore();
+                        }
+                    },
+                    reset: function () {
+                        this.selected = false;
+                        this.selection = {};
+                        this.correctSelections = [];
+                    }
+                }
+            }
+        }
+
+        function updateHighscore() {
+            window.localStorage.setItem("giftmatchhighscore", highscore);
+        }
+        var highscore = 0;
+        if (window.localStorage.getItem("giftmatchhighscore") != null) {
+            highscore = window.localStorage.getItem("giftmatchhighscore");
+        }
+
+        /*
+        To Do:
+        Necessary:
+            Elves that pop in and out
+            Cloud Transition Image
+            Sound when time is almost up
+            End Screen
+                Sound for counting up the score
+            Title Screen
+                Parralax present graphics
+            Menu Button Click sound effect
+            music
+
+        Maybe In The Future:
+            Stickers for clicking on items in houses
+            Themed houses with some presents having custom wrapping paper
+            Clocks that you can click to get more time
+            Cookies that you can click to get more score
+            Presents wiggle when you haven't spotted them in a long time
+        */
+
+        audios.presentSelect.volume = 0;
+    </script>
+    <script src="generate.js"></script>
+</body>
+
+</html>

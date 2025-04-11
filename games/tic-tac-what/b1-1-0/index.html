@@ -1,0 +1,133 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var Levels = [];
+        var LevelOrder = [
+            "1",
+            "2",
+            "gravity1",
+            "dontGetThreeInARow1",
+            "fillBoard1",
+            "symbols1",
+            "sort1",
+            "speed1",
+            "maze1",
+            "fillBoard2",
+            "rotateMaze1",
+            "gravity2",
+            "dontGetThreeInARow2",
+            "platformer1",
+            "flappyBird1",
+            "garden1",
+            "dontGetThreeInARow3",
+            "garden2",
+            "fillSort1",
+            "fillSort2",
+            "maze2",
+            "archaeology1",
+            "sortWords1"
+        ];
+        var NamedLevels = {};
+    </script>
+    <script src="levels/1.js"></script>
+    <script src="levels/2.js"></script>
+    <script src="levels/gravity1.js"></script>
+    <script src="levels/gravity2.js"></script>
+    <script src="levels/fillBoard1.js"></script>
+    <script src="levels/fillBoard2.js"></script>
+    <script src="levels/symbols1.js"></script>
+    <script src="levels/sort1.js"></script>
+    <script src="levels/dontGetThreeInARow1.js"></script>
+    <script src="levels/dontGetThreeInARow2.js"></script>
+    <script src="levels/dontGetThreeInARow3.js"></script>
+    <script src="levels/platformer1.js"></script>
+    <script src="levels/rotateMaze1.js"></script>
+    <script src="levels/flappyBird1.js"></script>
+    <script src="levels/garden1.js"></script>
+    <script src="levels/garden2.js"></script>
+    <script src="levels/speed1.js"></script>
+    <script src="levels/maze1.js"></script>
+    <script src="levels/maze2.js"></script>
+    <script src="levels/fillSort1.js"></script>
+    <script src="levels/fillSort2.js"></script>
+    <script src="levels/archaeology1.js"></script>
+    <script src="levels/sortWords1.js"></script>
+
+    <script src="components/game.js"></script>
+    <script src="components/opponent-ai.js"></script>
+    <script src="components/board.js"></script>
+    <script src="components/platformer.js"></script>
+    <script src="components/symbols.js"></script>
+    <script src="components/fill-board.js"></script>
+    <script src="components/object-count.js"></script>
+    <script src="components/gravity.js"></script>
+    <script src="components/rotate-maze.js"></script>
+    <script src="components/flappy.js"></script>
+    <script src="components/garden.js"></script>
+    <script src="components/button.js"></script>
+    <script src="components/maze.js"></script>
+    <script src="components/fillSort.js"></script>
+    <script src="components/archaeology.js"></script>
+    <script>
+        var title = "Tic Tac What?";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {
+            "wateringCan": "images/watering-can.png",
+            "wateringCanWater": "images/watering-can-water.png",
+            "faucet": "images/faucet.png",
+            "pot": "images/pot.png",
+            "cracka1": "images/crack-a1.png",
+            "cracka2": "images/crack-a2.png",
+            "cracka3": "images/crack-a3.png",
+            "cracka4": "images/crack-a4.png",
+            "cracka5": "images/crack-a5.png",
+            "crackb1": "images/crack-b1.png",
+            "crackb2": "images/crack-b2.png",
+            "crackb3": "images/crack-b3.png",
+            "crackb4": "images/crack-b4.png",
+            "crackb5": "images/crack-b5.png",
+            "skeleton": "images/skeleton.png"
+        };
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            game.update();
+            game.draw();
+        }
+
+        function bounceIn(t) {
+            t = Math.min(Math.max(t, 0), 1);
+            return Math.sqrt(t / 4) - t ** 6 + 1.5 * t;
+        }
+
+        rotate = function (cx, cy, x, y, a) {
+            a = -Math.PI / 180 * a;
+            return {
+                x: (Math.cos(a) * (x - cx)) + (Math.sin(a) * (y - cy)) + cx,
+                y: (Math.cos(a) * (y - cy)) - (Math.sin(a) * (x - cx)) + cy
+            };
+        }
+
+        function easeIn(n) {
+            return Math.min(Math.max(n, 0), 1) ** 0.5;
+        }
+
+        Levels = LevelOrder.map(e => NamedLevels[e]);
+
+        var game = new Game();
+        game.init();
+        game.level = 1 - 1;
+        game.reloadLevel();
+    </script>
+</body>
+
+</html>

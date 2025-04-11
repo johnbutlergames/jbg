@@ -1,0 +1,489 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            var imgsrcs = [];
+            var imgs = [];
+            var name = 'Snake Simulator';
+            var keys = [];
+            var clickCors = [];
+            var mouseCors = false;
+            document.title = name;
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin: 0px;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgsrcs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgsrcs[n];
+                document.body.appendChild(img);
+                img.style = 'display: none;';
+                imgs.push(img);
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                md = 1;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                md = 0;
+                if(_physics.pointInBox((event.pageX-xyoffset[0])*500/size,(event.pageY-xyoffset[1])*500/size,0,0,500,500)) {
+                    clickCors[0] = (event.pageX-xyoffset[0])*500/size;
+                    clickCors[1] = (event.pageY-xyoffset[1])*500/size;
+                }
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                if(_physics.pointInBox((event.pageX-xyoffset[0])*500/size,(event.pageY-xyoffset[1])*500/size,0,0,500,500)) {
+                    mouseCors = [0,0];
+                    mouseCors[0] = (event.pageX-xyoffset[0])*500/size;
+                    mouseCors[1] = (event.pageY-xyoffset[1])*500/size;
+                }
+            });
+            var ctx = canvas.getContext('2d');
+            var size;
+            var md = 0;
+            var xyoffset = [];
+            var _canvas = {
+                setSize: function() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                },
+                drawWhiteOut: function() {
+                    var worh;
+                    var extra;
+                    if(canvas.width > canvas.height) {
+                        worh = 'w';
+                        extra = canvas.width - canvas.height;
+                        size = canvas.height;
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(0,0,extra/2,size);
+                        ctx.fillRect(extra/2+size,0,extra/2,size);
+                        xyoffset[0] = extra/2;
+                        xyoffset[1] = 0;
+                    } else {
+                        worh = 'h';
+                        extra = canvas.height - canvas.width;
+                        size = canvas.width;
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(0,0,size,extra/2);
+                        ctx.fillRect(0,extra/2+size,size,extra/2);
+                        xyoffset[0] = 0;
+                        xyoffset[1] = extra/2;
+                    }
+                },
+                lineWidth: 1,
+                strokeStyle: 'black',
+                fillStyle: 'black',
+                beginPath: function() {
+                    ctx.beginPath();
+                },
+                stroke: function() {
+                    ctx.strokeStyle = this.strokeStyle;
+                    ctx.lineWidth = this.lineWidth*size/500;
+                    ctx.stroke();
+                },
+                fill: function() {
+                    ctx.fillStyle = this.fillStyle;
+                    ctx.fill();
+                },
+                arc: function(x,y,r,start,end) {
+                    ctx.arc(x*size/500+xyoffset[0],y*size/500+xyoffset[1],r*size/500,start*Math.PI/180,end*Math.PI/180)
+                },
+                drawRect: function(x,y,w,h) {
+                    ctx.drawRect(x*size/500+xyoffset[0],y*size/500+xyoffset[1],w*size/500,h*size/500);
+                },
+                fillRect: function(x,y,w,h) {
+                    ctx.fillStyle = this.fillStyle;
+                    ctx.fillRect(x*size/500+xyoffset[0],y*size/500+xyoffset[1],w*size/500,h*size/500);
+                },
+                strokeRect: function(x,y,w,h) {
+                    ctx.strokeStyle = this.strokeStyle;
+                    ctx.lineWidth = this.lineWidth*size/500;
+                    ctx.strokeRect(x*size/500+xyoffset[0],y*size/500+xyoffset[1],w*size/500,h*size/500);
+                },
+                moveTo: function(x,y) {
+                    ctx.moveTo(x*size/500+xyoffset[0],y*size/500+xyoffset[1]);
+                },
+                lineTo: function(x,y) {
+                    ctx.strokeStyle = this.strokeStyle;
+                    ctx.lineWidth = this.lineWidth*size/500;
+                    ctx.lineTo(x*size/500+xyoffset[0],y*size/500+xyoffset[1]);
+                },
+                quadraticCurveTo: function(x,y,x2,y2) {
+                    ctx.strokeStyle = this.strokeStyle;
+                    ctx.lineWidth = this.lineWidth*size/500;
+                    ctx.quadraticCurveTo(x*size/500+xyoffset[0],y*size/500+xyoffset[1],x2*size/500+xyoffset[0],y2*size/500+xyoffset[1]);
+                },
+                fillText: function(x,y,w,s,t) {
+                    ctx.fillStyle = _canvas.fillStyle;
+                    if(s&&t) {
+                        ctx.font = s*size/500 + 'px ' + t;
+                    }
+                    ctx.fillText(w,x*size/500+xyoffset[0],y*size/500+xyoffset[1]);
+                },
+                measureText: function(txt) {
+                    return ctx.measureText(txt)*size/500;
+                },
+                translate: function(x,y) {
+                    ctx.translate(x*size/500+xyoffset[0],y*size/500+xyoffset[1]);
+                },
+                rotate: function(degrees) {
+                    ctx.rotate(degrees*Math.PI/180);
+                },
+                save: function() {
+                    ctx.save();
+                },
+                restore: function() {
+                    ctx.restore();
+                },
+                drawImage: function(image,x,y,width,height) {
+                    ctx.drawImage(image,x*size/500+xyoffset[0],y*size/500+xyoffset[1],width*size/500,height*size/500);
+                }
+            }
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    var response = false;
+                    if(mouseCors[0] >= x && mouseCors[0] <= x+w && mouseCors[1] >= y && mouseCors[1] <= y+h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    var response = false;
+                    if(clickCors[0] >= x && clickCors[0] <= x+w && clickCors[1] >= y && clickCors[1] <= y+h) {
+                        response = true;
+                    }
+                    return response;
+                }
+            }
+            var _math = {
+                random: function(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1) ) + min;
+                },
+                distanceTo: function(x1,y1,x2,y2) {
+                    return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+                },
+                sortNumbers: function(arr) {
+                    return arr.sort(function(a, b){return a-b});
+                },
+                isOddOrEven: function(num) {
+                    var response = 'even';
+                    var mysplit = (''+num).split('');
+                    if(mysplit[mysplit.length-1] == 1 || mysplit[mysplit.length-1] == 3  || mysplit[mysplit.length-1] == 5 || mysplit[mysplit.length-1] == 7 || mysplit[mysplit.length-1] == 9) {
+                        response = 'odd';
+                    }
+                    return response;
+                },
+                average: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    while(num < arr.length) {
+                        num2 = num2 + arr[num];
+                        num = num + 1;
+                    }
+                    return num2/arr.length;
+                },
+                averageWeighted: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    var num3 = 0;
+                    while(num < arr.length) {
+                        num3 += arr[num];
+                        num2 += arr[num]*arr[num+1];
+                        num += 2;
+                    }
+                    return num2/num3;
+                }
+            }
+            var _physics = {
+                circlesTouching: function(x1,y1,r1,x2,y2,r2) {
+                    var response = false;
+                    if(_math.distanceTo(x1,y1,x2,y2)<=r1+r2) {
+                        response = true;
+                    }
+                    return response;
+                },
+                circleTouchingPolygon: function(x,y,r,poly) {
+                    var response = false;
+                    var num = 0;
+                    while(num < poly.length-1) {
+                        if(_physics.circleOnLine(x,y,r,poly[num][0],poly[num][1],poly[num+1][0],poly[num+1][1])) {
+                            response = true;
+                        }
+                        num = num + 1;
+                    }
+                    return response;
+                },
+                circleOnLine: function(cx,cy,cr,x1,y1,x2,y2) {
+                    var response = false;
+                    var h = _physics.heightOfTriangle(_math.distanceTo(cx,cy,x1,y1),_math.distanceTo(x1,y1,x2,y2),_math.distanceTo(cx,cy,x2,y2));
+                    if(cr>=h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                heightOfTriangle: function(a,b,c) {
+                    var s = (a+b+c)/2;
+                    var ta = Math.sqrt(s*(s-a)*(s-b)*(s-c));
+                    var h = ta*2/b;
+                    return h;
+                },
+                propertiesOfLine: function(x1,y1,x2,y2) {
+                    var slope = (y2-y1)/(x2-x1);
+                    var yint = y1-(x1*slope);
+                    return [slope,yint];
+                },
+                rectsTouching: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    var response = false;
+                    if(((x1>=x3&&x1<=x4)||(x2>=x3&&x2<=x4)||(x1<=x3&&x2>=x4))&&((y1>=y3&&y1<=y4)||(y2>=y3&&y2<=y4)||(y1<=y3&&y2>=y4))) {
+                        response = true;
+                    }
+                    return response;
+                },
+                pointInBox: function(px,py,x,y,w,h) {
+                    var response = false;
+                    if(px>=x&&px<=x+w&&py>=y&&py<=y+h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                linesIntersect: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    var m1 = _physics.propertiesOfLine(x1,y1,x2,y2)[0];
+                    var b1 = _physics.propertiesOfLine(x1,y1,x2,y2)[1];
+                    var m2 = _physics.propertiesOfLine(x3,y3,x4,y4)[0];
+                    var b2 = _physics.propertiesOfLine(x3,y3,x4,y4)[1];
+                    var response = false;
+                    if(m2 != m1&&m1!='Nan'&&m1!='Infinity'&&m2!='Nan'&&m2!='Infinity') {
+                        response = [(b1-b2)/(m2-m1),m1*(b1-b2)/(m2-m1)+b1];
+                    }
+                    if(m1=='Nan'||m1=='Infinity') {
+                        response = [x1,_physics.xPointOnLine(x1,x3,y3,x4,y4)];
+                    }
+                    if(m2=='Nan'||m2=='Infinity') {
+                        response = [x3,_physics.xPointOnLine(x3,x1,y1,x2,y2)];
+                    }
+                    if((m2=='Nan'||m2=='Infinity')&&(m1=='Nan'||m1=='Infinity')&&x1!=x3) {
+                        response = false;
+                    }
+                    if(x1==x3&&y1==y3&&x2==x4&&y2==y4) {
+                        response = true;
+                    }
+                    return response;
+                },
+                lineSegmentsIntersect: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    var response = false;
+                    var sortedx1 = _math.sortNumbers([x1,x2]);
+                    var sortedx2 = _math.sortNumbers([x3,x4]);
+                    var sortedy1 = _math.sortNumbers([y1,y2]);
+                    var sortedy2 = _math.sortNumbers([y3,y4]);
+                    if(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)!=true) {
+                        if(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)!=false) {
+                            if(_physics.pointInBox(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[0],_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[1],sortedx1[0],sortedy1[0],sortedx1[1]-sortedx1[0],sortedy1[1]-sortedy1[0])&&_physics.pointInBox(_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[0],_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[1],sortedx2[0],sortedy2[0],sortedx2[1]-sortedx2[0],sortedy2[1]-sortedy2[0])) {
+                                response = [_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[0],_physics.linesIntersect(x1,y1,x2,y2,x3,y3,x4,y4)[1]];
+                            }
+                        }
+                    } else {
+                        response = true;
+                    }
+                    return response;
+                },
+                xPointOnLine: function(x,x1,y1,x2,y2) {
+                    var props = _physics.propertiesOfLine(x1,y1,x2,y2);
+                    return props[0]*x+props[1];
+                },
+                yPointOnLine: function(y,x1,y1,x2,y2) {
+                    var props = _physics.propertiesOfLine(x1,y1,x2,y2);
+                    return (y-props[1])/props[0];
+                },
+                checkPolygonsCollided: function(poly1,poly2) {
+                    var response = false;
+                    var num = 0;
+                    while(num < poly1.length-1) {
+                        var num2 = 0;
+                        while(num2 < poly2.length-1) {
+                            if(_physics.lineSegmentsIntersect(poly1[num][0],poly1[num][1],poly1[num+1][0],poly1[num+1][1],poly2[num2][0],poly2[num2][1],poly2[num2+1][0],poly2[num2+1][1])) {
+                                response = true;
+                            }
+                            num2 = num2 +1;
+                        }
+                        num = num + 1;
+                    }
+                    return response;
+                },
+                drawPolygon: function(poly,xoff,yoff) {
+                    var num = 0;
+                    _canvas.moveTo(poly[0][0]+xoff,poly[0][1]+yoff);
+                    while(num < poly.length) {
+                        _canvas.lineTo(poly[num][0]+xoff,poly[num][1]+yoff);
+                        num = num + 1;
+                    }
+                },
+                changePolygon: function(poly,xoff,yoff) {
+                    var num = 0;
+                    var poly2 = poly;
+                    while(num < poly.length) {
+                        poly2[num][0] = poly[num][0] + xoff;
+                        poly2[num][1] = poly[num][1] + yoff;
+                        num = num + 1;
+                    }
+                    return poly2;
+                },
+                pointInPolygon: function(px,py,poly) {
+                    var response = false;
+                    var count = 0;
+                    var num = 0;
+                    while(num < poly.length - 1) {
+                        var int = linesIntersect(px,py,px+1,py,poly[num][0],poly[num][1],poly[num+1][0],poly[num+1][1]);
+                        var sortedy = _math.sortNumbers([poly[num][1],poly[num+1][1]]);
+                        if(int[0]>=px&&int[1]>=sortedy[0]&&int[1]<=sortedy[1]) {
+                            count = count + 1;
+                        }
+                        num = num + 1;
+                    }
+                    if(_math.isOddOrEven(count)=='odd') {
+                        response = true;
+                    }
+                    return response;
+                },
+                rotatePolygon: function(poly,degrees,origin) {
+                    var num = 0;
+                    while(num < poly.length) {
+                        poly[num] = _physics.rotate(origin[0],origin[1],poly[num][0],poly[num][1],degrees);
+                        num = num + 1;
+                    }
+                },
+                rotate: function(cx, cy, x, y, angle) {
+                    var radians = (Math.PI / 180) * angle,
+                        cos = Math.cos(radians),
+                        sin = Math.sin(radians),
+                        nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                        ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                    return [nx, ny];
+                },
+                directionToPoint: function(x1,y1,x2,y2) {
+                    return -(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI)+180;
+                },
+                movePoint: function(px,py,distance,direction) {
+                    var x = px;
+                    var y = py;
+                    x += distance * Math.sin(direction*Math.PI/180);
+                    y -= distance * Math.cos(direction*Math.PI/180);
+                    return [x,y];
+                },
+                distanceToMovePoint: function(distance,direction) {
+                    return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+                }
+            }
+            function doAll() {
+                _canvas.setSize();
+                //sets size
+
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+
+                ac();
+                //runs program
+
+                _canvas.drawWhiteOut();
+                //draws white outline
+
+                clickCors = [];
+            }
+
+            //start the program
+            window.setInterval(doAll,20);
+            
+            function ac() {
+                try{
+                    drawSegments();
+                    updateSegments();
+                }catch(err){window.alert(err.message);}
+            }
+            function updateSegments() {
+                var num = 0;
+                while(num < segments.length) {
+                    var m = [0,0];
+                    if(num == 0) {
+                        if(mouseCors) {
+                        if(_math.distanceTo(segments[0][0],segments[0][1],segments[1][0],segments[1][1])<segmentLength) {
+                            m = _physics.distanceToMovePoint(Math.max(_math.distanceTo(segments[num][0],segments[num][1],mouseCors[0],mouseCors[1]),0)/10,-90-_physics.directionToPoint(segments[num][0],segments[num][1],mouseCors[0],mouseCors[1]));
+                        } else {
+                            m = _physics.distanceToMovePoint(Math.max(_math.distanceTo(segments[num][0],segments[num][1],mouseCors[0],mouseCors[1]),0)/(_math.distanceTo(segments[0][0],segments[0][1],segments[1][0],segments[1][1])+10-segmentLength),-90-_physics.directionToPoint(segments[num][0],segments[num][1],mouseCors[0],mouseCors[1]));
+                        }
+                        }
+                    } else {
+                        if(num==segments.length-1) {
+                            m = _physics.distanceToMovePoint((_math.distanceTo(segments[num][0],segments[num][1],segments[num-1][0],segments[num-1][1])+10-segmentLength)/10,-90-_physics.directionToPoint(segments[num][0],segments[num][1],segments[num-1][0],segments[num-1][1]));
+                        } else if(_math.distanceTo(segments[num][0],segments[num][1],segments[num][0],segments[num][1])<segmentLength) {
+                            m = _physics.distanceToMovePoint((_math.distanceTo(segments[num][0],segments[num][1],segments[num-1][0],segments[num-1][1])+10-segmentLength)/10,-90-_physics.directionToPoint(segments[num][0],segments[num][1],segments[num-1][0],segments[num-1][1]));
+                        }
+                    }
+                    segments[num][0] += m[0];
+                    segments[num][1] += m[1];
+                    num += 1;
+                }
+            }
+            function drawSegments() {
+                var num = 0;
+                _canvas.strokeStyle = 'red';
+                _canvas.beginPath();
+                _canvas.lineWidth = 0.2*segments.length;
+                _canvas.moveTo(segments[0][0],segments[0][1]);
+                var m = _physics.rotate(segments[0][0],segments[0][1],segments[0][0],segments[0][1]+snakeTongue[0]+(segments.length-num)/2,-90+_physics.directionToPoint(segments[1][0],segments[1][1],segments[0][0],segments[0][1]));
+                _canvas.lineTo(m[0],m[1]);
+                _canvas.stroke();
+                while(num < segments.length) {
+                    _canvas.fillStyle = 'green';
+                    _canvas.beginPath();
+                    _canvas.arc(segments[num][0],segments[num][1],(segments.length-num)/2,0,360);
+                    _canvas.fill();
+                    num += 1;
+                }
+                num = 1;
+                _canvas.strokeStyle = 'green';
+                while(num < segments.length) {
+                    _canvas.beginPath();
+                    _canvas.moveTo(segments[num-1][0],segments[num-1][1]);
+                    _canvas.lineWidth = segments.length-num+1;
+                    _canvas.lineTo(segments[num][0],segments[num][1]);
+                    _canvas.stroke();
+                    num += 1;
+                }
+                _canvas.fillStyle = 'black';
+                _canvas.beginPath();
+                m = _physics.rotate(segments[0][0],segments[0][1],segments[0][0]+segments.length/5,segments[0][1],-90+_physics.directionToPoint(segments[1][0],segments[1][1],segments[0][0],segments[0][1]));
+                _canvas.arc(m[0],m[1],segments.length/10,0,360);
+                _canvas.fill();
+                _canvas.beginPath();
+                m = _physics.rotate(segments[0][0],segments[0][1],segments[0][0]-segments.length/5,segments[0][1],-90+_physics.directionToPoint(segments[1][0],segments[1][1],segments[0][0],segments[0][1]));
+                _canvas.arc(m[0],m[1],segments.length/10,0,360);
+                _canvas.fill();
+                if(snakeTongue[1]==0) {
+                snakeTongue[0] += 0.01*segments.length;
+                } else {
+                snakeTongue[0] -= 0.01*segments.length;
+                }
+                if(snakeTongue[0]>=0.7*segments.length) {
+                    snakeTongue[1]=1;
+                }
+                if(snakeTongue[0]<=-0.5*segments.length) {
+                snakeTongue[1]=0;
+                }
+            }
+            var segments = [];
+            var n = 0;
+            while(n < 10) {
+                segments.push([_math.random(0,500),_math.random(0,500)]);
+                n += 1;
+            }
+            var snakeTongue = [0,0];
+            var segmentLength = 30;
+        </script>
+    </body>
+</html>

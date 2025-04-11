@@ -1,0 +1,637 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "The Labyrinth";
+            var dimensions = {width:1000,height:1000};
+            var images = {
+                floorTile1:"images/floorTile.png",
+                floorTile2:"images/floorTile2.png"
+            };
+            var audios = {};
+            
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(Keys.down[32]) space = !space;
+
+                    this.objects.update();
+                    this.rooms.update();
+                    this.player.update();
+
+                    this.cam.x = this.player.x;
+                    this.cam.y = this.player.y;
+                },
+                draw: function() {
+                    var xoff = -(game.cam.x%1000+1000)%1000;
+                    var yoff = -(game.cam.y%1000+1000)%1000;
+                    for(var x=-1;x<2;x++) {
+                        for(var y=-1;y<2;y++) {
+                            if(!space) ctx.drawImage(images.floorTile1,x*1000+xoff,y*1000+yoff,1000,1000);
+                        }
+                    }
+
+                    ctx.save();
+                    ctx.translate(500,500);
+                    if(space) ctx.scale(0.1,0.1);
+                    ctx.translate(-this.cam.x,-this.cam.y);
+                    if(!space) {
+                        this.rooms.draw();
+                        ctx.save();
+                        ctx.beginPath();
+                        for(var o of this.objects.lightBlocks) {
+                            if(o.inverse) continue;
+                            if(o.on===false) continue;
+                            if(!blocksColliding(o,{x:game.cam.x-500,y:game.cam.y-500,w:1000,h:1000})) continue;
+                            ctx.rect(o.x,o.y,o.w,o.h);
+                        }
+                        ctx.clip();
+                        var xoff = Math.floor(game.cam.x/1000)*1000-500;
+                        var yoff = Math.floor(game.cam.y/1000)*1000+500;
+                        for(var x=-1;x<2;x++) {
+                            for(var y=-1;y<2;y++) {
+                                if(!space) ctx.drawImage(images.floorTile1,x*1000+xoff,y*1000+yoff,1000,1000);
+                            }
+                        }
+                        ctx.restore();
+                    }
+                    game.objects.drawDark();
+                    ctx.save();
+                    if(!space) this.objects.clipLighting();
+                    var xoff = Math.floor(game.cam.x/1000)*1000-500;
+                    var yoff = Math.floor(game.cam.y/1000)*1000+500;
+                    for(var x=-1;x<2;x++) {
+                        for(var y=-1;y<2;y++) {
+                            if(!space)ctx.drawImage(images.floorTile2,x*1000+xoff,y*1000+yoff,1000,1000);
+                        }
+                    }
+                    this.objects.draw();
+                    ctx.restore();
+
+                    if(!space) {
+                        ctx.save();
+                        ctx.translate(this.cam.x-500,this.cam.y-500);
+                        var grd = ctx.createRadialGradient(500,500,300,500,500,1000);
+                        grd.addColorStop(0,"rgba(0,0,0,0)");
+                        grd.addColorStop(1,"rgba(0,0,0,1)");
+                        ctx.fillStyle = grd;
+                        ctx.fillRect(0,0,1000,1000);
+                        ctx.restore();
+                    }
+                    this.player.draw();
+
+                    if(space) {
+                        ctx.save();
+                        ctx.globalAlpha = 0.5;
+                        this.rooms.drawDebug();
+                        ctx.restore();
+                    }
+
+                    ctx.restore();
+
+
+                    ctx.fillStyle = "white";
+                    if(space) ctx.fillStyle = "black";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("WASD/Arrows to move",20,50);
+                    ctx.fillText("Move Mouse to aim light",20,100);
+                    ctx.fillText("X to open doors",20,150);
+                    ctx.fillText("Space to toggle debug mode",20,200);
+                    ctx.fillText("FPS: "+fps,20,250);
+                },
+                objects: {
+                    objects: [],
+                    background: [],
+                    lightBlocks: [],
+                    entities: [],
+                    objectId: 0,
+                    update: function() {
+                        for(var o of this.entities) {
+                            if(o.type=="door") {
+                                var p = game.player;
+                                var dist = distTo(o.x+o.w/2,o.y+o.h/2,p.x+p.w/2,p.y+p.h/2);
+                                if(dist<100&&Keys.keys[88]) {
+                                    o.open = true;
+                                }
+
+                                var lightBlock = this.lightBlocks.find(e=>e.id==o.lightBlock);
+                                var doorBlock = this.objects.find(e=>e.id==o.doorBlock);
+                                lightBlock.on = !o.open;
+                                doorBlock.deactivated = o.open;
+                            }
+                        }
+                    },
+                    drawDark: function() {
+                        for(var o of this.entities) {
+                            if(o.type=="door"&&!o.open) {
+                                ctx.fillStyle = "rgb(60,35,10)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                        }
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            if(space) {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 5;
+                                ctx.strokeRect(o.x,o.y,o.w,o.h);
+                                ctx.fillStyle = "rgba(0,0,0,0.1)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                        }
+                        for(var o of this.entities) {
+                            if(o.type=="door"&&!o.open) {
+                                ctx.fillStyle = "rgb(120,70,20)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                        }
+                    },
+                    generateRoom: function(room) {
+                        var objects = [];
+                        var lightBlocks = [];
+                        var background = [];
+                        var entities = [];
+                        if(room.type.includes("room")) {
+                            for(var x=room.x-100;x<room.x+room.w+100;x+=100) {
+                                objects.push({x:x,y:room.y-100,w:100,h:100});
+                                objects.push({x:x,y:room.y+room.h,w:100,h:100});
+                            }
+                            for(var y=room.y;y<room.y+room.h;y+=100) {
+                                objects.push({x:room.x-100,y:y,w:100,h:100});
+                                objects.push({x:room.x+room.w,y:y,w:100,h:100});
+                            }
+                        } else {
+                            if(room.side==0||room.side==2) {
+                                for(var x=room.x;x<room.x+room.w;x+=100) {
+                                    objects.push({x:x,y:room.y-100,w:100,h:100});
+                                    objects.push({x:x,y:room.y+room.h,w:100,h:100});
+                                }
+                            } else {
+                                for(var y=room.y;y<room.y+room.h;y+=100) {
+                                    objects.push({x:room.x-100,y:y,w:100,h:100});
+                                    objects.push({x:room.x+room.w,y:y,w:100,h:100});
+                                }
+                            }
+                        }
+                        for(var o of objects) o.type = "exterior wall";
+                        //exterior walls
+
+                        lightBlocks = lightBlocks.concat(this.generateLightBlocks(room));
+
+                        for(var o of objects.concat(lightBlocks,entities,background)) {
+                            this.objectId++;
+                            o.id = this.objectId;
+                            o.roomId = room.id;
+                        }
+                        this.objects = this.objects.concat(objects);
+                        this.lightBlocks = this.lightBlocks.concat(lightBlocks);
+                        this.background = this.background.concat(background);
+                        this.entities = this.entities.concat(entities);
+
+                        this.generateDoors();
+                        this.clipLightBlocks();
+                    },
+                    generateLightBlocks: function(room) {
+                        var lightBlocks = [];
+                        if(room.type.includes("room")) {
+                            lightBlocks.push({x:room.x,y:room.y-100,w:room.w,h:100,left:false,right:false,top:false});
+                            lightBlocks.push({x:room.x,y:room.y+room.h,w:room.w,h:100,left:false,right:false,bottom:false});
+                            lightBlocks.push({x:room.x-100,y:room.y,w:100,h:room.h,left:false,top:false,bottom:false});
+                            lightBlocks.push({x:room.x+room.w,y:room.y,w:100,h:room.h,right:false,top:false,bottom:false});
+                        } else {
+                            if(room.side==0||room.side==2) {
+                                lightBlocks.push({x:room.x,y:room.y-100,w:room.w,h:100,right:false,left:false,top:false});
+                                lightBlocks.push({x:room.x,y:room.y+room.h,w:room.w,h:100,right:false,left:false,bottom:false});
+
+                                if(room.type=="secret hallway") {
+                                    lightBlocks.push({x:room.x,y:room.y,w:100,h:room.h,inverse:true});
+                                    lightBlocks.push({x:room.x+room.w-100,y:room.y,w:100,h:room.h,inverse:true});
+                                } else {
+                                    lightBlocks.push({x:room.x,y:room.y+100,w:100,h:room.h-200,inverse:true});
+                                    lightBlocks.push({x:room.x+room.w-100,y:room.y+100,w:100,h:room.h-200,inverse:true});
+                                }
+                            } else {
+                                lightBlocks.push({x:room.x-100,y:room.y,w:100,h:room.h,top:false,bottom:false,left:false});
+                                lightBlocks.push({x:room.x+room.w,y:room.y,w:100,h:room.h,top:false,bottom:false,right:false});
+
+                                if(room.type=="secret hallway") {
+                                    lightBlocks.push({x:room.x,y:room.y,w:room.w,h:100,inverse:true});
+                                    lightBlocks.push({x:room.x,y:room.y+room.h-100,w:room.w,h:100,inverse:true});
+                                } else {
+                                    lightBlocks.push({x:room.x+100,y:room.y,w:room.w-200,h:100,inverse:true});
+                                    lightBlocks.push({x:room.x+100,y:room.y+room.h-100,w:room.w-200,h:100,inverse:true});
+                                }
+                            }
+                        }
+                        return lightBlocks;
+                    },
+                    generateDoors: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            if(o.type!="exterior wall") continue;
+                            for(var n2=n+1;n2<this.objects.length;n2++) {
+                                var o2 = this.objects[n2];
+                                if(o2.type!="exterior wall") continue;
+                                if(o.x==o2.x&&o.y==o2.y) {
+                                    this.objects.splice(n2,1);
+                                    n2--;
+                                }
+                            }
+                            for(var n2=0;n2<game.rooms.objects.length;n2++) {
+                                var room = game.rooms.objects[n2];
+                                if(!room.type.includes("hallway")) continue;
+                                if(!blocksColliding(room,o)) continue;
+                                o.type = "door";
+                                if(room.type!="secret hallway") {
+                                    if(room.side%2==0) {
+                                        if(o.y==room.y||o.y+o.h==room.y+room.h) {
+                                            o.type = "exterior wall";
+                                        }
+                                    } else {
+                                        if(o.x==room.x||o.x+o.w==room.x+room.w) {
+                                            o.type = "exterior wall";
+                                        }
+                                    }
+                                }
+                                if(o.type=="door") {
+                                    this.objectId++;
+                                    var door = {type:"door",x:o.x,y:o.y,w:o.w,h:o.h,roomId:o.roomId,id:this.objectId};
+                                    this.entities.push(door);
+                                    this.objectId++;
+                                    var lightBlock = {x:o.x,y:o.y,w:o.w,h:o.h,roomId:o.roomId,id:this.objectId,constant:true};
+                                    this.lightBlocks.push(lightBlock);
+                                    door.lightBlock = this.objectId;
+                                    door.doorBlock = o.id;
+                                }
+                                break;
+                            }
+                        }
+                    },
+                    clipLightBlocks: function() {
+                        for(var n=0;n<this.lightBlocks.length;n++) {
+                            var o = this.lightBlocks[n];
+                            if(!o.inverse) continue;
+                            for(var n2=0;n2<this.lightBlocks.length;n2++) {
+                                var o2 = this.lightBlocks[n2];
+                                if(o2.inverse) continue;
+                                if(o2.constant) continue;
+                                if(!blocksColliding(o,o2)) continue;
+                                if(o.w==o2.w) {
+                                    this.lightBlocks.push({x:o2.x,y:o.y+o.h,w:o2.w,h:o2.y+o2.h-(o.y+o.h),roomId:o2.roomId});
+                                    o2.h = o.y-o2.y;
+                                    o2.top = true;
+                                    o2.right = true;
+                                    o2.left = true;
+                                    o2.bottom = true;
+                                } else {
+                                    this.lightBlocks.push({x:o.x+o.w,y:o2.y,w:o2.x+o2.w-(o.x+o.w),h:o2.h,roomId:o2.roomId});
+                                    o2.w = o.x-o2.x;
+                                    o2.top = true;
+                                    o2.right = true;
+                                    o2.left = true;
+                                    o2.bottom = true;
+                                }
+                            }
+                        }
+                    },
+                    deleteRoom: function(id) {
+                        this.objects = this.objects.filter(e=>e.roomId!=id);
+                        this.lightBlocks = this.lightBlocks.filter(e=>e.roomId!=id);
+                        this.background = this.background.filter(e=>e.roomId!=id);
+                        this.entities = this.entities.filter(e=>e.roomId!=id);
+                    },
+                    clipLighting: function() {
+                        var endCors = [];
+                        var angle = game.player.angle-45;
+                        while(angle<game.player.angle+45) {
+                            var ray = {};
+                            var distanceTraveled = 0;
+                            ray.x = game.player.x+game.player.w/2;
+                            ray.y = game.player.y+game.player.h/2;
+                            ray.angle = angle;
+                            var move = distToMove(1,ray.angle);
+                            ray.xmove = move.x;
+                            ray.ymove = move.y;
+                            while(distanceTraveled<750) {
+                                var dist = Math.min(this.maxDistToLightBlock(ray.x,ray.y),750);
+                                if(dist<0.1) {
+                                    break;
+                                }
+                                ray.x += ray.xmove*dist;
+                                ray.y += ray.ymove*dist;
+                                distanceTraveled += dist;
+                            }
+                            endCors.push({x:ray.x,y:ray.y});
+                            angle += 1;
+                        }
+
+                        ctx.beginPath();
+                        ctx.moveTo(game.player.x+game.player.w/2,game.player.y+game.player.h/2);
+                        for(var c of endCors) {
+                            ctx.lineTo(c.x,c.y);
+                        }
+                        ctx.clip();
+                    },
+                    maxDistToLightBlock: function(x,y) {
+                        var dist = Infinity;
+                        for(var n=0;n<this.lightBlocks.length;n++) {
+                            var o = this.lightBlocks[n];
+                            if(o.inverse) continue;
+                            if(o.on===false) continue;
+                            if(o.top!==false) dist = Math.min(dist,distToSeg(x,y,o.x,o.y,o.x+o.w,o.y));
+                            if(o.right!==false) dist = Math.min(dist,distToSeg(x,y,o.x+o.w,o.y,o.x+o.w,o.y+o.h));
+                            if(o.bottom!==false) dist = Math.min(dist,distToSeg(x,y,o.x,o.y+o.h,o.x+o.w,o.y+o.h));
+                            if(o.left!==false) dist = Math.min(dist,distToSeg(x,y,o.x,o.y,o.x,o.y+o.h));
+                        }
+                        return dist;
+                    }
+                },
+                rooms: {
+                    roomId: 0,
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            if(o.group) {
+                                var group = this.objects.find(e=>e.id==o.group);
+                                if(group==undefined) {
+                                    o.delete = true;
+                                } else {
+                                    o.delete = false;
+                                }
+                            } else {
+                                o.delete = true;
+                            }
+                        }
+                        for(var o of this.objects) {
+                            o.playerIn = blocksColliding(game.player,o);
+                            if(o.playerIn) {
+                                o.delete = false;
+                                this.propogateGeneration({},o,2);
+                            }
+                            o.visited = o.visited||o.playerIn;
+                            o.canSee = blocksColliding({x:game.cam.x-500,y:game.cam.y-500,w:1000,h:1000},o);
+                            o.generate = blocksColliding({x:game.cam.x-700,y:game.cam.y-700,w:1400,h:1400},o);
+                            if(o.generate&&!o.generated) {
+                                game.objects.generateRoom(o);
+                                o.generated = true;
+                            }
+                        }
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            var d = o.delete;
+                            if(d) {
+                                game.objects.deleteRoom(o.id);
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                        }
+                    },
+                    drawDebug: function() {
+                        for(var o of this.objects) {
+                            if(o.type=="room"||o.type=="intersection room") {
+                                ctx.fillStyle = "rgb(200,200,200)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                            if(o.type=="hallway") {
+                                ctx.fillStyle = "rgb(255,200,200)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                            if(o.type=="secret room") {
+                                ctx.fillStyle = "rgb(200,200,255)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                            if(o.type=="secret hallway") {
+                                ctx.fillStyle = "rgb(255,200,255)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                            if(o.type=="doorway") {
+                                ctx.fillStyle = "rgb(200,200,255)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                            if(o.playerIn) {
+                                ctx.fillStyle = "rgba(255,255,255,0.5)";
+                                ctx.fillRect(o.x,o.y,o.w,o.h);
+                            }
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "200px Arial";
+                            ctx.fillText(o.id,o.x+o.w/2,o.y+o.h/2-100);
+                            ctx.fillText(o.type,o.x+o.w/2,o.y+o.h/2+100);
+                        }
+                        for(var o of game.objects.lightBlocks) {
+                            ctx.fillStyle = "rgba(255,255,255,0.4)";
+                            if(o.inverse) ctx.fillStyle = "rgba(0,255,0,0.4)";
+                            ctx.fillRect(o.x,o.y,o.w,o.h);
+                        }
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            if(!o.visited&&o.type.includes("secret")) continue;
+                            ctx.fillStyle = "rgba(255,255,255,0.07)";
+                            ctx.fillRect(o.x,o.y,o.w,o.h);
+                        }
+                    },
+                    createFirstRoom: function() {
+                        var room = {};
+                        room.id = 0;
+                        room.type = "room";
+                        room.x = 0;
+                        room.y = 0;
+                        room.w = Math.floor(Math.random()*10)*100+1000;
+                        room.h = Math.floor(Math.random()*10)*100+1000;
+                        room.neighbors = [];
+                        this.objects.push(room);
+                    },
+                    propogateGeneration: function(parent,room,num) {
+                        room.delete = false;
+                        if(num==-1) return;
+                        if(num==0&&!room.type.includes("room")) return;
+                        for(var n=0;n<room.neighbors.length;n++) {
+                            var neighbor = this.objects.find(e=>e.id==room.neighbors[n].id);
+                            if(neighbor==undefined) {
+                                room.neighbors.splice(n,1);
+                                n--;
+                            }
+                        }
+                        if(room.type!="secret room") {
+                            if(room.neighbors.length<2) {
+                                var sidesTaken = room.neighbors.map(e=>e.side);
+                                var sides = [0,1,2,3].filter(e=>!sidesTaken.includes(e));
+                                var generateNum = Math.random()*3;
+                                if(room.type=="hallway"||room.type=="secret hallway") {
+                                    sides = [(sidesTaken[0]+2)%4];
+                                    generateNum = 1;
+                                }
+                                for(var n=0;n<generateNum;n++) {
+                                    var sideId = Math.floor(Math.random()*sides.length);
+                                    var side = sides[sideId];
+                                    sides.splice(sideId,1);
+                                    if(n==2&&Math.random()<0.5) {
+                                        this.generateRoom(room,side,{type:"secret hallway"},true);
+                                    } else if(room.type=="secret hallway") {
+                                        this.generateRoom(room,side,{type:"secret room"},true);
+                                    } else {
+                                        this.generateRoom(room,side);
+                                    }
+                                }
+                            }
+                        }
+                        for(var n=0;n<room.neighbors.length;n++) {
+                            if(parent.id==room.neighbors[n].id) continue;
+                            var neighbor = this.objects.find(e=>e.id==room.neighbors[n].id);
+                            if(room.type=="secret room"||room.type=="secret hallway") {
+                                this.propogateGeneration(room,neighbor,num);
+                            } else {
+                                this.propogateGeneration(room,neighbor,num-1);
+                            }
+                        }
+                    },
+                    generateRoom: function(room,side,o={},group) {
+                        this.roomId++;
+                        if(group) o.group = room.id;
+                        if(o.id===undefined) o.id = this.roomId;
+                        room.neighbors.push({id:o.id,side:side});
+                        if(!o.type) {
+                            o.type = "room";
+                        }
+                        o.w = Math.floor(Math.random()*20)*100+1000;
+                        o.h = Math.floor(Math.random()*20)*100+1000;
+                        if(room.type.includes("room")&&o.type=="room") {
+                            o.type = "hallway";
+                            o.w = Math.floor(Math.random()*2)*100+300;
+                            o.side = side;
+                        }
+                        if(o.type=="room") {
+                            if(Math.random()<0.3) {
+                                o.type = "intersection room";
+                            }
+                        }
+                        if(o.type=="secret hallway") {
+                            o.w = 200;
+                            o.h = 300;
+                            o.side = side;
+                        }
+                        if(o.type=="secret room") {
+                            o.w = 500;
+                            o.h = 500;
+                        }
+                        if(o.type=="intersection room") {
+                            o.w = 500;
+                            o.h = 500;
+                        }
+                        this.positionRoom(o,room,side);
+                        o.neighbors = [{id:room.id,side:(side+2)%4}];
+                        this.objects.push(o);
+                    },
+                    positionRoom: function(room,parent,side) {
+                        var w = room.w;
+                        var h = room.h;
+                        if(side==0) {
+                            room.w = h;
+                            room.h = w;
+                            room.x = parent.x+parent.w;
+                            room.y = parent.y+Math.random()*(parent.h-room.h);
+                        } else if(side==1) {
+                            room.x = parent.x+Math.random()*(parent.w-room.w);
+                            room.y = parent.y+parent.h;
+                        } else if(side==2) {
+                            room.w = h;
+                            room.h = w;
+                            room.x = parent.x-room.w;
+                            room.y = parent.y+Math.random()*(parent.h-room.h);
+                        } else if(side==3) {
+                            room.x = parent.x+Math.random()*(parent.w-room.w);
+                            room.y = parent.y-room.h;
+                        }
+                        room.x = Math.round(room.x/100)*100;
+                        room.y = Math.round(room.y/100)*100;
+                    }
+                },
+                player: {
+                    x: 0,
+                    y: 0,
+                    w: 25,
+                    h: 25,
+                    xmove: 0,
+                    ymove: 0,
+                    angle: 0,
+                    update: function() {
+                        var speed = 0.2;
+                        if(space) speed = 1;
+                        if(Keys.keys[37]||Keys.keys[65]) {
+                            this.xmove -= speed;
+                        }
+                        if(Keys.keys[38]||Keys.keys[87]) {
+                            this.ymove -= speed;
+                        }
+                        if(Keys.keys[39]||Keys.keys[68]) {
+                            this.xmove += speed;
+                        }
+                        if(Keys.keys[40]||Keys.keys[83]) {
+                            this.ymove += speed;
+                        }
+                        this.xmove *= 0.95;
+                        this.ymove *= 0.95;
+
+                        this.x += this.xmove;
+                        for(var o of game.objects.objects) {
+                            if(!blocksColliding(this,o)) continue;
+                            if(o.deactivated) continue;
+                            var c1 = {x:this.x+this.w/2,y:this.y+this.h/2};
+                            var c2 = {x:o.x+o.w/2,y:o.y+o.h/2};
+                            if(c1.x>c2.x) {
+                                this.x = o.x+o.w;
+                            } else {
+                                this.x = o.x-this.w;
+                            }
+                        }
+                        this.y += this.ymove;
+                        for(var o of game.objects.objects) {
+                            if(!blocksColliding(this,o)) continue;
+                            if(o.deactivated) continue;
+                            var c1 = {x:this.x+this.w/2,y:this.y+this.h/2};
+                            var c2 = {x:o.x+o.w/2,y:o.y+o.h/2};
+                            if(c1.y>c2.y) {
+                                this.y = o.y+o.h;
+                            } else {
+                                this.y = o.y-this.h;
+                            }
+                        }
+
+                        this.angle = dirTo(500,500,Mouse.x,Mouse.y);
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "blue";
+                        ctx.save();
+                        ctx.translate(this.x+this.w/2,this.y+this.h/2);
+                        ctx.rotate(this.angle*Math.PI/180);
+                        if(space) ctx.scale(5,5);
+                        ctx.fillRect(-this.w/2,-this.h/2,this.w,this.h);
+                        ctx.restore();
+                    }
+                },
+                cam: {
+                    x: 0,
+                    y: 0
+                }
+            }
+
+            game.rooms.createFirstRoom();
+
+            var space = false;
+        </script>
+    </body>
+</html>

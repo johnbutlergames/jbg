@@ -1,0 +1,626 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0;
+            }
+        </style>
+        <canvas id="canvas"></canvas>
+        <script>
+            var title = "Emergence";
+            var dimensions = {width:1000,height:1000};
+            var images = [];
+            var audios = [];
+
+            var canvas,ctx;
+
+            function initialize() {
+                document.title = title;
+
+                canvas = document.getElementById("canvas");
+                var ratio = dimensions.width/dimensions.height;
+                var sizeText = "min(100vw,100vh)";
+                if(ratio>1) {
+                    sizeText = `min(${100/ratio}vw,100vh)`;
+                    canvas.style.width = `calc(${sizeText} * ${ratio})`;
+                    canvas.style.height = sizeText;
+                } else if(ratio<1) {
+                    sizeText = `min(100vw,${100*ratio}vh)`;
+                    canvas.style.width = sizeText;
+                    canvas.style.height = `calc(${sizeText} * ${1/ratio})`;
+                } else {
+                    canvas.style.width = sizeText;
+                    canvas.style.height = sizeText;
+                }
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
+
+                ctx = canvas.getContext("2d");
+                canvas.onmousemove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchmove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.onclick = function(event) {
+                    Mouse.click = true;
+                }
+                canvas.onmousedown = function(event) {
+                    Mouse.down = true;
+                }
+                canvas.ontouchstart = function(event) {
+                    Mouse.down = true;
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchend = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onmouseup = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onwheel = function(event) {
+                    Mouse.scrollX = event.deltaX;
+                    Mouse.scrollY = event.deltaY;
+                    event.preventDefault();
+                }
+                window.onkeydown = function(event) {
+                    Keys.keys[event.keyCode] = true;
+                    Keys.down[event.keyCode] = true;
+                }
+                window.onkeyup = function(event) {
+                    Keys.keys[event.keyCode] = false;
+                    Keys.up[event.keyCode] = true;
+                }
+
+                Loading.loadLogoImage();
+                Loading.loadImages();
+                Loading.loadAudios();
+
+                for(var key of Object.keys(Physics)) {
+                    this[key] = Physics[key];
+                }
+
+                ctx.roundRect=(x,y,w,h,r)=>{
+                    ctx.beginPath();
+                    ctx.moveTo(x+r,y);
+                    ctx.lineTo(x+w-r,y);
+                    ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                    ctx.lineTo(x+w,y+h-r);
+                    ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                    ctx.lineTo(x+r,y+h);
+                    ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                    ctx.lineTo(x,y+r);
+                    ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                }
+            }
+            var Loading = {
+                animation: 0,
+                loads: 0,
+                loaded: false,
+                intro: 1,
+                logoImage: false,
+                percent: 0,
+                loadImages: function() {
+                    for(var n in images) {
+                        var image = document.createElement("img");
+                        image.src = images[n];
+                        image.onload = function() {
+                            Loading.loads++;
+                        }
+                        images[n] = image;
+                    }
+                },
+                loadAudios: function() {
+                    for(var n in audios) {
+                        var audio = document.createElement("audio");
+                        audio.src = audios[n];
+                        audio.oncanplaythrough = function() {
+                            Loading.loads++;
+                        }
+                        audios[n] = audio;
+                    }
+                },
+                loadLogoImage: function() {
+                    this.logoImage = document.createElement("img");
+                    this.logoImage.src = "https://johnbutlergames.com/logoLarge.png";
+                    this.logoImage.onload = function() {
+                        Loading.loads++;
+                    }
+                },
+                updateLoadingScreen: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var percent = this.loads/(images.length+audios.length+1);
+                    this.percent = this.percent*0.9+percent*0.1;
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s,s);
+                    ctx.translate(-250,-250);
+                    if(percent==1) {
+                        var a = 1-this.percent*(images.length+audios.length+1)+this.loads-1;
+                        ctx.globalAlpha = a;
+                    }
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(47.5,272.5,405*this.percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*this.percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = "rgb(255,100,0)";
+                    var a = this.animation/2%40;
+                    for(var n=0;n<40;n++) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Loading...",250,250);
+                    ctx.restore();
+
+                    this.animation++;
+                    if(percent==1&&this.percent>0.99) this.loaded = true;
+                },
+                updateIntro: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var i = Math.min(Physics.easeInOut(this.intro/100),Physics.easeInOut((250-this.intro)/100));
+                    var i2 = Math.min(Physics.easeInOut(this.intro/50),Physics.easeInOut((250-this.intro)/50));
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s*i2,s*i2);
+                    ctx.translate(-250,-250);
+                    ctx.globalAlpha = i;
+                    ctx.drawImage(this.logoImage,0,0,500,500);
+                    ctx.restore();
+
+                    this.intro++;
+                    if(this.intro==300) this.intro = 0;
+                }
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h){return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h},
+                clickInBox: function(x,y,w,h){return this.inBox(x,y,w,h)&&this.click}
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            var Physics = {
+                dirTo: (x1,y1,x2,y2)=>90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI),
+                distToMove: (distance,direction)=>({x:distance*Math.sin(direction*Math.PI/180),y:-distance*Math.cos(direction*Math.PI/180)}),
+                distTo: (x1,y1,x2,y2)=>Math.sqrt((x2-x1)**2+(y2-y1)**2),
+                rotate:(cx,cy,x,y,a)=>([a=Math.PI/180*a,{x:(Math.cos(a)*(x-cx))+(Math.sin(a)*(y-cy))+cx,y:(Math.cos(a)*(y-cy))-(Math.sin(a)*(x-cx))+cy}][1]),
+                easeInOut:a=>1/(1+2.71828**(-10*(a-0.5))),
+                blocksColliding:(b1,b2)=>r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h),
+                blocksCollidingEdge:(b1,b2)=>r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h),
+                r:n=>Math.round(n*10000)/10000
+            }
+            function updateBlocks(blocks,data={}) {
+                data.gravity = data.gravity||{x:0,y:0};
+                data.damping = data.damping||{x:1,y:1};
+                data.maxCollisions = data.maxCollisions||100;
+
+                function initBlock(block) {
+                    if(!block.initialized) {
+                        block.density = block.density||1;
+                        block.mass = block.mass||block.w*block.h*block.density;
+                        block.bounce = {x:1,y:1};
+                        block.move = block.move||{x:0,y:0};
+                        block.static = block.static||false;
+                        block.resting = block.resting||{x:0,y:0};
+                        block.last = block.last||{x:0,y:0}
+                        block.initialized = true;
+                    }
+
+                    block.collided = false;
+                    if(!block.static) {
+                        if(!block.resting.x) {
+                            block.move.x *= data.damping.x;
+                            block.move.x += data.gravity.x;
+                        }
+                        if(!block.resting.y) {
+                            block.move.y *= data.damping.y;
+                            block.move.y += data.gravity.y;
+                        }
+                    }
+
+                    block.resting.x = false;
+                    block.resting.y = false;
+                    block.last.x = block.x;
+                    block.last.y = block.y;
+                }
+
+                function initialize() {
+                    for(var n in blocks) {
+                        blocks[n].id = n;
+                    }
+                    for(var block of blocks) {
+                        initBlock(block);
+                    }
+                }
+
+                function resolveCollision(b1,b2,a) {
+                    if((b1.static||b1.resting[a])&&(b2.static||b2.resting[a])) return false;
+                    if(!(b2.static||b2.resting[a])&&(b1.static||b1.resting[a])) return resolveCollision(b2,b1,a);
+
+                    b1.collided = true;
+                    b2.collided = true;
+                    //blocks have collided
+
+                    var c1 = {x:b1.last.x+b1.w/2,y:b1.last.y+b1.h/2};
+                    var c2 = {x:b2.last.x+b2.w/2,y:b2.last.y+b2.h/2};
+                    //find centers
+
+                    var c = a;
+                    var dim = a=='x'?'w':'h';
+
+                    if(b2.static||b2.resting[a]) {
+                        //static-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            b1[a] = b2[a]+b2[dim];
+                        } else {
+                            b1[a] = b2[a]-b1[dim];
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b1.resting[a] = true;
+                    } else {
+                        //dynamic-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            var dist = b2[a]+b2[dim]-b1[a];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        } else {
+                            var dist = b2[a]-b1[a]-b1[dim];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b2.move[a] = avg;
+                    }
+                    return true;
+                }
+
+                function updateStaticAxis(a) {
+                    for(var block of blocks) {
+                        if(!block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                }
+
+                function updateAxis(a) {
+                    for(var block of blocks) {
+                        if(block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                    var n3 = 0;
+                    while(n3<data.maxCollisions) {
+                        var collisions = false;
+                        for(var n=0;n<blocks.length;n++) {
+                            var block = blocks[n];
+                            for(var n2=n+1;n2<blocks.length;n2++) {
+                                var block2 = blocks[n2];
+                                if(blocksColliding(block,block2)) {
+                                    var x = resolveCollision(block2,block,a);
+                                    var y = resolveCollision(block,block2,a);
+                                    collisions = collisions||x||y;
+                                }
+                            }
+                        }
+                        if(!collisions) break;
+                        n3++;
+                    }
+                }
+
+                initialize();
+                updateStaticAxis("x");
+                updateAxis("x");
+                updateStaticAxis("y");
+                updateAxis("y");
+            }
+            function joystick(x,y,r) {
+                ctx.beginPath();
+                ctx.fillStyle = "rgba(200,200,200,0.8)";
+                ctx.arc(x,y,r,0,2*Math.PI);
+                ctx.fill();
+
+                var dirToMouse = dirTo(x,y,Mouse.x,Mouse.y);
+                var distToMouse = distTo(x,y,Mouse.x,Mouse.y);
+                ctx.strokeStyle = "black";
+                ctx.fillStyle = "rgba(100,100,100,0.5)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                Keys.keys[37] = false;
+                Keys.keys[65] = false;
+                Keys.keys[39] = false;
+                Keys.keys[68] = false;
+                Keys.keys[38] = false;
+                Keys.keys[87] = false;
+                Keys.keys[40] = false;
+                Keys.keys[83] = false;
+                if(Mouse.down&&distToMouse<r*3) {
+                    var move = distToMove(Math.min(distToMouse,r/2),dirToMouse);
+                    ctx.arc(x+move.x,y+move.y,r/2,0,2*Math.PI);
+
+                    move = distToMove(1,dirToMouse);
+                    if(move.x<-0.3) {
+                        Keys.keys[37] = true;
+                        Keys.keys[65] = true;
+                    }
+                    if(move.x>0.3) {
+                        Keys.keys[39] = true;
+                        Keys.keys[68] = true;
+                    }
+                    if(move.y<-0.3) {
+                        Keys.keys[38] = true;
+                        Keys.keys[87] = true;
+                    }
+                    if(move.y>0.3) {
+                        Keys.keys[40] = true;
+                        Keys.keys[83] = true;
+                    }
+                } else {
+                    ctx.arc(x,y,r/2,0,2*Math.PI);
+                }
+                ctx.fill();
+                ctx.stroke();
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function update() {
+                if(!Loading.loaded||Loading.intro) {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                } else {
+                    ctx.fillStyle = "rgba(0,0,0,0.05)";
+                    ctx.fillRect(0,0,canvas.width,canvas.height);
+                }
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        Loading.updateIntro();
+                    } else {
+                        main();
+                    }
+                } else {
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                updateCells();
+                drawCells();
+
+                t++;
+                if(t%100===0) {
+                    changeRule();
+                }
+            }
+
+            function updateCells() {
+                for(var n=0;n<cells.length;n++) {
+                    var c = cells[n];
+
+                    for(var n2=n+1;n2<cells.length;n2++) {
+                        var c2 = cells[n2];
+                        var dist = distTo(c.x,c.y,c2.x,c2.y);
+                        if(dist>maximumRange) continue;
+                        executeRules(c,c2);
+                        executeRules(c2,c);
+                    }
+
+                    updateCell(c);
+                }
+            }
+
+            function updateCell(cell) {
+                cell.direction += cell.turn;
+                cell.turn += Math.random()*2-1;
+                cell.turn = Math.min(Math.max(cell.turn,-10),10);
+                cell.ambientSpeed += Math.random()*0.004-0.002;
+                cell.ambientSpeed = Math.min(Math.max(cell.ambientSpeed,0),0.05);
+                var move = distToMove(cell.ambientSpeed,cell.direction);
+                cell.xmove += move.x;
+                cell.ymove += move.y;
+
+                cell.x += cell.xmove;
+                cell.y += cell.ymove;
+
+                var damping = Math.max(0,1-distTo(0,0,cell.xmove,cell.ymove)/20);
+                cell.xmove *= damping;
+                cell.ymove *= damping;
+
+                if(cell.x<0) {
+                    cell.xmove *= -1;
+                    cell.xmove++;
+                    cell.x = 0;
+                }
+                if(cell.x>1000) {
+                    cell.xmove *= -1;
+                    cell.xmove--;
+                    cell.x = 1000;
+                }
+                if(cell.y<0) {
+                    cell.ymove *= -1;
+                    cell.ymove++;
+                    cell.y = 0;
+                }
+                if(cell.y>1000) {
+                    cell.ymove *= -1;
+                    cell.ymove--;
+                    cell.y = 1000;
+                }
+            }
+
+            function drawCells() {
+                for(var cell of cells) {
+                    drawCell(cell);
+                }
+            }
+
+            function drawCell(cell) {
+                ctx.fillStyle = cell.color;
+                ctx.fillRect(cell.x-4,cell.y-4,8,8);
+            }
+
+            function changeRule() {
+                var i = Math.floor(Math.random()*rules.length);
+                rules[i].move *= -1;
+                rules[i].dist = Math.random()*100+50;
+                if(Math.random()<0.1) {
+                    rules[i].turn = Math.random()*180-90;
+                } else {
+                    rules[i].turn = 0;
+                }
+                rules[i].unify = Math.random()<0.5;
+            }
+
+            function add(color,amount) {
+                for(var n=0;n<amount;n++) {
+                    var c = {};
+                    c.x = Math.random()*1000;
+                    c.y = Math.random()*1000;
+                    c.color = color;
+                    c.xmove = 0;
+                    c.ymove = 0;
+                    c.direction = Math.random()*360;
+                    c.turn = Math.random()*10-5;
+                    c.ambientSpeed = 0.02;
+                    cells.push(c);
+                }
+            }
+
+            function executeRules(cell1,cell2) {
+                var dist = distTo(cell1.x,cell1.y,cell2.x,cell2.y);
+                for(var n=0;n<rules.length;n++) {
+                    var rule = rules[n];
+                    if(rule.color1!==cell1.color) continue;
+                    if(rule.color2!==cell2.color) continue;
+                    if(dist>rule.dist) continue;
+                    var dir = dirTo(cell1.x,cell1.y,cell2.x,cell2.y);
+                    var move = distToMove(rule.move,dir+rule.turn);
+                    cell1.xmove += move.x;
+                    cell1.ymove += move.y;
+                    if(rule.align) {
+                        cell1.xmove = cell1.xmove*(1-rule.align)+cell2.xmove*rule.align;
+                        cell1.ymove = cell1.ymove*(1-rule.align)+cell2.ymove*rule.align;
+                    }
+                    if(rule.unify&&rule.color1==rule.color2) {
+                        cell1.direction += turn(cell1.direction,cell2.direction)/10;
+                        cell1.turn = cell1.turn*0.95+cell2.turn*0.05;
+                        cell1.ambientSpeed *= 2;
+                    }
+                }
+
+                resolveCollision(cell1,cell2);
+            }
+
+            function resolveCollision(cell1,cell2) {
+                var dist = distTo(cell1.x,cell1.y,cell2.x,cell2.y);
+                var collisionRadius = 10;
+                if(dist<collisionRadius) {
+                    var dir = dirTo(cell1.x,cell1.y,cell2.x,cell2.y);
+                    var move = distToMove(dist-collisionRadius,dir);
+                    cell1.x += move.x/2;
+                    cell1.y += move.y/2;
+                    cell2.x -= move.x/2;
+                    cell2.y -= move.y/2;
+                }
+            }
+
+            function init() {
+                var colors = ["red","blue","green","orange"];
+                for(var n=0;n<colors.length;n++) {
+                    add(colors[n],50);
+                    for(var n2=0;n2<colors.length;n2++) {
+                        for(var n3=0;n3<2;n3++) {
+                            var rule = {};
+                            rule.color1 = colors[n];
+                            rule.color2 = colors[n2];
+                            rule.dist = Math.random()*100+50;
+                            rule.move = Math.random()*0.1*(n3*2-1);
+                            if(Math.random()<0.1) {
+                                rule.turn = Math.random()*180-90;
+                            } else {
+                                rule.turn = 0;
+                            }
+                            if(Math.random()<0.2) {
+                                rule.align = Math.random()/10;
+                            } else {
+                                rule.align = 0;
+                            }
+                            rule.unify = Math.random()<0.5;
+                            rules.push(rule);
+                        }
+                    }
+                }
+            }
+
+            var maximumRange = 150;
+            var cells = [];
+            var rules = [];
+            var t = 0;
+
+            init();
+        </script>
+    </body>
+</html>

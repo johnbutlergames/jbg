@@ -1,0 +1,138 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Cascading Data";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function update() {
+                var d = new Date().getTime();
+                fps = Math.round(600/(d-lastTime));
+                lastTime = d;
+
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        ctx.clearRect(0,0,canvas.width,canvas.height);
+                        Loading.updateIntro();
+                    } else {
+                        ctx.fillStyle = "rgba(0,0,0,0.02)";
+                        if(t==0) ctx.fillStyle = "rgb(0,25,25)";
+                        ctx.fillRect(0,0,canvas.width,canvas.height);
+                        main();
+                    }
+                } else {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.downStart = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            function main() {
+                if(t%1==0) {
+                    data.push(createNewCharacter());
+                }
+                updateData();
+                drawData();
+                t++;
+            }
+
+            function updateData() {
+                for(var n=0;n<data.length;n++) {
+                    var o = data[n];
+                    for(var n2=n+1;n2<data.length;n2++) {
+                        var o2 = data[n2];
+                        var dist = distTo(o.x,o.y,o2.x,o2.y);
+                        if(dist>25) continue;
+                        var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                        var move = distToMove(25-dist,dir);
+                        o.x -= move.x/2;
+                        o.y -= move.y/2;
+                        o2.x += move.x/2;
+                        o2.y += move.y/2;
+                        o.xmove -= move.x/10;
+                        o.ymove -= move.y/10;
+                        o2.xmove += move.x/10;
+                        o2.ymove += move.y/10;
+                    }
+                    if(Mouse.down) {
+                        var dist = distTo(o.x,o.y,Mouse.x,Mouse.y);
+                        if(dist<100) {
+                            var dir = dirTo(o.x,o.y,Mouse.x,Mouse.y);
+                            var move = distToMove(100-dist,dir+180);
+                            o.xmove += move.x/50;
+                            o.ymove += move.y/50;
+                        }
+                    }
+                    o.y += o.ymove;
+                    o.x += o.xmove;
+                    o.ymove += 0.03;
+                    o.xmove *= 0.99;
+                    o.ymove *= 0.99;
+                    o.draw = false;
+                    var dist = distTo(o.x,o.y,o.lastDraw.x,o.lastDraw.y);
+                    if(dist>10) {
+                        o.character = getRandomCharacter();
+                        o.lastDraw.x = o.x;
+                        o.lastDraw.y = o.y;
+                        o.draw = true;
+                    }
+                    if(o.y>1050) o.delete = true;
+                }
+                data = data.filter(e=>!e.delete);
+            }
+
+            function drawData() {
+                for(var n=0;n<data.length;n++) {
+                    var o = data[n];
+                    if(!o.draw) continue;
+                    ctx.fillStyle = o.color;
+                    ctx.font = "20px Times New Roman";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.save();
+                    ctx.translate(o.x,o.y);
+                    ctx.fillText(o.character,0,0);
+                    ctx.restore();
+                }
+            }
+
+            function createNewCharacter() {
+                var o = {};
+                o.x = Math.floor(Math.random()*1000);
+                o.y = -200;
+                o.xmove = 0;
+                o.ymove = 3;
+                o.color = `rgb(0,${155+Math.random()*100},${Math.random()*155})`;
+                o.lastDraw = {x:o.x,y:o.y};
+                o.character = getRandomCharacter();
+                o.draw = false;
+                return o;
+            }
+
+            function getRandomCharacter() {
+                var n;
+                if(Math.random()>0.5) {
+                    n = 161+Math.random()*94;
+                } else {
+                    n = 33+Math.random()*93;
+                }
+                return String.fromCharCode(Math.floor(n));
+            }
+            var t = 0;
+            var data = [];
+        </script>
+    </body>
+</html>

@@ -1,0 +1,1913 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Micro Factory";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+        var t = 0;
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var menu = {
+            page: "game",
+            switchPage: "game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            mode: "editing",
+            update: function () {
+                this.background.update();
+                this.objects.update();
+                this.level.update();
+                this.cam.update();
+                this.editing.update();
+                this.playback.update();
+                this.updateMode();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                this.background.draw();
+
+                ctx.save();
+                this.cam.viewport.align();
+                this.objects.draw();
+                this.editing.draw();
+                this.level.boundary.draw();
+                ctx.restore();
+
+                this.editing.ui.draw();
+                this.playback.ui.draw();
+            },
+            reset: function () {
+                this.editing.reset();
+                this.playback.reset();
+                this.setEditingMode();
+            },
+            keys: {
+                action: function (label, type) {
+                    var keys = this[label];
+                    if (keys === undefined) return false;
+                    for (var key of keys) {
+                        if (typeof key == "number") {
+                            if (Keys.keys[17]) return false;
+                            if (Keys.keys[16]) return false;
+                            if (Keys[type][key]) return true;
+                        } else {
+                            if (key.ctrl && !Keys.keys[17]) return false;
+                            if (key.shift && !Keys.keys[16]) return false;
+                            if (key.key === undefined) return true;
+                            if (Keys[type][key.key]) return true;
+                        }
+                    }
+                    return false;
+                },
+                panCamLeft: [37, 65],
+                panCamRight: [39, 68],
+                panCamUp: [38, 87],
+                panCamDown: [40, 83],
+                zoomCamIn: [90],
+                zoomCamOut: [88],
+                rotateClockwise: [82],
+                rotateCounterclockwise: [69],
+                placeMultiple: [{ shift: true }],
+                select1: [49],
+                select2: [50],
+                select3: [51],
+                select4: [52],
+                select5: [53],
+                select6: [54],
+                select7: [55],
+                select8: [56],
+                select9: [57],
+                select10: [48],
+                selectSubtype1: [{ ctrl: true, key: 49 }],
+                selectSubtype2: [{ ctrl: true, key: 50 }],
+                selectSubtype3: [{ ctrl: true, key: 51 }],
+                selectSubtype4: [{ ctrl: true, key: 52 }],
+                selectSubtype5: [{ ctrl: true, key: 53 }],
+                selectSubtype6: [{ ctrl: true, key: 54 }],
+                selectSubtype7: [{ ctrl: true, key: 55 }],
+                selectSubtype8: [{ ctrl: true, key: 56 }],
+                selectSubtype9: [{ ctrl: true, key: 57 }],
+                selectSubtype10: [{ ctrl: true, key: 48 }],
+                undo: [{ ctrl: true, key: 90 }],
+                redo: [{ ctrl: true, shift: true, key: 90 }],
+                cut: [{ ctrl: true, key: 88 }],
+                copy: [{ ctrl: true, key: 67 }],
+                delete: [8, 46],
+                playbackMode: [32],
+                editMode: [27],
+                pause: [32],
+                resetPlayback: [82],
+                changePlaybackSpeed: [69],
+                step: [84]
+            },
+            updateMode: function () {
+                if (this.mode == "editing") {
+                    if (!this.editing.editingMode || this.playback.playbackMode) this.setEditingMode();
+                } else if (this.mode == "playback") {
+                    if (this.editing.editingMode || !this.playback.playbackMode) this.setPlaybackMode();
+                }
+            },
+            setEditingMode: function () {
+                this.editing.editingMode = true;
+                this.playback.playbackMode = false;
+                this.playback.resetObjectsToSource();
+                this.editing.selection.clearSelection();
+                this.editing.selection.tooltip.visible = false;
+            },
+            setPlaybackMode: function () {
+                this.editing.editingMode = false;
+                this.playback.playbackMode = true;
+                this.playback.resetSource();
+                this.playback.reset();
+                this.objects.initializePlayback();
+            },
+            background: {
+                update: function () {
+                },
+                draw: function () {
+                    ctx.fillStyle = "rgb(200,200,200)";
+                    ctx.fillRect(0, 0, 1500, 1000);
+
+                    ctx.save();
+                    game.cam.viewport.align();
+                    var backgroundTiles = [];
+                    var vx = Math.floor(game.cam.viewport.x / 100) * 100 - 100;
+                    var vy = Math.floor(game.cam.viewport.y / 100) * 100 - 100;
+                    var vw = Math.ceil(game.cam.viewport.w / 100) * 100 + 200;
+                    var vh = Math.ceil(game.cam.viewport.h / 100) * 100 + 200;
+                    /*for (var x = vx; x < vx + vw; x += 100) {
+                        for (var y = vy; y < vy + vh; y += 100) {
+                            backgroundTiles.push({ x: x, y: y, w: 100, h: 100 });
+                        }
+                        for (var o of backgroundTiles) {
+                            ctx.strokeStyle = "black";
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(o.x, o.y, o.w, o.h);
+                        }
+                    }*/
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "black";
+                    for (var x = vx; x < vx + vw; x += 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, vy);
+                        ctx.lineTo(x, vy + vh);
+                        ctx.stroke();
+                    }
+                    for (var y = vy; y < vy + vh; y += 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(vx, y);
+                        ctx.lineTo(vx + vw, y);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            },
+            objects: {
+                objects: [],
+                animatedObjects: [],
+                emptyGroupObject: { wire: [], piston: [], element: [], emitter: [], activator: [], scanner: [], delay: [], conveyer: [], transmitter: [], reciever: [] },
+                wireGroups: [],
+                groups: [],
+                activeCors: [],
+                update: function () {
+                },
+                tick: function () {
+                    this.turnOffActivators(this.groups);
+                    this.turnOffTransmittersAndRecievers(this.groups);
+                    this.turnOffWires(this.groups, this.wireGroups);
+                    this.updateActiveCoordinates(this.groups, this.wireGroups);
+                    this.updatePoweredConveyers(this.groups);
+                    this.updateElementMovement(this.groups);
+                    this.updateElements(this.groups);
+                },
+                findObjectsAt: function (x, y) {
+                    return this.objects.filter(e => e.x == x && e.y == y);
+                },
+                activeAt: function (x, y) {
+                    return this.activeCors.some(e => e.x == x && e.y == y);
+                },
+                immovableObjectAt: function (x, y) {
+                    var objects = this.findObjectsAt(x, y);
+                    objects = objects.filter(e => e.type != "element" && e.type != "conveyer" && e.type != "wire");
+                    if (objects.length == 0) return false;
+                    return objects;
+                },
+                turnOffWires: function (groups, wireGroups) {
+                    for (var group of wireGroups) {
+                        group.powered = false;
+                        for (var id of group.ids) {
+                            groups.wire[id].powered = false;
+                        }
+                    }
+                },
+                turnOffActivators: function (groups) {
+                    for (var o of groups.activator) o.powered = false;
+                },
+                turnOffTransmittersAndRecievers: function (groups) {
+                    for (var o of groups.transmitter) o.active = false;
+                    for (var o of groups.reciever) o.active = false;
+                },
+                updateActiveCoordinates: function (groups, wireGroups) {
+                    this.activeCors = [];
+                    this.updateScannerActivity(groups);
+                    this.updateDelaySignalOutput(groups);
+                    this.updateEmitterActivity(groups);
+                    this.updateWireActivatorAndTransmitterActivity(groups, wireGroups);
+                    this.updateDelaySignalInput(groups);
+                },
+                updateScannerActivity: function (groups) {
+                    for (var o of groups.scanner) {
+                        o.active = false;
+                        var move = distToMove(100 * o.distance, o.angle);
+                        move.x = Math.round(move.x);
+                        move.y = Math.round(move.y);
+                        var targetCor = {
+                            x: o.x + move.x,
+                            y: o.y + move.y
+                        };
+                        var objects = this.objects.filter(e => e.x == targetCor.x && e.y == targetCor.y);
+                        if (!objects.some(e => e.type == "element")) continue;
+                        o.active = true;
+                        var move = distToMove(100, o.angle + 180);
+                        move.x = Math.round(move.x);
+                        move.y = Math.round(move.y);
+                        var output = {
+                            x: o.x + move.x,
+                            y: o.y + move.y
+                        }
+                        if (!this.activeAt(output.x, output.y)) {
+                            this.activeCors.push(output);
+                        }
+                    }
+                },
+                updateDelaySignalOutput: function (groups) {
+                    for (var o of groups.delay) {
+                        o.active = false;
+                        for (var s of o.signals) {
+                            s.position++;
+                            if (s.position == o.delay) {
+                                o.active = true;
+                            }
+                            if (s.position == o.delay + 1) {
+                                s.delete = true;
+                            }
+                        }
+                        o.signals = o.signals.filter(e => !e.delete);
+                        if (o.active) {
+                            var move = distToMove(100, o.angle);
+                            move.x = Math.round(move.x);
+                            move.y = Math.round(move.y);
+                            var output = {
+                                x: o.x + move.x,
+                                y: o.y + move.y
+                            }
+                            if (!this.activeAt(output.x, output.y)) {
+                                this.activeCors.push(output);
+                            }
+                        }
+                    }
+                },
+                updateDelaySignalInput: function (groups) {
+                    for (var o of groups.delay) {
+                        if (this.activeAt(o.x, o.y)) {
+                            o.signals.push({ position: 0 });
+                        }
+                    }
+                },
+                updateEmitterActivity: function (groups) {
+                    for (var o of groups.emitter) {
+                        o.emitting = o.tick % o.period == 0;
+                        o.tick++;
+                    }
+                    for (var o of groups.emitter) {
+                        if (!o.emitting) continue;
+                        for (var n = 0; n < 4; n++) {
+                            var move = distToMove(100, n * 90);
+                            move.x = Math.round(move.x);
+                            move.y = Math.round(move.y);
+                            var target = { x: o.x + move.x, y: o.y + move.y };
+                            if (this.activeCors.findIndex(e => e.x == target.x && e.y == target.y) != -1) continue;
+                            this.activeCors.push(target);
+                        }
+                    }
+                },
+                updateWireActivatorAndTransmitterActivity: function (groups, wireGroups) {
+                    var iteration = -1;
+                    var change = true;
+                    while (change) {
+                        iteration++;
+                        change = false;
+                        for (var group of wireGroups) {
+                            if (group.powered) continue;
+                            for (var id of group.ids) {
+                                var o = groups.wire[id];
+                                if (!this.activeAt(o.x, o.y)) continue;
+                                group.powered = true;
+                                break;
+                            }
+                            if (!group.powered) continue;
+                            change = true;
+                            for (var id of group.ids) {
+                                var o = groups.wire[id];
+                                o.powered = true;
+                            }
+                        }
+                        for (var o of groups.activator) {
+                            if (o.powered) continue;
+                            var move = distToMove(100, o.angle);
+                            move.x = Math.round(move.x);
+                            move.y = Math.round(move.y);
+                            var targetCor = { x: o.x + move.x, y: o.y + move.y };
+                            if (this.activeAt(o.x, o.y)) {
+                                o.powered = true;
+                            } else {
+                                var neighboringWires = groups.wire.filter(e => Math.abs(e.x - o.x) + Math.abs(e.y - o.y) == 100);
+                                for (var o2 of neighboringWires) {
+                                    if (!o2.powered) continue;
+                                    if (o2.x == targetCor.x && o2.y == targetCor.y) continue;
+                                    o.powered = true;
+                                    break;
+                                }
+                            }
+                            if (!o.powered) continue;
+                            if (!this.activeAt(targetCor.x, targetCor.y)) {
+                                change = true;
+                                this.activeCors.push(targetCor);
+                            }
+                        }
+                        for (var o of groups.transmitter) {
+                            if (o.active) continue;
+                            if (!this.activeAt(o.x, o.y)) continue;
+                            o.active = true;
+                            var move = distToMove(100, o.angle);
+                            move.x = Math.round(move.x);
+                            move.y = Math.round(move.y);
+                            var targetCor = { x: o.x + move.x, y: o.y + move.y };
+                            var alignedRecievers = groups.reciever.filter(e => e.angle == o.angle);
+                            alignedRecievers = alignedRecievers.filter(e => distTo(e.x, e.y, targetCor.x, targetCor.y) < distTo(e.x, e.y, o.x, o.y));
+                            if (alignedRecievers.length == 0) continue;
+                            alignedRecievers = alignedRecievers.sort((a, b) => distTo(a.x, a.y, o.x, o.y) - distTo(b.x, b.y, o.x, o.y));
+                            var closestReciever = alignedRecievers[0];
+                            closestReciever.active = true;
+                            var targetCor = { x: closestReciever.x + move.x, y: closestReciever.y + move.y };
+                            if (!this.activeAt(targetCor.x, targetCor.y)) {
+                                change = true;
+                                this.activeCors.push(targetCor);
+                            }
+                        }
+                    }
+                },
+                createWireGroups: function (groups) {
+                    var wireGroups = [];
+                    for (var n = 0; n < groups.wire.length; n++) {
+                        var o = groups.wire[n];
+                        o.powered = false;
+                        wireGroups.push([n]);
+                        o.group = wireGroups.length - 1;
+                    }
+                    var change = true;
+                    while (change) {
+                        change = false;
+                        for (var n = 0; n < groups.wire.length; n++) {
+                            var o = groups.wire[n];
+                            for (var n2 = n + 1; n2 < groups.wire.length; n2++) {
+                                var o2 = groups.wire[n2];
+                                var dist = distTo(o.x, o.y, o2.x, o2.y);
+                                if (dist != 100) continue;
+                                if (o.group == o2.group) continue;
+                                change = true;
+                                var index = o2.group;
+                                var groupToMerge = wireGroups[index];
+                                groupToMerge.forEach(function (e) {
+                                    groups.wire[e].group = o.group;
+                                });
+                                groups.wire.forEach(function (e) {
+                                    if (e.group < index) return;
+                                    e.group--;
+                                });
+                                wireGroups.splice(index, 1);
+                                wireGroups[o.group].push(...groupToMerge);
+                            }
+                        }
+                    }
+                    wireGroups = wireGroups.map(e => ({ ids: e }));
+                    return wireGroups;
+                },
+                updatePoweredConveyers: function (groups) {
+                    for (var o of groups.conveyer) {
+                        o.powered = false;
+                        if (o.subtype != "powered") continue;
+                        if (!this.activeAt(o.x, o.y)) continue;
+                        o.powered = true;
+                    }
+                    var change = true;
+                    while (change) {
+                        change = false;
+                        for (var o of groups.conveyer) {
+                            if (o.subtype != "powered") continue;
+                            if (!o.powered) continue;
+                            var move = distToMove(100, o.angle);
+                            move.x = Math.round(move.x);
+                            move.y = Math.round(move.y);
+                            var target = { x: o.x + move.x, y: o.y + move.y };
+                            var objects = this.findObjectsAt(target.x, target.y).filter(e => e.type == "conveyer" && e.subtype == "powered");
+                            if (objects.length == 0) continue;
+                            if (objects[0].powered) continue;
+                            objects[0].powered = true;
+                            change = true;
+                        }
+                    }
+                },
+                updateElementMovement: function (groups) {
+                    this.resetElementMovement(this.groups);
+                    this.updateConveyers(this.groups);
+                    this.updatePistons(this.groups);
+                    for (var o of groups.element) {
+                        if (!o.move) continue;
+                        o.x += o.move.x;
+                        o.y += o.move.y;
+                    }
+                },
+                resetElementMovement: function (groups) {
+                    for (var o of groups.element) {
+                        o.stuck = false;
+                        o.move = false;
+                    }
+                },
+                updateConveyers: function (groups) {
+                    for (var o of groups.conveyer) {
+                        if (o.subtype == "powered" && !o.powered) continue;
+                        var elements = this.findObjectsAt(o.x, o.y).filter(e => e.type == "element");
+                        if (elements.length == 0) continue;
+                        var element = elements[0];
+                        var move = distToMove(100, o.angle);
+                        move.x = Math.round(move.x);
+                        move.y = Math.round(move.y);
+                        element.move = move;
+                    }
+                },
+                updatePistons: function (groups) {
+                    for (var o of groups.piston) {
+                        o.active = this.activeAt(o.x, o.y);
+                        if (!o.active) continue;
+                        var move = distToMove(100, o.angle);
+                        move.x = Math.round(move.x);
+                        move.y = Math.round(move.y);
+                        var target = { x: o.x + move.x, y: o.y + move.y };
+                        var elements = this.findObjectsAt(target.x, target.y).filter(e => e.type == "element");
+                        if (elements.length == 0) continue;
+                        var element = elements[0];
+                        element.move = move;
+                    }
+                },
+                updateElements: function (groups) {
+                },
+                initializePlayback: function () {
+                    var groups = JSON.parse(JSON.stringify(this.emptyGroupObject));
+                    for (var o of this.objects) {
+                        if (!groups[o.type]) groups[o.type] = [];
+                        groups[o.type].push(o);
+                    }
+                    this.groups = groups;
+                    this.resetEmitters(groups);
+                    this.resetDelays(groups);
+                    this.wireGroups = this.createWireGroups(groups);
+                },
+                resetEmitters: function (groups) {
+                    for (var o of groups.emitter) {
+                        o.tick = 0;
+                        if (!o.period) o.period = 1;
+                    }
+                },
+                resetDelays: function (groups) {
+                    for (var o of groups.delay) {
+                        o.signals = [];
+                        if (!o.delay) o.delay = 1;
+                    }
+                },
+                clearObjectsInHitbox: function (x, y, w, h) {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        if (!blocksColliding({ x: x, y: y, w: w, h: h }, { x: o.x, y: o.y, w: o.hitbox.w, h: o.hitbox.h })) continue;
+                        this.objects.splice(n, 1);
+                        n--;
+                    }
+                },
+                draw: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x + 50, o.y + 50);
+                    ctx.rotate(o.angle * Math.PI / 180);
+                    this.drawObjectInPosition(o);
+                    ctx.restore();
+                },
+                drawObjectInPosition: function (o) {
+                    ctx.save();
+                    if (o.hitbox && (o.hitbox.w != 100 || o.hitbox.h != 100)) {
+                        if (o.angle == 90) {
+                            ctx.translate(100 - o.hitbox.w, 0);
+                        }
+                        if (o.angle == 180) {
+                            ctx.translate(100 - o.hitbox.w, 100 - o.hitbox.h);
+                        }
+                        if (o.angle == 270) {
+                            ctx.translate(100 - o.hitbox.h, 0);
+                        }
+                    }
+                    if (o.type == "piston") {
+                        ctx.fillStyle = "green";
+                        if (o.active) ctx.fillStyle = "blue";
+                        ctx.fillRect(-40, -20, 80, 60);
+                        ctx.fillRect(-20, -30, 40, 10);
+                        ctx.fillRect(-40, -40, 80, 10);
+                    } else if (o.type == "emitter") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-30, -30, 60, 60);
+                        ctx.fillStyle = "rgb(0,0,150)";
+                        if (o.emitting) ctx.fillStyle = "blue";
+                        ctx.fillRect(-20, -20, 40, 40);
+                    } else if (o.type == "scanner") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-30, -30, 60, 60);
+                        ctx.fillStyle = "rgb(0,0,150)";
+                        if (o.active) ctx.fillStyle = "blue";
+                        ctx.beginPath();
+                        ctx.arc(0, -20, 10, 0, 2 * Math.PI);
+                        ctx.fill();
+                    } else if (o.type == "delay") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-30, -30, 60, 60);
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(-20, -20, 40, 40);
+                        for (var n = 1; n < o.delay + 1; n++) {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(-20, -20 + 40 * n / (o.delay + 1), 40, 1);
+                        }
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-5, -40, 10, 10);
+                        for (var n = 0; n < o.signals.length; n++) {
+                            var o2 = o.signals[n];
+                            ctx.fillStyle = "blue";
+                            ctx.fillRect(-20, -20 + 40 * (o.delay - o2.position) / (o.delay + 1), 40, 40 * 1 / (o.delay + 1));
+                        }
+                    } else if (o.type == "bonder") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-30, -30, 60, 60);
+                        ctx.fillRect(-30 + 100, -30, 60, 60);
+                        ctx.fillRect(-5, -50, 10, 20);
+                        ctx.fillRect(-5 + 100, -50, 10, 20);
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 5;
+                        ctx.strokeRect(-50, -150, 200, 100);
+                    } else if (o.type == "producer") {
+                        ctx.fillStyle = "grey";
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 30, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-50, 0, 30, 50);
+                        ctx.fillRect(20, 0, 30, 50);
+                        ctx.fillRect(-50, 20, 100, 30);
+                    } else if (o.type == "activator") {
+                        ctx.fillStyle = "black";
+                        if (o.powered) ctx.fillStyle = "blue";
+                        ctx.fillRect(-30, -30, 60, 60);
+                        ctx.fillRect(-10, -40, 20, 10);
+                    } else if (o.type == "wire") {
+                        ctx.fillStyle = "black";
+                        if (o.powered) ctx.fillStyle = "blue";
+                        ctx.fillRect(-10, -10, 20, 20);
+                    } else if (o.type == "element") {
+                        ctx.fillStyle = "red";
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 40, 0, 2 * Math.PI);
+                        ctx.fill();
+                    } else if (o.type == "conveyer") {
+                        ctx.fillStyle = "rgb(255,0,255)";
+                        if (o.subtype == "powered") ctx.fillStyle = "black";
+                        ctx.fillRect(-50, -50, 100, 100);
+                        ctx.fillStyle = "black";
+                        if (o.subtype == "powered") {
+                            if (o.powered) {
+                                ctx.fillStyle = "blue";
+                            } else {
+                                ctx.fillStyle = "rgb(0,0,150)";
+                            }
+                        }
+                        ctx.beginPath();
+                        ctx.moveTo(-30, 30);
+                        ctx.lineTo(0, -30);
+                        ctx.lineTo(30, 30);
+                        ctx.closePath();
+                        ctx.fill();
+                    } else if (o.type == "barrier") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-50, -50, 100, 100);
+                    } else if (o.type == "transmitter") {
+                        ctx.fillStyle = "black";
+                        if (o.active) ctx.fillStyle = "blue";
+                        ctx.beginPath();
+                        ctx.moveTo(-50, 50);
+                        ctx.lineTo(-50, 0);
+                        ctx.lineTo(0, -50);
+                        ctx.lineTo(50, 0);
+                        ctx.lineTo(50, 50);
+                        ctx.closePath();
+                        ctx.fill();
+                    } else if (o.type == "reciever") {
+                        ctx.fillStyle = "black";
+                        if (o.active) ctx.fillStyle = "blue";
+                        ctx.beginPath();
+                        ctx.moveTo(-50, 0);
+                        ctx.lineTo(0, -50);
+                        ctx.lineTo(50, 0);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                },
+                create: function (o) {
+                    var newObject = JSON.parse(JSON.stringify(o));
+                    this.objects.push(newObject);
+                }
+            },
+            playback: {
+                playbackMode: false,
+                paused: false,
+                timeUntilTick: 0,
+                tickReset: 50,
+                source: [],
+                update: function () {
+                    this.ui.visible = this.playbackMode;
+                    this.ui.update();
+                    if (!this.playbackMode) return;
+                    this.updateTick();
+                },
+                draw: function () {
+                },
+                resetSource: function () {
+                    this.source = JSON.parse(JSON.stringify(game.objects.objects));
+                },
+                resetObjectsToSource: function () {
+                    game.objects.objects = JSON.parse(JSON.stringify(this.source));
+                    game.objects.initializePlayback();
+                },
+                updateTick: function () {
+                    var chosenSpeed = this.ui.speeds[this.ui.speedChosenId].frames;
+                    this.tickReset = chosenSpeed;
+                    if (!this.paused) this.timeUntilTick--;
+                    this.timeUntilTick = Math.min(this.timeUntilTick, this.tickReset);
+                    if (this.timeUntilTick <= 0) {
+                        this.timeUntilTick = this.tickReset;
+                        this.tick();
+                    }
+                },
+                tick: function () {
+                    game.objects.tick();
+                },
+                reset: function () {
+                    this.paused = false;
+                    this.timeUntilTick = this.tickReset;
+                },
+                ui: {
+                    x: 750,
+                    y: 925,
+                    opacity: 0,
+                    hitbox: { x: -250, y: -50, w: 500, h: 100 },
+                    options: ["stop playback", "pause", "step", "reset", "speed"],
+                    speeds: [
+                        { name: "0.1x", frames: 500 },
+                        { name: "0.2x", frames: 250 },
+                        { name: "0.5x", frames: 100 },
+                        { name: "1x", frames: 50 },
+                        { name: "2x", frames: 25 },
+                        { name: "5x", frames: 10 },
+                        { name: "10x", frames: 5 },
+                        { name: "50x", frames: 1 }
+                    ],
+                    speedChosenId: 3,
+                    visible: true,
+                    update: function () {
+                        this.updateOpacity();
+                        if (!this.visible) return;
+                        this.updateOptions();
+                    },
+                    draw: function () {
+                        ctx.save();
+                        ctx.translate(this.x, this.y);
+                        ctx.globalAlpha = this.opacity;
+
+                        ctx.fillStyle = "rgb(150,150,150)";
+                        ctx.roundRect(-250, -50, 500, 100, 20);
+                        ctx.fill();
+
+                        this.drawOptions();
+
+                        ctx.restore();
+                    },
+                    drawOptions: function () {
+                        for (var n = 0; n < this.options.length; n++) {
+                            var o = this.options[n];
+                            ctx.save();
+                            ctx.translate(-200 + n * 100, 0);
+                            ctx.scale(0.7, 0.7);
+                            this.drawOption(o);
+                            ctx.restore();
+                        }
+                    },
+                    drawOption: function (o) {
+                        if (o == "stop playback") {
+                            ctx.fillStyle = "red";
+                            ctx.fillRect(-50, -50, 100, 100);
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(-30, -30, 60, 60);
+                        } else if (o == "pause") {
+                            ctx.fillStyle = "orange";
+                            ctx.fillRect(-50, -50, 100, 100);
+                            ctx.fillStyle = "black";
+                            if (game.playback.paused) {
+                                ctx.beginPath();
+                                ctx.moveTo(40, 0);
+                                ctx.lineTo(-40, 40);
+                                ctx.lineTo(-40, -40);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else {
+                                ctx.fillRect(-40, -40, 30, 80);
+                                ctx.fillRect(10, -40, 30, 80);
+                            }
+                        } else if (o == "step") {
+                            ctx.fillStyle = "orange";
+                            ctx.fillRect(-50, -50, 100, 100);
+                            ctx.fillStyle = "black";
+                            ctx.scale(0.7, 0.7);
+                            ctx.translate(-20, 0);
+                            ctx.beginPath();
+                            ctx.moveTo(40, 0);
+                            ctx.lineTo(-40, 40);
+                            ctx.lineTo(-40, -40);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.translate(40, 0);
+                            ctx.beginPath();
+                            ctx.moveTo(40, 0);
+                            ctx.lineTo(-40, 40);
+                            ctx.lineTo(-40, -40);
+                            ctx.closePath();
+                            ctx.fill();
+                        } else if (o == "reset") {
+                            ctx.fillStyle = "yellow";
+                            ctx.fillRect(-50, -50, 100, 100);
+                            ctx.strokeStyle = "black";
+                            ctx.lineWidth = 5;
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 40, 0, 1.5 * Math.PI);
+                            ctx.stroke();
+                        } else if (o == "speed") {
+                            ctx.fillStyle = "green";
+                            ctx.fillRect(-50, -50, 100, 100);
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "40px Arial";
+                            var speed = this.speeds[this.speedChosenId];
+                            ctx.fillText(speed.name, 0, 0);
+                        }
+                    },
+                    updateOptions: function () {
+                        for (var n = 0; n < this.options.length; n++) {
+                            var o = this.options[n];
+                            var hitbox = {
+                                x: this.x - 200 + n * 100 - 60 * 0.7,
+                                y: this.y + 0 - 60 * 0.7,
+                                w: 120 * 0.7,
+                                h: 120 * 0.7
+                            };
+                            if (Mouse.clickInBox(hitbox.x, hitbox.y, hitbox.w, hitbox.h)) {
+                                this.executeOption(o);
+                            }
+                        }
+                        if (game.keys.action("pause", "down")) this.executeOption("pause");
+                        if (game.keys.action("editMode", "down")) this.executeOption("stop playback");
+                        if (game.keys.action("resetPlayback", "down")) this.executeOption("reset");
+                        if (game.keys.action("changePlaybackSpeed", "down")) this.executeOption("speed");
+                        if (game.keys.action("step", "down")) this.executeOption("step");
+                    },
+                    executeOption: function (o) {
+                        if (o == "stop playback") {
+                            game.mode = "editing";
+                        } else if (o == "pause") {
+                            game.playback.paused = !game.playback.paused;
+                        } else if (o == "step") {
+                            game.playback.tick();
+                            game.playback.timeUntilTick = game.playback.tickReset;
+                        } else if (o == "reset") {
+                            game.playback.timeUntilTick = game.playback.tickReset;
+                            game.playback.resetObjectsToSource();
+                        } else if (o == "speed") {
+                            this.speedChosenId++;
+                            this.speedChosenId %= this.speeds.length;
+                        }
+                    },
+                    updateOpacity: function () {
+                        if (!this.visible) {
+                            this.opacity -= options.ui.opacityChange * 3;
+                            this.opacity = Math.max(this.opacity, 0);
+                            return;
+                        }
+                        if (this.mouseCloseToHitbox(50) && !game.editing.selection.creatingSelection) {
+                            this.opacity += options.ui.opacityChange;
+                        } else {
+                            this.opacity -= options.ui.opacityChange;
+                        }
+                        this.opacity = Math.max(Math.min(this.opacity, 1), options.ui.opacityLowerBound);
+                    },
+                    mouseInHitbox: function () {
+                        return Mouse.inBox(this.x + this.hitbox.x, this.y + this.hitbox.y, this.hitbox.w, this.hitbox.h);
+                    },
+                    mouseCloseToHitbox: function (distance) {
+                        var hitbox = {};
+                        hitbox.x = this.hitbox.x - distance;
+                        hitbox.y = this.hitbox.y - distance;
+                        hitbox.w = this.hitbox.w + distance * 2;
+                        hitbox.h = this.hitbox.h + distance * 2;
+                        return Mouse.inBox(this.x + hitbox.x, this.y + hitbox.y, hitbox.w, hitbox.h);
+                    }
+                }
+            },
+            editing: {
+                creatingObject: {},
+                mouseOffset: { x: 0, y: 0 },
+                objectPlacementCors: { x: 0, y: 0 },
+                objectPreviewCors: { x: 0, y: 0 },
+                creatingObjectDimensions: { w: 0, h: 0 },
+                canPlace: true,
+                justPlaced: false,
+                editingMode: true,
+                history: [],
+                redoBuffer: [],
+                update: function () {
+                    this.ui.visible = this.editingMode;
+                    this.ui.update();
+                    if (!this.editingMode) return;
+                    this.updateUndoAndRedo();
+                    this.updatePlacementRotation();
+                    this.updatePlacementPosition();
+                    this.canPlace = this.validatePlacement();
+                    this.justPlaced = false;
+                    this.updatePlacing();
+                    this.selection.update();
+                },
+                draw: function () {
+                    if (!this.editingMode) return;
+                    if (this.selection.active) {
+                        this.selection.draw();
+                        return;
+                    }
+                    if (!this.canPlace) return;
+                    ctx.save();
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    var x = this.objectPlacementCors.x;
+                    var y = this.objectPlacementCors.y;
+                    var w = this.creatingObjectDimensions.w;
+                    var h = this.creatingObjectDimensions.h;
+                    ctx.fillRect(x, y, w, h);
+
+                    if (this.creatingObject.type == "paste data") {
+                        ctx.save();
+                        ctx.translate(this.objectPlacementCors.x, this.objectPlacementCors.y);
+                        for (var n = 0; n < this.creatingObject.objects.length; n++) {
+                            var o = this.creatingObject.objects[n];
+                            game.objects.drawObject(o);
+                        }
+                        ctx.restore();
+                    } else {
+                        game.objects.drawObject(this.creatingObject);
+                    }
+                    ctx.restore();
+                },
+                reset: function () {
+                    this.setCreatingObject(0);
+                    this.opacity = this.opacityLowerBound;
+                    this.justPlaced = false;
+                    this.selection.reset();
+                    this.resetHistory();
+                },
+                resetHistory: function () {
+                    this.history = [];
+                    this.addHistoryEntry();
+                },
+                addHistoryEntry() {
+                    this.redoBuffer = [];
+                    var entry = JSON.parse(JSON.stringify(game.objects.objects));
+                    this.history.push(entry);
+                },
+                undo: function () {
+                    if (this.history.length <= 1) return;
+                    this.redoBuffer.push(this.history.pop());
+                    game.objects.objects = JSON.parse(JSON.stringify(this.history[this.history.length - 1]));
+                },
+                redo: function () {
+                    if (this.redoBuffer.length == 0) return;
+                    this.history.push(this.redoBuffer.pop());
+                    game.objects.objects = JSON.parse(JSON.stringify(this.history[this.history.length - 1]));
+                },
+                updateUndoAndRedo: function () {
+                    if (game.keys.action("redo", "down")) {
+                        this.redo();
+                        this.selection.clearSelection();
+                    } else if (game.keys.action("undo", "down")) {
+                        this.undo();
+                        this.selection.clearSelection();
+                    }
+                },
+                updatePlacing: function () {
+                    if (this.selection.active) return;
+                    if (!this.canPlace) return;
+                    var correctButton = Mouse.buttons[0] && !Mouse.buttons[1] && !Mouse.buttons[2];
+                    var correctClickButton = Mouse.clickButtons[0] && !Mouse.clickButtons[1] && !Mouse.clickButtons[2];
+                    if (this.creatingObject.type == "paste data") {
+                        if (!correctClickButton) return;
+                        this.placePasteData();
+                    } else {
+                        if ((!correctButton || !game.keys.action("placeMultiple", "down")) && !correctClickButton) return;
+                        this.placeRegular();
+                    }
+                    this.justPlaced = true;
+                    this.addHistoryEntry();
+                },
+                placeRegular: function () {
+                    var o = {};
+                    for (var key of Object.keys(this.creatingObject)) {
+                        o[key] = this.creatingObject[key];
+                    }
+                    if (!o.hitbox) {
+                        o.hitbox = { w: 100, h: 100 };
+                    }
+                    o.x = this.objectPlacementCors.x;
+                    o.y = this.objectPlacementCors.y;
+                    game.objects.clearObjectsInHitbox(o.x, o.y, o.hitbox.w, o.hitbox.h);
+                    this.placeObject(o);
+                },
+                placePasteData: function () {
+                    var placedCoordinates = [];
+                    for (var n = 0; n < this.creatingObject.objects.length; n++) {
+                        var o = this.creatingObject.objects[n];
+                        o.x += this.objectPlacementCors.x;
+                        o.y += this.objectPlacementCors.y;
+                        game.objects.clearObjectsInHitbox(o.x, o.y, o.hitbox.w, o.hitbox.h);
+                        placedCoordinates.push({ x: o.x, y: o.y });
+                        this.placeObject(o);
+                    }
+                    this.selection.selection = {
+                        x: this.objectPlacementCors.x,
+                        y: this.objectPlacementCors.y,
+                        w: this.creatingObjectDimensions.w,
+                        h: this.creatingObjectDimensions.h
+                    };
+                    this.selection.objectsSelected = [];
+                    this.selection.objectsSelectedIds = [];
+                    for (var n = 0; n < placedCoordinates.length; n++) {
+                        var cors = placedCoordinates[n];
+                        var id = game.objects.objects.findIndex(e => e.x == cors.x && e.y == cors.y);
+                        if (id == -1) continue;
+                        this.selection.objectsSelectedIds.push(id);
+                        this.selection.objectsSelected.push(game.objects.objects[id]);
+                    }
+                    this.selection.finalizeSelection();
+                    this.setCreatingObject(0);
+                },
+                placeObject: function (o) {
+                    var hitbox = { x: o.x, y: o.y, w: o.hitbox.w, h: o.hitbox.h };
+                    if (!blocksColliding(hitbox, game.level.boundary)) return;
+                    game.objects.create(o);
+                },
+                updatePlacementRotation: function () {
+                    if (game.keys.action("rotateClockwise", "down")) {
+                        this.rotatePlacement(90);
+                    }
+                    if (game.keys.action("rotateCounterclockwise", "down")) {
+                        this.rotatePlacement(-90);
+                    }
+                },
+                rotatePlacement: function (angle) {
+                    if (this.creatingObject.type == "paste data") {
+                        this.rotatePasteData(angle);
+                    } else {
+                        var rotateBy = (angle % 360 + 360) / 360;
+                        if (rotateBy != 180 && rotateBy != 0) {
+                            var w = this.creatingObject.hitbox.w;
+                            var h = this.creatingObject.hitbox.h;
+                            this.creatingObject.hitbox.w = h;
+                            this.creatingObject.hitbox.h = w;
+                            this.creatingObjectDimensions.w = this.creatingObject.hitbox.w;
+                            this.creatingObjectDimensions.h = this.creatingObject.hitbox.h;
+                        }
+                        this.creatingObject.angle += angle;
+                        this.creatingObject.angle = (this.creatingObject.angle % 360 + 360) % 360;
+                    }
+                },
+                rotatePasteData: function (angle) {
+                    var data = {};
+                    data.x = 0;
+                    data.y = 0;
+                    data.w = this.creatingObjectDimensions.w;
+                    data.h = this.creatingObjectDimensions.h;
+                    data.objects = this.creatingObject.objects;
+                    data = game.editing.rotateObjectData(angle, data);
+                    this.creatingObjectDimensions.w = data.w;
+                    this.creatingObjectDimensions.h = data.h;
+                },
+                updatePlacementPosition: function () {
+                    var mouseX = game.cam.viewport.mouse.x + this.mouseOffset.x;
+                    var mouseY = game.cam.viewport.mouse.y + this.mouseOffset.y;
+                    this.objectPlacementCors.x = Math.floor(mouseX / 100) * 100;
+                    this.objectPlacementCors.y = Math.floor(mouseY / 100) * 100;
+                    var x = mouseX - Math.floor(mouseX / 100) * 100;
+                    var y = mouseY - Math.floor(mouseY / 100) * 100;
+                    var dist = distTo(50, 50, x, y);
+                    var percent = 1 * ((dist / 50) ** 5);
+                    percent = Math.min(percent, 1);
+                    var targetX = (this.objectPlacementCors.x + 50) * (1 - percent) + game.cam.viewport.mouse.x * percent;
+                    var targetY = (this.objectPlacementCors.y + 50) * (1 - percent) + game.cam.viewport.mouse.y * percent;
+                    this.objectPreviewCors.x = targetX;
+                    this.objectPreviewCors.y = targetY;
+                    this.creatingObject.x = this.objectPreviewCors.x - 50;
+                    this.creatingObject.y = this.objectPreviewCors.y - 50;
+                },
+                validatePlacement: function () {
+                    if (this.ui.mouseInHitbox()) return false;
+                    //var placementBox = { x: this.objectPlacementCors.x, y: this.objectPlacementCors.y, w: 100, h: 100 };
+                    //if (!blocksColliding(placementBox, game.level.boundary)) return false;
+                    return true;
+                },
+                setCreatingObject: function (n) {
+                    this.ui.objectSelectedId = n;
+                    this.creatingObject = JSON.parse(JSON.stringify(this.ui.objects[this.ui.objectSelectedId]));
+                    if (!this.creatingObject.hitbox) this.creatingObject.hitbox = { w: 100, h: 100 };
+                    this.creatingObjectDimensions = { w: this.creatingObject.hitbox.w, h: this.creatingObject.hitbox.h };
+                    this.creatingObject.angle = 0;
+                    this.mouseOffset = { x: 0, y: 0 };
+                    this.updatePlacementPosition();
+                },
+                rotateObjectData: function (angle, data) {
+                    angle = (angle % 360 + 360) % 360;
+                    if (angle == 0) return data;
+                    if (angle == 90) {
+                        return this.rotateObjectDataClockwise(data);
+                    }
+                    if (angle == 180) {
+                        return this.rotateObjectDataClockwise(this.rotateObjectDataClockwise(data));
+                    }
+                    if (angle == 270) {
+                        return this.rotateObjectDataClockwise(this.rotateObjectDataClockwise(this.rotateObjectDataClockwise(data)));
+                    }
+                },
+                rotateObjectDataClockwise: function (data) {
+                    for (var o of data.objects) {
+                        o.x -= data.x;
+                        o.y -= data.y;
+                    }
+                    for (var o of data.objects) {
+                        o.angle += 90;
+                        o.angle %= 360;
+                        var w = o.hitbox.w;
+                        var h = o.hitbox.h;
+                        o.hitbox.w = h;
+                        o.hitbox.h = w;
+                        var x = o.x;
+                        var y = o.y;
+                        o.x = data.h - 100 - y;
+                        o.y = x;
+                    }
+                    for (var o of data.objects) {
+                        o.x += data.x;
+                        o.y += data.y;
+                    }
+                    var w = data.w;
+                    var h = data.h;
+                    data.w = h;
+                    data.h = w;
+                    return data;
+                },
+                selection: {
+                    active: false,
+                    selectionStartCoordinates: false,
+                    selectionEndCoordinates: false,
+                    creatingSelection: false,
+                    selection: false,
+                    selectionFinalized: false,
+                    objectsSelected: [],
+                    objectsSelectedIds: [],
+                    update: function () {
+                        this.active = game.editing.creatingObject.type == "selection";
+                        this.tooltip.update();
+                        if (!this.active) {
+                            this.clearSelection();
+                            return;
+                        }
+                        var correctButton = Mouse.buttons[0] && !Mouse.buttons[1] && !Mouse.buttons[2];
+                        if (Mouse.down && correctButton) {
+                            var notUsingUI = !game.editing.ui.mouseInHitbox() && !this.tooltip.mouseInHitbox();
+                            if (notUsingUI) this.selectionFinalized = false;
+                            if (!this.creatingSelection && notUsingUI) this.startSelection();
+                            if (this.creatingSelection) this.updateSelection();
+                        } else {
+                            if (this.creatingSelection) {
+                                this.finalizeSelection();
+                            }
+                        }
+                    },
+                    draw: function () {
+                        if (!this.selection) return;
+                        for (var n = 0; n < this.objectsSelected.length; n++) {
+                            var o = this.objectsSelected[n];
+                            ctx.fillStyle = "rgba(0,0,255,0.35)";
+                            ctx.fillRect(o.x, o.y, o.hitbox.w, o.hitbox.h);
+                        }
+                        if (this.selectionFinalized) {
+                            ctx.fillStyle = "rgba(0,0,0,0.15)";
+                            ctx.fillRect(this.selection.x, this.selection.y, this.selection.w, this.selection.h);
+                            ctx.strokeStyle = "rgb(50,50,50)";
+                            ctx.lineWidth = 10;
+                            ctx.setLineDash([50, 50]);
+                            ctx.lineDashOffset = t * 1.5;
+                            ctx.strokeRect(this.selection.x, this.selection.y, this.selection.w, this.selection.h);
+                            ctx.setLineDash([]);
+                        } else {
+                            ctx.fillStyle = "rgba(0,0,0,0.1)";
+                            ctx.fillRect(this.selection.x, this.selection.y, this.selection.w, this.selection.h);
+                        }
+                    },
+                    reset: function () {
+                        this.active = false;
+                        this.selectionStartCoordinates = false;
+                        this.selectionEndCoordinates = false;
+                        this.creatingSelection = false;
+                        this.selection = false;
+                        this.selectionFinalized = false;
+                        this.objectsSelected = false;
+                        this.objectsSelectedIds = false;
+                        this.tooltip.reset();
+                    },
+                    updateSelection: function () {
+                        this.selectionEndCoordinates = { x: game.editing.objectPlacementCors.x, y: game.editing.objectPlacementCors.y };
+                        this.selection = this.createBoxFromPoints(this.selectionStartCoordinates, this.selectionEndCoordinates);
+                        this.selection.w += 100;
+                        this.selection.h += 100;
+
+                        this.updateObjectsSelected();
+                    },
+                    updateObjectsSelected: function () {
+                        this.objectsSelected = [];
+                        this.objectsSelectedIds = [];
+                        for (var n = 0; n < game.objects.objects.length; n++) {
+                            var o = game.objects.objects[n];
+                            var rect = { x: o.x, y: o.y, w: o.hitbox.w, h: o.hitbox.h };
+                            if (!blocksColliding(rect, this.selection)) continue;
+                            this.objectsSelected.push(o);
+                            this.objectsSelectedIds.push(n);
+                        }
+                    },
+                    startSelection: function () {
+                        this.selectionStartCoordinates = { x: game.editing.objectPlacementCors.x, y: game.editing.objectPlacementCors.y };
+                        this.creatingSelection = true;
+                    },
+                    clearSelection: function () {
+                        this.creatingSelection = false;
+                        this.selection = false;
+                        this.selectionFinalized = false;
+                        this.selectionStartCoordinates = false;
+                        this.selectionEndCoordinates = false;
+                    },
+                    createBoxFromPoints: function (p1, p2) {
+                        var minX = Math.min(p1.x, p2.x);
+                        var minY = Math.min(p1.y, p2.y);
+                        var maxX = Math.max(p1.x, p2.x);
+                        var maxY = Math.max(p1.y, p2.y);
+                        var box = {};
+                        box.x = minX;
+                        box.y = minY;
+                        box.w = maxX - minX;
+                        box.h = maxY - minY;
+                        return box;
+                    },
+                    finalizeSelection: function () {
+                        if (this.objectsSelected.length == 0) {
+                            this.clearSelection();
+                            return;
+                        }
+                        this.selectionFinalized = true;
+                        var minX = Math.min(...this.objectsSelected.map(e => e.x));
+                        var minY = Math.min(...this.objectsSelected.map(e => e.y));
+                        var maxX = Math.max(...this.objectsSelected.map(e => e.x + e.hitbox.w));
+                        var maxY = Math.max(...this.objectsSelected.map(e => e.y + e.hitbox.h));
+                        this.selection = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+                        this.creatingSelection = false;
+                    },
+                    tooltip: {
+                        visible: true,
+                        x: 0,
+                        y: 0,
+                        rootCors: { x: 0, y: 0 },
+                        opacity: 0,
+                        hitbox: { x: 0, y: 0, w: 310, h: 75 },
+                        options: ["clear", "copy", "move", "rotate clockwise", "rotate counterclockwise"],
+                        optionSizes: [1, 1, 1, 1, 1],
+                        update: function () {
+                            this.visible = game.editing.selection.selectionFinalized;
+                            if (!this.visible) {
+                                this.optionsSizes = this.optionSizes.map(e => 1);
+                                return;
+                            }
+                            this.updateOpacity();
+                            this.setPosition();
+                            if (!game.editing.justPlaced) this.updateOptions();
+                            this.handleInput();
+                        },
+                        draw: function () {
+                            if (!game.editing.editingMode) return;
+                            if (!this.visible) return;
+                            ctx.save();
+                            ctx.globalAlpha = this.opacity;
+                            ctx.translate(this.x, this.y);
+                            ctx.fillStyle = "rgb(150,150,150)";
+                            ctx.roundRect(0, 0, 310, 75, 20);
+                            ctx.fill();
+
+                            for (var n = 0; n < this.options.length; n++) {
+                                var o = this.options[n];
+                                ctx.save();
+                                ctx.translate(n * 60 + 35, 37.5);
+                                ctx.scale(this.optionSizes[n], this.optionSizes[n]);
+                                this.drawOption(o);
+                                ctx.restore();
+                            }
+
+                            ctx.restore();
+                        },
+                        reset: function () {
+                            this.optionSizes = [1, 1, 1, 1, 1];
+                        },
+                        updateOptions: function () {
+                            for (var n = 0; n < this.options.length; n++) {
+                                var o = this.options[n];
+                                var dist = distTo(this.x + this.hitbox.x + n * 60 + 35, this.y + this.hitbox.y + 37.5, Mouse.x, Mouse.y);
+                                if (dist < 25) {
+                                    this.optionSizes[n] += 0.03;
+                                    if (Mouse.click) {
+                                        this.performAction(o);
+                                    }
+                                } else {
+                                    this.optionSizes[n] -= 0.03;
+                                }
+                                this.optionSizes[n] = Math.max(1, Math.min(this.optionSizes[n], 1.15));
+                            }
+                        },
+                        handleInput: function () {
+                            if (game.keys.action("delete", "down")) this.performAction("clear");
+                            if (game.keys.action("copy", "down")) this.performAction("copy", true, false);
+                            if (game.keys.action("cut", "down")) this.performAction("move", true, false);
+                            if (game.keys.action("rotateClockwise", "down")) this.performAction("rotate clockwise", true, false);
+                            if (game.keys.action("rotateCounterclockwise", "down")) this.performAction("rotate counterclockwise", true, false);
+                        },
+                        drawOption: function (o) {
+                            if (o == "clear") {
+                                ctx.fillStyle = "red";
+                                ctx.fillRect(-20, -20, 40, 40);
+                            } else if (o == "copy") {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 3;
+                                ctx.strokeRect(-20, -20, 40, 40);
+                            } else if (o == "move") {
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(-20, -20, 40, 40);
+                            } else if (o == "rotate clockwise") {
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(-20, -20, 40, 40);
+                                ctx.fillStyle = "white";
+                                ctx.fillRect(0, -20, 20, 20);
+                            } else if (o == "rotate counterclockwise") {
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(-20, -20, 40, 40);
+                                ctx.fillStyle = "white";
+                                ctx.fillRect(-20, -20, 20, 20);
+                            }
+                        },
+                        performAction: function (o, clear, mouseOffset) {
+                            if (o == "clear") {
+                                var ids = game.editing.selection.objectsSelectedIds.sort((a, b) => b - a);
+                                for (var n = 0; n < ids.length; n++) {
+                                    game.objects.objects.splice(ids[n], 1);
+                                }
+                                game.editing.addHistoryEntry();
+                            } else if (o == "copy") {
+                                var data = {};
+                                data.objects = [];
+                                for (var n = 0; n < game.editing.selection.objectsSelected.length; n++) {
+                                    var o = game.editing.selection.objectsSelected[n];
+                                    var copy = JSON.parse(JSON.stringify(o));
+                                    copy.x -= game.editing.selection.selection.x;
+                                    copy.y -= game.editing.selection.selection.y;
+                                    data.objects.push(copy);
+                                }
+                                data.type = "paste data";
+                                game.editing.creatingObject = data;
+                                game.editing.creatingObjectDimensions.w = game.editing.selection.selection.w;
+                                game.editing.creatingObjectDimensions.h = game.editing.selection.selection.h;
+                                if (mouseOffset !== false) {
+                                    var viewportCors = game.cam.viewport.translateFromViewportCoordinates(this.rootCors);
+                                    game.editing.mouseOffset.x = viewportCors.x - game.cam.viewport.mouse.x;
+                                    game.editing.mouseOffset.y = viewportCors.y - game.cam.viewport.mouse.y;
+                                }
+                            } else if (o == "move") {
+                                this.performAction("copy", false, mouseOffset);
+                                this.performAction("clear");
+                            } else if (o == "rotate clockwise") {
+                                this.performAction("move", true, mouseOffset);
+                                game.editing.rotatePasteData(90);
+                            } else if (o == "rotate counterclockwise") {
+                                this.performAction("move", true, mouseOffset);
+                                game.editing.rotatePasteData(-90);
+                            }
+                            if (clear !== false) game.editing.selection.clearSelection();
+                        },
+                        setPosition: function () {
+                            var x = game.editing.selection.selection.x;
+                            var y = game.editing.selection.selection.y;
+                            var cors = game.cam.viewport.translateToVieportCoordinates({ x: x, y: y });
+                            this.rootCors = cors;
+                            this.x = cors.x;
+                            this.y = cors.y - this.hitbox.h - 10;
+
+                            var buffer = 10;
+                            this.x = Math.max(this.x, buffer);
+                            this.y = Math.max(this.y, buffer);
+                            this.x = Math.min(this.x, 1500 - this.hitbox.w - buffer);
+                            this.y = Math.min(this.y, game.editing.ui.y + game.editing.ui.hitbox.y - this.hitbox.h - buffer);
+                        },
+                        updateOpacity: function () {
+                            if (this.mouseCloseToHitbox(50)) {
+                                this.opacity += options.ui.opacityChange;
+                            } else {
+                                this.opacity -= options.ui.opacityChange;
+                            }
+                            this.opacity = Math.max(Math.min(this.opacity, 1), options.ui.opacityLowerBound);
+                        },
+                        mouseInHitbox: function () {
+                            return Mouse.inBox(this.x + this.hitbox.x, this.y + this.hitbox.y, this.hitbox.w, this.hitbox.h);
+                        },
+                        mouseCloseToHitbox: function (distance) {
+                            var hitbox = {};
+                            hitbox.x = this.hitbox.x - distance;
+                            hitbox.y = this.hitbox.y - distance;
+                            hitbox.w = this.hitbox.w + distance * 2;
+                            hitbox.h = this.hitbox.h + distance * 2;
+                            return Mouse.inBox(this.x + hitbox.x, this.y + hitbox.y, hitbox.w, hitbox.h);
+                        }
+                    }
+                },
+                ui: {
+                    x: 750,
+                    y: 925,
+                    opacity: 0,
+                    hitbox: { x: -510, y: -50, w: 910, h: 100 },
+                    objectSelectedId: 0,
+                    visible: true,
+                    objects: [
+                        {
+                            type: "selection"
+                        },
+                        {
+                            type: "piston"
+                        },
+                        {
+                            type: "emitter",
+                            period: 4
+                        },
+                        {
+                            type: "scanner",
+                            distance: 1
+                        },
+                        {
+                            type: "delay",
+                            delay: 5,
+                            signals: []
+                        },
+                        {
+                            type: "conveyer"
+                        },
+                        {
+                            type: "bonder",
+                            hitbox: { w: 200, h: 100 }
+                        },
+                        {
+                            type: "producer"
+                        },
+                        {
+                            type: "wire"
+                        },
+                        {
+                            type: "activator"
+                        },
+                        {
+                            type: "barrier"
+                        },
+                        {
+                            type: "element"
+                        },
+                        {
+                            type: "transmitter"
+                        },
+                        {
+                            type: "reciever"
+                        }
+                    ],
+                    update: function () {
+                        this.updateOpacity();
+                        if (!this.visible) return;
+                        this.updateTool();
+                        this.updatePlaybackButton();
+                    },
+                    draw: function () {
+                        ctx.save();
+                        ctx.translate(this.x, this.y);
+                        ctx.globalAlpha = this.opacity;
+
+                        this.drawPlaybackButton();
+                        this.drawMainBody();
+                        this.drawObjects();
+
+                        ctx.restore();
+
+                        game.editing.selection.tooltip.draw();
+                    },
+                    drawPlaybackButton: function () {
+                        ctx.save();
+                        ctx.translate(-470, 0);
+
+                        ctx.fillStyle = "rgb(150,150,150)";
+                        ctx.roundRect(-40, -40, 80, 80, 20);
+                        ctx.fill();
+                        ctx.fillStyle = "black";
+                        ctx.beginPath();
+                        ctx.moveTo(20, 0);
+                        ctx.lineTo(-20, 20);
+                        ctx.lineTo(-20, -20);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.restore();
+                    },
+                    drawMainBody: function () {
+                        ctx.fillStyle = "rgb(150,150,150)";
+                        ctx.roundRect(-400, -50, 800, 100, 20);
+                        ctx.fill();
+                    },
+                    drawObjects: function () {
+                        for (var n = 0; n < this.objects.length; n++) {
+                            var o = this.objects[n];
+                            ctx.save();
+                            ctx.translate(-350 + n * 80, 0);
+                            ctx.scale(0.7, 0.7);
+                            if (o.type == "selection") {
+                                this.drawSelectionIcon();
+                            } else {
+                                game.objects.drawObjectInPosition(o);
+                            }
+                            if (this.objectSelectedId == n) {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 4;
+                                ctx.lineJoin = "round";
+                                ctx.strokeRect(-60, -60, 120, 120);
+                            }
+                            ctx.restore();
+                        }
+                    },
+                    updateOpacity: function () {
+                        if (!this.visible) {
+                            this.opacity -= options.ui.opacityChange * 3;
+                            this.opacity = Math.max(this.opacity, 0);
+                            return;
+                        }
+                        if (this.mouseCloseToHitbox(50) && !game.editing.selection.creatingSelection) {
+                            this.opacity += options.ui.opacityChange;
+                        } else {
+                            this.opacity -= options.ui.opacityChange;
+                        }
+                        this.opacity = Math.max(Math.min(this.opacity, 1), options.ui.opacityLowerBound);
+                    },
+                    updatePlaybackButton: function () {
+                        var hitbox = {
+                            x: this.x - 510,
+                            y: this.y - 40,
+                            w: 80,
+                            h: 80
+                        };
+                        if (Mouse.clickInBox(hitbox.x, hitbox.y, hitbox.w, hitbox.h)) {
+                            game.mode = "playback";
+                        }
+                        if (game.keys.action("playbackMode", "down")) game.mode = "playback";
+                    },
+                    updateTool: function () {
+                        for (var n = 0; n < this.objects.length; n++) {
+                            var o = this.objects[n];
+                            var hitbox = {
+                                x: this.x - 350 + n * 80 - 60 * 0.7,
+                                y: this.y + 0 - 60 * 0.7,
+                                w: 120 * 0.7,
+                                h: 120 * 0.7
+                            };
+                            if (Mouse.clickInBox(hitbox.x, hitbox.y, hitbox.w, hitbox.h) || game.keys.action("select" + (n + 1), "down")) {
+                                game.editing.setCreatingObject(n);
+                            }
+                        }
+                    },
+                    drawSelectionIcon: function () {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-40, -40, 80, 80);
+                    },
+                    mouseInHitbox: function () {
+                        return Mouse.inBox(this.x + this.hitbox.x, this.y + this.hitbox.y, this.hitbox.w, this.hitbox.h);
+                    },
+                    mouseCloseToHitbox: function (distance) {
+                        var hitbox = {};
+                        hitbox.x = this.hitbox.x - distance;
+                        hitbox.y = this.hitbox.y - distance;
+                        hitbox.w = this.hitbox.w + distance * 2;
+                        hitbox.h = this.hitbox.h + distance * 2;
+                        return Mouse.inBox(this.x + hitbox.x, this.y + hitbox.y, hitbox.w, hitbox.h);
+                    }
+                }
+            },
+            level: {
+                update: function () {
+                },
+                boundary: {
+                    x: -1500,
+                    y: -1500,
+                    w: 3000,
+                    h: 3000,
+                    draw: function () {
+                        ctx.strokeStyle = "blue";
+                        ctx.lineWidth = 5;
+                        ctx.strokeRect(this.x, this.y, this.w, this.h);
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                realPosition: {
+                    x: 0,
+                    y: 0,
+                    zoom: 1,
+                },
+                viewport: {
+                    x: 0,
+                    y: 0,
+                    w: 0,
+                    h: 0,
+                    update: function () {
+                        this.normalizeViewportToLevelBoundary();
+                        this.setViewport();
+                        this.mouse.update();
+                    },
+                    normalizeViewportToLevelBoundary: function () {
+                        var zoomBuffer = 200;
+                        var maxWidth = game.level.boundary.w + zoomBuffer * 2;
+                        var maxHeight = game.level.boundary.h + zoomBuffer * 2;
+                        var maxZoom = Math.min(1500 / maxWidth, 1000 / maxHeight);
+                        game.cam.realPosition.zoom = Math.max(game.cam.realPosition.zoom, maxZoom);
+                        game.cam.realPosition.zoom = Math.min(game.cam.realPosition.zoom, 3);
+
+                        game.cam.realPosition.x = Math.max(game.cam.realPosition.x, game.level.boundary.x);
+                        game.cam.realPosition.y = Math.max(game.cam.realPosition.y, game.level.boundary.y);
+                        game.cam.realPosition.x = Math.min(game.cam.realPosition.x, game.level.boundary.x + game.level.boundary.w);
+                        game.cam.realPosition.y = Math.min(game.cam.realPosition.y, game.level.boundary.y + game.level.boundary.h);
+                    },
+                    setViewport: function () {
+                        var w = 1500 / game.cam.zoom;
+                        var h = 1000 / game.cam.zoom;
+                        var x = game.cam.x;
+                        var y = game.cam.y;
+                        this.x = x - w / 2;
+                        this.y = y - h / 2;
+                        this.w = w;
+                        this.h = h;
+                    },
+                    mouse: {
+                        x: 0,
+                        y: 0,
+                        update: function () {
+                            var cors = game.cam.viewport.translateFromViewportCoordinates({ x: Mouse.x, y: Mouse.y });
+                            this.x = cors.x;
+                            this.y = cors.y;
+                        }
+                    },
+                    translateFromViewportCoordinates: function ({ x: x, y: y }) {
+                        x = (x - 750) / game.cam.zoom + game.cam.x;
+                        y = (y - 500) / game.cam.zoom + game.cam.y;
+                        return { x: x, y: y };
+                    },
+                    translateToVieportCoordinates: function ({ x: x, y: y }) {
+                        x = (x - game.cam.x) * game.cam.zoom + 750;
+                        y = (y - game.cam.y) * game.cam.zoom + 500;
+                        return { x: x, y: y };
+                    },
+                    align: function () {
+                        ctx.translate(750, 500);
+                        ctx.scale(game.cam.zoom, game.cam.zoom);
+                        ctx.translate(-game.cam.x, -game.cam.y);
+                    }
+                },
+                update: function () {
+                    this.handleInput();
+                    this.viewport.update();
+                    this.animatePosition();
+                },
+                animatePosition: function () {
+                    var animateFactor = 0.1;
+                    this.x = this.x * (1 - animateFactor) + this.realPosition.x * animateFactor;
+                    this.y = this.y * (1 - animateFactor) + this.realPosition.y * animateFactor;
+                    this.zoom = this.zoom * (1 - animateFactor) + this.realPosition.zoom * animateFactor;
+                    if (Mouse.buttons[1]) {
+                        this.x = this.realPosition.x;
+                        this.y = this.realPosition.y;
+                    }
+                },
+                handleInput: function () {
+                    this.handleKeyboardInput();
+                    this.handleMouseInput();
+                },
+                handleKeyboardInput: function () {
+                    var movementSpeed = 15 / this.zoom;
+                    var zoomSpeed = 1.02;
+                    if (game.keys.action("panCamLeft", "keys")) {
+                        this.realPosition.x -= movementSpeed;
+                    }
+                    if (game.keys.action("panCamRight", "keys")) {
+                        this.realPosition.x += movementSpeed;
+                    }
+                    if (game.keys.action("panCamUp", "keys")) {
+                        this.realPosition.y -= movementSpeed;
+                    }
+                    if (game.keys.action("panCamDown", "keys")) {
+                        this.realPosition.y += movementSpeed;
+                    }
+                    if (game.keys.action("zoomCamIn", "keys")) {
+                        this.realPosition.zoom *= zoomSpeed;
+                    }
+                    if (game.keys.action("zoomCamOut", "keys")) {
+                        this.realPosition.zoom /= zoomSpeed;
+                    }
+                },
+                handleMouseInput: function () {
+                    this.realPosition.zoom -= Mouse.scrollY / 500 * this.realPosition.zoom;
+                    if (Mouse.buttons[1]) {
+                        this.realPosition.x -= Mouse.xmove / this.realPosition.zoom;
+                        this.realPosition.y -= Mouse.ymove / this.realPosition.zoom;
+                    }
+                }
+            }
+        }
+
+        var options = {
+            ui: {
+                opacityLowerBound: 0.6,
+                opacityChange: 0.02
+            }
+        }
+
+        game.reset();
+
+        game.objects.objects = [
+            {
+                "type": "transmitter",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": 200
+            },
+            {
+                "type": "reciever",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -300
+            },
+            {
+                "type": "emitter",
+                "period": 4,
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": 300,
+                "tick": 0
+            },
+            {
+                "type": "wire",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -400,
+                "powered": false,
+                "group": 0
+            },
+            {
+                "type": "wire",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -500,
+                "powered": false,
+                "group": 0
+            },
+            {
+                "type": "wire",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -600,
+                "powered": false,
+                "group": 0
+            },
+            {
+                "type": "wire",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -700,
+                "powered": false,
+                "group": 0
+            },
+            {
+                "type": "wire",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -800,
+                "powered": false,
+                "group": 0
+            },
+            {
+                "type": "wire",
+                "hitbox": {
+                    "w": 100,
+                    "h": 100
+                },
+                "angle": 0,
+                "x": 600,
+                "y": -900,
+                "powered": false,
+                "group": 0
+            }
+        ];
+
+        /*
+        TODO:
+        Placement:
+            Animations
+            Keybind Prompts
+            Clear Level
+            Undo and Redo UI Buttons
+            Specialized Actions for Single Block Selection
+            Subtype selection
+        Playback:
+            Animations
+            Logic:
+                Moving Element Logic!!!
+                Bonded Element Logic!!!
+                Add rotators
+        Level:
+            Goal molecule
+            First Levels
+            Uneditables
+        Artwork:
+            Block Tileset
+            Icons
+        */
+    </script>
+</body>
+
+</html>

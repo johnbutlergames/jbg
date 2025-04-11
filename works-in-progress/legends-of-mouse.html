@@ -1,0 +1,666 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script src="https://unpkg.com/geometric@2.2.5/build/geometric.min.js"></script>
+        <script>
+            localStorage.removeItem('legendsofmousedata');
+            var randNumbers = [9,5,8,3,4,6,4,0,8,2,5,7,9,5,6,0,0,6,2,5,6,0,6,6,7,9,7,3,5,4,7,9,8,3,7,4,0,3,8,4,4,8,4,1,7,6,4,9,0,7,8,5,6,6,2,3,8,7,1,0,2,1,0,1,9,6,0,1,5,5,5,7,2,3,4,4,2,6,0,0,4,8,3,7,5,3,5,4,7,8,1,8,1,9,3,2,2,4,3,6,1,9,5,7,4,2,3,1,8,4,5,1,9,6,8,8,4,5,8,2,4,9,3,6,4,4,8,3,0,1,0,2,0,5,9,1,7,8,9,3,9,7,0,4,5,3,0,1,7,2,3,4,4,9,6,2,9,3,5,7,2,0,6,6,8,8,6,2,2,0,8,0,9,0,7,6,0,9,6,8,6,1,7,1,5,2,9,4,5,2,7,6,3,3,2,6,8,4,7,7,3,2,3,3,5,8,7,1,1,0,5,8,5,9,7,0,6,2,7,5,2,3,0,8,1,9,2,0,7,0,7,8,4,1,3,5,9,9,3,2,1,6,9,2,5,0,7,3,8,3,7,4,0,6,3,9,9,5,7,6,4,1,4,2,6,6,8,6,8,9,5,2,5,3,9,6,5,0,2,3,6,6,7,7,2,7,3,8,6,1,7,2,9,9,4,7,3,3,2,9,7,9,4,8,4,5,0,4,1,8,0,6,6,5,6,7,6,9,3,3,7,5,2,6,3,3,1,8,6,5,1,7,2,0,9,7,8,7,0,1,2,8,9,8,0,0,5,4,0,4,4,9,6,0,5,8,8,0,9,5,5,6,4,9,4,4,4,6,8,9,1,4,1,5,6,1,4,6,7,2,1,3,5,8,3,7,4,6,1,5,3,2,2,0,5,8,3,0,8,4,1,6,2,8,5,9,1,3,7,8,3,7,7,9,1,5,4,2,1,8,9,6,0,1,1,2,2,5,6,0,9,9,0,1,4,7,8,5,4,2,7,3,2,3,9,2,9,1,9,8,7,2,9,1,3,7,8,3,4,0,1,1,3,1,6,6,1,6,5,9,5,1,7,3,4,8,9,7,1,9,4,5,6,4,4,2,0,3,9,9,1,5,0,9,8,2,2,9,0,9,5,3,7,6,4,4,4,7,8,2,1,8,5,3,3,8,6,8,5,9,9,7,7,8,1,7,9,4,1,7,4,4,6,3,2,4,9,0,4,4,4,4,4,8,4,6,1,4,1,8,7,0,1,3,4,8,1,7,2,0,1,1,9,5,3,1,2,9,8,8,0,2,4,8,1,8,4,6,7,2,2,3,0,5,1,1,4,3,8,8,6,2,6,6,1,3,1,7,1,7,1,3,3,7,2,7,8,1,4,9,8,6,8,7,5,6,6,1,6,6,1,8,4,3,2,9,1,7,1,2,4,9,4,0,5,7,6,6,9,7,9,5,6,9,9,8,5,9,1,3,1,4,1,5,9,2,8,1,2,5,9,0,4,6,9,2,6,5,5,8,3,6,7,2,9,7,9,8,1,8,0,5,8,8,6,2,7,1,9,4,1,8,0,9,9,5,4,8,6,1,0,7,0,2,1,4,6,1,0,4,3,0,2,7,5,8,9,1,2,6,9,7,9,2,0,7,5,0,2,0,8,3,9,8,5,8,8,8,8,2,8,8,7,5,5,2,2,4,9,1,7,9,8,1,4,4,3,9,9,4,6,4,4,8,4,5,1,8,8,2,7,8,9,9,5,5,3,6,6,7,5,8,7,4,1,1,7,2,9,6,0,0,0,4,4,7,7,2,6,2,8,4,1,1,3,4,5,3,6,9,4,7,9,5,1,2,4,1,9,9,2,8,5,9,1,6,3,5,5,5,9,9,2,7,1,9,0,5,9,4,3,0,9,9,3,6,3,0,7,5,5,4,0,2,2,0,7,8,1,3,6,9,3,4,3,1,2,9,6,0,3,9,3,2,9,4,9,1,4,1,8,0,1,1,5,4,7,5,5,9,3,2,3,9,5,8,8,8,8,6,8,3,8,9,1,8,2,8,9,1,7,1,0,9,1,9,1,4,5,3,8,9,4,0,7,9,6,4,3,4,4,8,2,5,3,0,1,3,1,9,2,0,5,5,3,2,4,1,3,2,7,9,1,4,6,8,9,2,4,0,2,3,2,3,3,4,6,0,1,0,7,0,2,2,5,6,2,4,1,1,0,1,4,8,2,3,3,3,1,4,6,5,6,1,8,4,8,2,3,5];
+            function rndFromSeed(s) {
+                var r = JSON.parse(JSON.stringify(randNumbers));
+                return Number('0.'+r.splice(s,15).join(''));
+            }
+            document.title = "Legends Of Mouse";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = ["https://i.ibb.co/b7Jgh3k/cursor.png",'grass.png'];
+            var keys = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin: 0px;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                document.body.appendChild(img);
+                img.style = 'display: none;';
+                imgs[n] = img;
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.up = false;
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.up = true;
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                if(!_mouse.isLocked()) {
+                    _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                    _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+                } else {
+                    _mouse.x = false;
+                    _mouse.y = false;
+                }
+                _mouse.movex = event.movementX/dimensions.zoom;
+                _mouse.movey = event.movementY/dimensions.zoom;
+            });
+            canvas.requestPointerLock = canvas.requestPointerLock||canvas.mozRequestPointerLock;
+            canvas.exitPointerLock = canvas.exitPointerLock||canvas.mozExitPointerLock;
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    var response = false;
+                    if(this.x >= x && this.x <= x+w && this.y >= y && this.y <= y+h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    var response = false;
+                    if(this.clickX >= x && this.clickX <= x+w && this.clickY >= y && this.clickY<= y+h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                x: 250,
+                y: 250,
+                movex: 0,
+                movey: 0,
+                click: false,
+                up: true,
+                down: false,
+                lock: function() {
+                    canvas.requestPointerLock();
+                },
+                unlock: function() {
+                    document.exitPointerLock();
+                },
+                isLocked: function() {
+                    return document.pointerLockElement===canvas||document.mozPointerLockElement===canvas;
+                }
+            }
+            function doAll() {try{
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                program();
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+                _mouse.movex = 0;
+                _mouse.movey = 0;
+                time++;
+            }catch(err){window.alert(err.message);}}
+
+            //start the program
+            window.setInterval(doAll,20);
+
+            function program() {
+                _canvas.imageSmoothingEnabled = false;
+                if(page=='titlescreen') {
+                    _canvas.fillStyle = 'black';
+                    _canvas.font = "100px Times New Roman";
+                    _canvas.textBaseline = "top";
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Legends Of Mouse",500,30);
+                    drawCursor(507,55,2,2);
+                    _canvas.font = "70px Times New Roman";
+                    _canvas.lineWidth = 4;
+                    _canvas.textBaseline = 'middle';
+                    _canvas.strokeRect(400,200,200,100);
+                    _canvas.fillText("Play",500,250);
+                    _canvas.fillStyle = 'rgba(0,0,0,0.5)';
+                    if(_mouse.InBox(400,200,200,100)) {
+                        _canvas.fillRect(400,200,200,100);
+                        if(_mouse.click) {
+                            _mouse.lock();
+                            if(tutorial&&false) {
+                                page = "tutorial";
+                                tutorial = false;
+                            } else {
+                                page = "play";
+                            }
+                        }
+                    }
+                } else if(page=='play') {
+                    playGame();
+                }
+            }
+            function drawGlitch(x,y,w,h,level,replaceLevel) {
+                _canvas.beginPath();
+                _canvas.rect(x,y,w,h);
+                _canvas.save();
+                _canvas.clip();
+                var n = 0;
+                while(n < level) {
+                    var t = Math.round((time+(n/level*replaceLevel))/replaceLevel)+n*10;
+                    var x2 = randomFromSeed(-20,w,t);
+                    var y2 = randomFromSeed(-20,h,t+1);
+                    var w2 = randomFromSeed(5,100,t+2);
+                    var h2 = randomFromSeed(5,100,t+3);
+                    if(randomFromSeed(0,1,t)) {
+                        _canvas.fillStyle = 'rgb('+randomFromSeed(0,255,t)+','+randomFromSeed(0,255,t+1)+','+randomFromSeed(0,255,t+2)+')';
+                    } else {
+                        var g = _canvas.createLinearGradient(x2,y2,x2+w2,y2+h2);
+                        g.addColorStop(0,'rgb('+randomFromSeed(0,255,t)+','+randomFromSeed(0,255,t+1)+','+randomFromSeed(0,255,t+2)+')');
+                        g.addColorStop(1,'rgb('+randomFromSeed(0,255,t+3)+','+randomFromSeed(0,255,t+4)+','+randomFromSeed(0,255,t+5)+')');
+                        _canvas.fillStyle = g;
+                    }
+                    _canvas.fillRect(x2,y2,w2,h2);
+                    n++;
+                }
+                _canvas.restore();
+            }
+            function random(min, max) {
+                return Math.floor(Math.random() * (max - min + 1) ) + min;
+            }
+            function randomFromSeed(min,max,seed) {
+                return Math.floor(rndFromSeed(seed%985) * (max - min + 1) ) + min;
+            }
+            function directionToPoint(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distanceTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function distanceToMovePoint(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function textBox(x,y,w,h,margin,lineWidth,color1,color2,text) {
+                _canvas.fillStyle = color1;
+                _canvas.fillRect(x,y,w,h);
+                _canvas.strokeStyle = color2;
+                _canvas.strokeRect(x,y,w,h);
+                _canvas.fillStyle = color2;
+                var y2 = y+margin;
+                var x2 = x+margin;
+                var t = '';
+                var lineBreaks = [];
+                while(text.indexOf('/n')!=-1) {
+                    var i = text.indexOf('/n');
+                    var str1 = text.slice(0,i);
+                    var str2 = text.slice(i+2);
+                    lineBreaks.push(i);
+                    text = str1+" "+str2;
+                }
+                var n = 0;
+                while(n < text.length) {
+                    t += text[n];
+                    if(_canvas.measureText(t+text[n+1]).width>w-margin*2||lineBreaks.indexOf(n)!=-1||n==text.length-1) {
+                        while(t[0]==' ') {
+                            t = t.split('');
+                            t.shift();
+                            t = t.join('');
+                        }
+                        _canvas.fillText(t,x2,y2);
+                        y2+=lineWidth;
+                        t = '';
+                    }
+                    n++;
+                }
+            }
+            function playGame() {
+                if(_mouse.isLocked()) {
+                    game.update();
+                    player.update();
+                }
+                game.draw();
+                player.draw();
+                if(!_mouse.isLocked()) {
+                    _canvas.fillStyle = 'rgba(0,0,0,0.5)';
+                    _canvas.fillRect(0,0,1000,500);
+                    _canvas.fillStyle = 'white';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 4;
+                    _canvas.fillRect(300,50,400,400);
+                    _canvas.strokeRect(300,50,400,400);
+                    _canvas.fillStyle = 'black';
+                    _canvas.textBaseline = 'top';
+                    _canvas.textAlign = 'center';
+                    _canvas.font = "60px Times New Roman";
+                    _canvas.fillText("Paused",500,60);
+                    _canvas.beginPath();
+                    _canvas.moveTo(400,120);
+                    _canvas.lineTo(600,120);
+                    _canvas.stroke();
+                    
+                }
+            }
+            function drawCursor(x,y,w,h,smooth) {
+                if(smooth) {
+                    _canvas.imageSmoothingEnabled = true;
+                }
+                _canvas.drawImage(imgs[0],x,y,w*12,h*19);
+                _canvas.imageSmoothingEnabled = false;
+            }
+            function save() {
+                var d = {};
+                d.tutorial = tutorial;
+                d.game = game;
+                d.player = player;
+                localStorage.setItem('legendsofmousedata',d);
+                data = d;
+            }
+            function drawItem(x,y,size,item) {
+                if(item.type=='bronzeCoin') {
+                    _canvas.fillStyle = 'rgb(80,50,20)';
+                    _canvas.fillRect(x-2*size,y-2*size,4*size,4*size);
+                }
+                if(item.type=='silverCoin') {
+                    _canvas.fillStyle = 'rgb(192,192,192)';
+                    _canvas.fillRect(x-3*size,y-3*size,6*size,6*size);
+                }
+                if(item.type=='goldCoin') {
+                    _canvas.fillStyle = 'rgb(255,223,0)';
+                    _canvas.fillRect(x-4*size,y-4*size,8*size,8*size);
+                }
+            }
+            var game = {
+                x: 0,
+                y: 0,
+                level: {},
+                addItem: function(arr) {
+                    var arr2 = JSON.parse(JSON.stringify(arr));
+                    if(!arr2.xmove) {
+                        arr2.xmove = 0;
+                    }
+                    if(!arr2.ymove) {
+                        arr2.ymove = 0;
+                    }
+                    this.level.items.push(arr2);
+                },
+                update: function() {try{
+                    if(Object.keys(this.level).length==0) {
+                        this.level = findLevel(this.x,this.y);
+                    }
+                    var n = 0;
+                    while(n < this.level.items.length) {
+                        var i = this.level.items[n];
+                        if(!i.xmove) {
+                            i.xmove = 0;
+                        }
+                        if(!i.ymove) {
+                            i.ymove = 0;
+                        }
+                        var distance = distanceTo(0,0,i.xmove,i.ymove);
+                        var direction = directionToPoint(0,0,i.xmove,i.ymove);
+                        if(distance>0) {
+                            distance-=0.05;
+                            if(distance<0.05) {
+                                distance = 0;
+                            }
+                        }
+                        if(distance<0) {
+                            distance+=0.05;
+                            if(distance>-0.05) {
+                                distance = 0;
+                            }
+                        }
+                        var move = distanceToMovePoint(distance,direction);
+                        i.xmove = move[0];
+                        i.ymove = move[1];
+                        i.x += i.xmove;
+                        i.y += i.ymove;
+                        if(this.touchingType('block',[[i.x,i.y],[i.x+i.xmove,i.y+i.ymove]])!==false) {
+                            i.xmove*=-1;
+                            i.ymove*=-1;
+                        }
+                        if(i.x<0) {
+                            var level = findLevel(game.x-1,game.y);
+                            if(level) {
+                                i.x = 1000;
+                                level.items.push(JSON.parse(JSON.stringify(i)));
+                                this.level.items.splice(n,1);
+                                n--;
+                            } else {
+                                i.x = 0;
+                            }
+                        }
+                        if(i.x>1000) {
+                            var level = findLevel(game.x+1,game.y);
+                            if(level) {
+                                i.x = 0;
+                                level.items.push(JSON.parse(JSON.stringify(i)));
+                                this.level.items.splice(n,1);
+                                n--;
+                            } else {
+                                i.x = 1000;
+                            }
+                        }
+                        if(i.y<70) {
+                            var level = findLevel(game.x,game.y-1);
+                            if(level) {
+                                i.y = 500;
+                                level.items.push(JSON.parse(JSON.stringify(i)));
+                                this.level.items.splice(n,1);
+                                n--;
+                            } else {
+                                i.y = 70;
+                            }
+                        }
+                        if(i.y>500) {
+                            var level = findLevel(game.x,game.y+1);
+                            if(level) {
+                                i.y = 70;
+                                level.items.push(JSON.parse(JSON.stringify(i)));
+                                this.level.items.splice(n,1);
+                                n--;
+                            } else {
+                                i.y = 500;
+                            }
+                        }
+                        n++;
+                    }
+                    player.nextToItem = false;
+                    var n = 0;
+                    while(n < this.level.items.length) {
+                        if(distanceTo(this.level.items[n].x,this.level.items[n].y,player.x,player.y)<40&&!player.nextToItem) {
+                            player.nextToItem = true;
+                            if(keys[81]) {
+                                player.pickup += 2;
+                                if(player.pickup>=30) {
+                                    player.pickup = 0;
+                                    if(player.inventory[player.inventorySelect]) {
+                                        player.inventory[player.inventorySelect].x = this.level.items[n].x;
+                                        player.inventory[player.inventorySelect].y = this.level.items[n].y;
+                                        this.addItem(player.inventory[player.inventorySelect]);
+                                    }
+                                    player.inventory[player.inventorySelect] = JSON.parse(JSON.stringify(this.level.items[n]));
+                                    this.level.items.splice(n,1);
+                                }
+                            }
+                        }
+                        n++;
+                    }
+                    if(!player.nextToItem&&keys[81]&&player.inventory[player.inventorySelect]) {
+                        player.pickup += 2;
+                    }
+                    if(!player.nextToItem&&player.pickup>0&&player.inventory[player.inventorySelect]) {
+                        if(player.pickup>=30) {
+                            player.pickup = 0;
+                            var p = rotate(player.x,player.y,player.x,player.y-20,-player.direction);
+                            player.inventory[player.inventorySelect].x = p[0];
+                            player.inventory[player.inventorySelect].y = p[1];
+                            this.addItem(player.inventory[player.inventorySelect]);
+                            player.inventory[player.inventorySelect] = undefined;
+                        }
+                    }
+                }catch(err){window.alert('Game Update: '+err.message)}},
+                touchingType: function(type,poly) {
+                    var response = false;
+                    var n = 0;
+                    while(n < this.level.blocks.length) {
+                        if(this.level.blocks[n].type==type&&geometric.polygonIntersectsPolygon(this.level.blocks[n].points,poly)) {
+                            response = n;
+                        }
+                        n++;
+                    }
+                    return response;
+                },
+                draw: function() {try{
+                    if(this.level.bgc) {
+                        _canvas.fillStyle = this.level.bgc;
+                        _canvas.fillRect(0,70,1000,430);
+                    }
+                    var n = 0;
+                    while(n < this.level.blocks.length) {
+                        this.drawBlock(this.level.blocks[n]);
+                        n++;
+                    }
+                    player.nextToItem = false;
+                    n = 0;
+                    while(n < this.level.items.length) {
+                        drawItem(this.level.items[n].x,this.level.items[n].y,1,this.level.items[n]);
+                        if(distanceTo(this.level.items[n].x,this.level.items[n].y,player.x,player.y)<40&&!player.nextToItem) {
+                            player.nextToItem = true;
+                            _canvas.lineWidth = 3;
+                            _canvas.font = "12px Times New Roman";
+                            _canvas.textBaseline = 'top';
+                            _canvas.fillStyle = 'rgb(255,255,255)';
+                            _canvas.fillRect(this.level.items[n].x-60,this.level.items[n].y-50,120,30);
+                            _canvas.fillStyle = 'rgb(0,255,0)';
+                            _canvas.fillRect(this.level.items[n].x-60,this.level.items[n].y-50,120*player.pickup/30,30);
+                            textBox(this.level.items[n].x-60,this.level.items[n].y-50,120,30,10,23,'rgba(0,0,0,0)','black','Hold Q to Pick Up');
+                        }
+                        n++;
+                    }
+                    if(!player.nextToItem&&player.pickup>0&&player.inventory[player.inventorySelect]) {
+                        _canvas.lineWidth = 3;
+                        _canvas.font = "12px Times New Roman";
+                        _canvas.textBaseline = 'top';
+                        _canvas.fillStyle = 'rgb(255,255,255)';
+                        _canvas.fillRect(player.x-55,player.y-50,110,30);
+                        _canvas.fillStyle = 'rgb(0,255,0)';
+                        _canvas.fillRect(player.x-55,player.y-50,110*player.pickup/30,30);
+                        textBox(player.x-55,player.y-50,110,30,10,23,'rgba(0,0,0,0)','black','Hold Q to Drop');
+                    }
+                }catch(err){window.alert('Draw Game: '+err.message);}},
+                drawBlock: function(block) {
+                    if(!block.hidden) {
+                        if(block.type=='block') {
+                            _canvas.beginPath();
+                            _canvas.moveTo(block.points[0][0],block.points[0][1]);
+                            var n = 1;
+                            while(n < block.points.length) {
+                                _canvas.lineTo(block.points[n][0],block.points[n][1]);
+                                n++;
+                            }
+                            _canvas.fillStyle = 'black';
+                            if(block.color) {
+                                _canvas.fillStyle = block.color;
+                            }
+                            _canvas.fill();
+                        }
+                        if(block.type=='image') {
+                            _canvas.drawImage(imgs[block.img],block.x,block.y,block.w,block.h);
+                        }
+                    }
+                }
+            };
+            var player = {
+                throw: 0,
+                nextToItem: false,
+                x: 500,
+                y: 250,
+                xmove: 0,
+                ymove: 0,
+                direction: 0,
+                pickup: 0,
+                moveTimeout: 0,
+                update: function() {
+                    if(keys[87]&&this.inventory[this.inventorySelect]) {
+                        this.throw += 2;
+                    }
+                    if(this.throw>0) {
+                        this.throw -= 1;
+                        if(!this.inventory[this.inventorySelect]) {
+                            this.throw = 0;
+                        }
+                    }
+                    if(this.pickup>0) {
+                        this.pickup -= 1;
+                    }
+                    if(this.throw>30) {
+                        this.throw = 0;
+                        var d = distanceToMovePoint(5,this.direction);
+                        var i = this.inventory[this.inventorySelect];
+                        i.x = this.x;
+                        i.y = this.y;
+                        i.xmove = d[0];
+                        i.ymove = d[1];
+                        game.addItem(i);
+                        this.inventory[this.inventorySelect] = undefined;
+                    }
+                    var n = 0;
+                    while(n < 9) {
+                        if(keys[49+n]&&n<this.inventoryAmount) {
+                            this.inventorySelect = n;
+                        }
+                        n++;
+                    }
+                    if(this.pickup==0&&this.throw==0) {
+                        this.xmove = _mouse.movex;
+                        this.ymove = _mouse.movey;
+                    } else {
+                        this.xmove = 0;
+                        this.ymove = 0;
+                    }
+                    if(distanceTo(0,0,this.xmove,this.ymove)) {
+                        this.direction = directionToPoint(0,0,this.xmove,this.ymove);
+                    }
+                    this.x+=this.xmove;
+                    this.y+=this.ymove;
+                    var n = 0;
+                    while(game.touchingType('block',[[this.x-this.xmove*(10-n)/10,this.y-this.ymove*(10-n)/10],[this.x,this.y]])!==false) {
+                        this.x-=this.xmove/10;
+                        this.y-=this.ymove/10;
+                        n++;
+                    }
+                    if(this.x < 0) {
+                        if(findLevel(game.x-1,game.y)) {
+                            game.level = findLevel(game.x-1,game.y);
+                            this.x = 1000;
+                            game.x--;
+                        } else {
+                            this.x = 0;
+                        }
+                    }
+                    if(this.x > 1000) {
+                        if(findLevel(game.x+1,game.y)) {
+                            game.level = findLevel(game.x+1,game.y);
+                            this.x = 0;
+                            game.x++;
+                        } else {
+                            this.x = 1000;
+                        }
+                    }
+                    if(this.y < 70) {
+                        if(findLevel(game.x,game.y-1)) {
+                            game.level = findLevel(game.x,game.y-1);
+                            this.y = 500;
+                            game.y--;
+                        } else {
+                            this.y = 70;
+                        }
+                    }
+                    if(this.y > 500) {
+                        if(findLevel(game.x,game.y+1)) {
+                            game.level = findLevel(game.x,game.y+1);
+                            this.y = 70;
+                            game.y++;
+                        } else {
+                            this.y = 500;
+                        }
+                    }
+                },
+                draw: function() {
+                    if(this.inventory[this.inventorySelect]) {
+                        var p = rotate(this.x,this.y,this.x,this.y-20,-this.direction);
+                        drawItem(p[0],p[1],1,this.inventory[this.inventorySelect]);
+                    }
+                    drawCursor(this.x-6,this.y-9.5,1,1,1);
+                    if(this.throw>0) {
+                        _canvas.lineWidth = 3;
+                        _canvas.font = "12px Times New Roman";
+                        _canvas.textBaseline = 'top';
+                        _canvas.fillStyle = 'rgb(255,255,255)';
+                        _canvas.fillRect(this.x-55,this.y-50,110,30);
+                        _canvas.fillStyle = 'rgb(0,255,0)';
+                        _canvas.fillRect(this.x-55,this.y-50,110*this.throw/30,30);
+                        textBox(this.x-55,this.y-50,110,30,10,23,'rgba(0,0,0,0)','black','Hold W to Throw');
+                    }
+                    _canvas.fillStyle = 'white';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(0,0,1000,70);
+                    _canvas.strokeRect(-3,-3,1006,73);
+                    var n = 0;
+                    while(n < this.inventoryAmount) {
+                        if(this.inventory[n]) {
+                            drawItem(n*60+35,35,2,this.inventory[n]);
+                        }
+                        _canvas.lineWidth = 3;
+                        _canvas.strokeStyle = 'black';
+                        if(this.inventorySelect==n) {
+                            _canvas.strokeStyle = 'blue';
+                        }
+                        _canvas.strokeRect(n*60+10,10,50,50);
+                        n++;
+                    }
+                },
+                inventory: [{type:'bronzeCoin'},{type:'silverCoin'},{type:'goldCoin'}],
+                inventoryAmount: 3,
+                inventorySelect: 0
+            };
+            var page = 'titlescreen';
+            var time = 0;
+            var tutorial = true;
+            var data = localStorage.getItem('legendsofmousedata');
+            if(data) {
+                tutorial = data.tutorial;
+                game = data.game;
+                player = data.player;
+            } else {
+                save();
+            }
+            function findLevel(x,y) {
+                var response = false;
+                var n = 0;
+                while(n < levels.length) {
+                    if(levels[n].x==x&&levels[n].y==y) {
+                        response = levels[n];
+                    }
+                    n++;
+                }
+                return response;
+            }
+            var levels = [{bgc:'rgb(50,255,50)',x:0,y:0,blocks:[{points:[[100,100],[200,200],[100,200],[100,100]],type:'block'}],items:[{x:700,y:250,type:'goldCoin'}]},{x:0,y:-1,blocks:[{points:[[300,100],[200,200],[100,200],[100,100]],type:'block'}],items:[]}];
+        </script>
+    </body>
+</html>

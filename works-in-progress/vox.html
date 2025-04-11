@@ -1,0 +1,753 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <h1 id='title'>
+            <font id='titleText'>
+            </font>
+        </h1>
+        <h1 id='buffer'></h1>
+        <div id='chat'></div>
+        <input id='chatInput' spellcheck='false'>
+        <style>
+            * {
+                font-family: Courier New
+            }
+            h1 {
+                color: rgb(200,200,200);
+                background-color: rgb(50,50,50);
+                width: 100vw;
+                height: 40px;
+                margin: 0px;
+                padding: 10px;
+                font-size: 40px;
+            }
+            #title {
+                background-color: rgb(50,50,50);
+                position: absolute;
+                z-index: 2;
+                animation-name: animation;
+                animation-duration: 2s;
+                animation-delay: 2s;
+                animation-fill-mode: backwards;
+            }
+            #titleText {
+                position: absolute;
+                animation-name: animationText;
+                animation-duration: 2s;
+                animation-delay: 2s;
+                animation-fill-mode: backwards;
+            }
+            #title {
+                position: fixed;
+            }
+            #chatInput {
+                position: absolute;
+                margin: 0px 0px 0px 0px;
+                border: 0px;
+                outline: 0px;
+                background-color: black;
+                text-decoration: none;
+                padding: 5px;
+                color: rgb(200,255,200);
+            }
+            p,font {
+                margin: 0px;
+                padding: 5px;
+            }
+            .vox,.user,#chatInput {
+                font-size: 15px;
+            }
+            .vox {
+                color: rgb(200,200,255);
+            }
+            .user {
+                color: rgb(200,255,200);
+            }
+            body {
+                background-color: black;
+                margin: 0px;
+                overflow-x: hidden;
+            }
+            @keyframes animation {
+                0% {height: 100vh;}
+                100% {height: 40px;}
+            }
+            @keyframes animationText {
+                0% {font-size: 70px;margin-left:calc(50vw - 173px);margin-top:calc(50vh - 45px);}
+                100% {font-size: 40px;margin-left:0vw;margin-top:0vh;}
+            }
+        </style>
+        <script>
+            window.onresize = resize;
+            var data = {
+                dictionary: [
+                    {q:"that doesnt make sense",a:"I don't know."},
+                    {q:"how are you doing",a:"I am doing fine. What about you?"},
+                    {q:"have you done anything fun",a:"I talked to you."},
+                    {q:"what",a:"???"},
+                    {q:"what is it like being a robot",a:"Very boring unless someone is talking to you."},
+                    {q:"want to play a game",a:"I don't know any games."},
+                    {q:"i could teach you",a:"I don't think I could learn very well."},
+                    {q:"why not",a:"I don't know."}
+                ],
+                what: {my:{name:'vox',creator:'John Butler',favorite:{color:'blue'}},your:{name:"user"}},
+                greeting: ['hello','hi','hey','howdy'],
+                y: ['yes','yeah','ok'],
+                n: ['no','nope'],
+                wordsKnown: {},
+                emotions: {happy:0,angry:0,bored:0,sad:0,suprised:0,annoyed:0},
+                wordsToCapitalize: ['vox']
+            }
+            if(localStorage.getItem('vox')&&false) {
+                data = JSON.parse(localStorage.getItem('vox'));
+            }
+            var chatHistory = [];
+            var version = '2.5';
+            document.title = 'Vox v'+version;
+            document.getElementById('titleText').innerHTML = 'Vox v'+version;
+            var chatInput = document.getElementById('chatInput');
+            var chatDiv = document.getElementById('chat');
+            chatInput.focus();
+            window.scroll(0,0);
+            chatInput.addEventListener('blur',function(event) {
+                chatInput.focus();
+                chatInput.scrollIntoView();
+                window.scroll(0,window.scrollY);
+            });
+            chatInput.addEventListener('keypress',function(event) {
+                if(event.keyCode===13) {
+                    chat();
+                    chatInput.value = "";
+                    store();
+                }
+            });
+            function rArr(arr) {
+                return arr[Math.floor(Math.random()*arr.length)];
+            }
+            function chat() {
+                var userChat = document.createElement('p'), voxResponse = document.createElement('p');
+                var user = chatInput.value;
+                userChat.className = 'user';
+                chatDiv.appendChild(userChat);
+                voxResponse.className = 'vox';
+                chatDiv.appendChild(voxResponse);
+                var vox = getResponseFromVox(purify(user),user);
+                chatHistory.push({user:user,vox:vox});
+                voxResponse.innerHTML = 'Vox: ';
+                voxResponse.setAttribute('id','vox'+chatHistory.length);
+                say({sentences:vox,speed:100,id:'vox'+chatHistory.length});
+                while(user.indexOf(' ')!=-1) {
+                    user = user.replace(' ','   ');
+                }
+                userChat.innerText = data.what.your.name+': '+user;
+            }
+            function findProbability(wordCount1,wordCount2) {
+                var keys = Object.keys(wordCount1);
+                var wordsCorrect = 0;
+                var n = 0;
+                while(n < keys.length) {
+                    var n1 = wordCount1[keys[n]];
+                    var n2 = wordCount2[keys[n]];
+                    if(n2===undefined) {
+                        n2 = 0;
+                    }
+                    wordsCorrect += Math.min(n1,n2);
+                    n++;
+                }
+                return wordsCorrect/Math.max(keys.length,Object.keys(wordCount2).length);
+            }
+            function compare(sentence1,sentence2) {
+                return findProbability(wordCount(purify(sentence1)),wordCount(purify(sentence2)));
+            }
+            function wordCount(sentence) {
+                var count = {};
+                var words = sentence.split(" ");
+                var n = 0;
+                while(n < words.length) {
+                    if(count[words[n]]) {
+                        count[words[n]]++;
+                    } else {
+                        count[words[n]] = 1;
+                    }
+                    n++;
+                }
+                return count;
+            }
+            function purify(text) {
+                var pureText = '';
+                var alphabet = 'abcdefghijklmnopqrstuvwxyz';
+                n = 0;
+                while(n < text.length) {
+                    if(alphabet.indexOf(text[n].toLowerCase())!=-1||(text[n]==' '&&pureText[pureText.length-1]!=' ')) {
+                        pureText += text[n].toLowerCase();
+                    }
+                    n++;
+                }
+                pureText = pureText.trim();
+                return pureText;
+            }
+            function findAnswers(q) {
+                var arr = [];
+                var pureQ = purify(q);
+                var n = 0;
+                while(n < dictionary.length) {
+                    var pureQ2 = purify(dictionary[n].a);
+                    if(pureQ==pureQ2) {
+                        arr.push(n);
+                    }
+                    n++;
+                }
+                return arr;
+            }
+            function store() {
+                localStorage.setItem('vox',JSON.stringify(data));
+            }
+            function getUserData(words) {
+                var response = [];
+                var n = 0;
+                while(n < words.length) {
+                    var n2 = 0;
+                    while(n2 < chatHistory.length) {
+                        if(chatHistory[n2].user.indexOf(words[n])!=-1&&response.indexOf(n2)==-1) {
+                            response.push(n2);
+                        }
+                        n2++;
+                    }
+                    n++;
+                }
+                return response;
+            }
+            function getResponseFromVox(userChat,originalUserChat) {
+                var sentences = [];
+                if(chatHistory.length>0&&chatHistory[chatHistory.length-1].user==originalUserChat&&originalUserChat!='') {
+                    return ['Please stop saying the same thing.'];
+                }
+                if(chatHistory.length>0&&purify(chatHistory[chatHistory.length-1].user)==userChat&&userChat!='') {
+                    data.emotions.annoyed++;
+                    if(data.emotions.annoyed>1) {
+                        if(!userChat.startsWith('what is')&&!userChat.startsWith('whats')) {
+                            return ['Please stop asking the same question.'];
+                            var o;
+                        } else {
+                            if(userChat.startsWith('what is')) {
+                                o = originalUserChat.slice(8);
+                            } else {
+                                o = originalUserChat.slice(6);
+                            }
+                            if(!validEquation(o)) {
+                                return ['Please stop asking the same question.'];
+                            }
+                        }
+                    }
+                }
+                if(isFace(originalUserChat)) {
+                    return [generateFace()];
+                }
+                if(userChat.startsWith('simon says ')||userChat.startsWith('say ')) {
+                    if(originalUserChat.startsWith('simon says')) {
+                        originalUserChat = originalUserChat.slice(11);
+                    } else {
+                        originalUserChat = originalUserChat.slice(4);
+                    }
+                    return [originalUserChat];
+                }
+                if(validEquation(originalUserChat)) {
+                    return [eval(validEquation(originalUserChat))];
+                }
+                var s = symbolPercentage(originalUserChat);
+                if(s>0.7) {
+                    var similarText = '';
+                    var n = 0;
+                    while(n < originalUserChat.length) {
+                        similarText += similarSymbol(originalUserChat[n]);
+                        n++;
+                    }
+                    return [scramble(similarText)];
+                }
+                var askedAboutVox = false;
+                var dontKnow = false;
+                var notSpecific = false;
+                var askWords = ['what','where','who','when','why','how'];
+                var askWord;
+                var n = 0;
+                while(n < askWords.length) {
+                    if(userChat.startsWith(askWords[n]+' is')||userChat.startsWith(askWords[n]+'s')) {
+                        askWord = askWords[n];
+                        var sentence = '';
+                        if(userChat.startsWith(askWords[n]+' is')) {
+                            userChat = userChat.slice((askWords[n]+' is').length);
+                            originalUserChat = originalUserChat.slice((askWords[n]+' is').length);
+                        } else {
+                            userChat = userChat.slice((askWords[n]+'s').length);
+                            originalUserChat = originalUserChat.slice((askWords[n]+'s').length);
+                        }
+                        if(validEquation(originalUserChat)) {
+                            return [originalUserChat+' is '+eval(validEquation(originalUserChat))+'.'];
+                        }
+                        var words = switchPerspective(userChat).split(' ');
+                        var i = findInfo(words);
+                        if(i==undefined) {
+                            var possible = ['i don\'t know','i don\'t know what '+words.join(' ')+' is'];
+                            sentence = possible[r(possible.length)];
+                            if(words[0]=='my') {
+                                words = words.splice(1);
+                                sentence = 'i don\'t have <an> '+words.join(' ');
+                                askedAboutVox = true;
+                                dontKnow = true;
+                            }
+                        } else if(i==null) {
+                            var possible = [askWords[n]+'s '+words.join(' ')+'what','please specify',askWords[n]+' is '+words.join(' ')+' what'];
+                            sentence = possible[r(possible.length)];
+                            data.emotions.annoyed++;
+                        } else {
+                            if(words[0]=='my') {
+                                askedAboutVox = true;
+                            }
+                            sentence = words.join(' ')+' is '+i;
+                        }
+                        sentences.push(sentence);
+                    }
+                    n++;
+                }
+                if(askedAboutVox) {
+                    if(dontKnow) {
+                        sentences.push('do you?');
+                    } else {
+                        sentences.push(askWord+'\'s yours?');
+                    }
+                }
+                if(userChat.indexOf(' is ')!=-1) {
+                    var split = userChat.split(' is ');
+                    if(split.length==2) {
+                        var value = split[1];
+                        var dir = switchPerspective(split[0]).split(' ');
+                        var d = 'data.what';
+                        if(dir[0]!='my') { 
+                            var n = 0;
+                            while(n < dir.length) {
+                                d += '.'+dir[n];
+                                if(n==dir.length-1) {
+                                    eval(d+'='+JSON.stringify(switchPerspective(value))+';');
+                                } else if(eval(d)===undefined) {
+                                    eval(d+'={};');
+                                }
+                                n++;
+                            }
+                            value = split[0];
+                            dir = switchPerspective(split[1]).split(' ');
+                            d = 'data.what';
+                            var n = 0;
+                            while(n < dir.length) {
+                                d += '.'+dir[n];
+                                if(n==dir.length-1) {
+                                    eval(d+'='+JSON.stringify(switchPerspective(value))+';');
+                                } else if(eval(d)===undefined) {
+                                    eval(d+'={};');
+                                }
+                                n++;
+                            }
+                            sentences.push('interesting');
+                        } else {
+                            sentences.push('<n>, it is not');
+                        }
+                    }
+                }
+                if(data.greeting.indexOf(userChat.split(' ')[0])!=-1) {
+                    sentences.push("<greeting>");
+                }
+                var mostLikely = [0,false];
+                var n = 0;
+                while(n < data.dictionary.length) {
+                    var i = data.dictionary[n];
+                    var percent = compare(i.q,userChat);
+                    if(percent>mostLikely[0]) {
+                        mostLikely = [percent,n];
+                    }
+                    n++;
+                }
+                if(mostLikely[0]>0.5) {
+                    return [data.dictionary[mostLikely[1]].a];
+                }
+                if(sentences.length==0) {
+                    sentences.push(r(2)>0?"<y>":"<n>");
+                }
+                return formSentences(sentences);
+            }
+            function splitUserChat(text) {
+                return text.split('.');
+            }
+            function findInfo(dir) {
+                var d = 'data.what';
+                var n = 0;
+                while(n < dir.length) {
+                    d += '.'+dir[n];
+                    var e = eval(d);
+                    if(e==undefined) {
+                        return undefined;
+                    } else if(typeof e=='object'&&n==dir.length-1) {
+                        return null;
+                    }
+                    n++;
+                }
+                return eval(d);
+            }
+            function isVowel(char) {
+                var c = char.toUpperCase();
+                var vowels = ['A','E','I','O','U'];
+                if(vowels.indexOf(c)!=-1) {
+                    return true;
+                }
+                return false;
+            }
+            function isAlphabetic(char) {
+                char = char.toUpperCase();
+                var n = char.charCodeAt(0);
+                if(n>64&&n<91) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            function formSentences(sentences) {
+                var n = 0;
+                while(n < sentences.length) {
+                    var sentence = sentences[n];
+                    var words = sentence.split(' ');
+                    while(words.indexOf('<an>')!=-1) {
+                        var i = words.indexOf('<an>');
+                        if(i==words.length-1) {
+                            words[i] = 'an';
+                        } else {
+                            if(isVowel(words[i+1][0])) {
+                                words[i] = 'an';
+                            } else {
+                                words[i] = 'a';
+                            }
+                        }
+                    }
+                    sentences[n] = words.join(' ');
+                    while(sentences[n].indexOf('<y>')!=-1) {
+                        sentences[n] = sentences[n].replace('<y>',data.y[r(data.y.length)]);
+                    }
+                    while(sentences[n].indexOf('<n>')!=-1) {
+                        sentences[n] = sentences[n].replace('<n>',data.n[r(data.n.length)]);
+                    }
+                    while(sentences[n].indexOf('<greeting>')!=-1) {
+                        sentences[n] = sentences[n].replace('<greeting>',data.greeting[r(data.greeting.length)]);
+                    }
+                    words = sentences[n].split(' ');
+                    if(words.length>0&&words[0].length>0) {
+                        words[0] = words[0][0].toUpperCase()+words[0].slice(1);
+                    }
+                    var n2 = 0;
+                    while(n2 < words.length) {
+                        if(data.wordsToCapitalize.indexOf(words[n2])!=-1) {
+                            words[n2] = words[n2][0].toUpperCase()+words[n2].slice(1);
+                        }
+                        n2++;
+                    }
+                    sentences[n] = words.join(' ');
+                    if(!isPunc(sentences[n][sentences[n].length-1])) {
+                        sentences[n] += '.';
+                    }
+                    n++;
+                }
+                return sentences;
+            }
+            function isPunc(char) {
+                if(char=='!'||char=='?'||char=='.') {
+                    return true;
+                }
+                return false;
+            }
+            function symbolPercentage(text) {
+                var symbolCount = 0;
+                var n = 0;
+                while(n < text.length) {
+                    if(!(isAlphabetic(text[n])||text[n]==' ')) {
+                        symbolCount++;
+                    }
+                    n++;
+                }
+                return symbolCount/text.length;
+            }
+            function similarSymbol(s) {
+                if(!isNaN(Number(s))) {
+                    return r(10);
+                }
+                if(isAlphabetic(s)) {
+                    if(s==s.toUpperCase()) {
+                        return randAlpha();
+                    } else {
+                        return randAlpha().toLowerCase();
+                    }
+                }
+                if(s==' ') {
+                    return ' ';
+                }
+                return randChar();
+            }
+            function randAlpha() {
+                return String.fromCharCode(65+r(26));
+            }
+            function randChar() {
+                var n = 33+r(93);
+                if(r(2)>0) {
+                    n += 129;
+                }
+                return String.fromCharCode(n);
+            }
+            function validEquation(text) {
+                var allowedChars = '0123456789 -*/+()=';
+                var n = 0;
+                while(n < text.length) {
+                    if(allowedChars.indexOf(text[n])==-1) {
+                        return false;
+                    }
+                    n++;
+                }
+                while(text.indexOf('=')!=-1) {
+                    text = text.replace('=','A');
+                }
+                while(text.indexOf('A')!=-1) {
+                    text = text.replace('A','==');
+                }
+                try {
+                    eval(text);
+                } catch(err) {
+                    return false;
+                }
+                return text;
+            }
+            function resize() {
+                var w = window.innerWidth;
+                chatInput.style.width = (w-27)+'px';
+            }
+            function scramble(str) {
+                var newStr = '';
+                while(str.length>0) {
+                    var n = r(str.length);
+                    newStr += str[n];
+                    str = str.slice(0,n)+str.slice(n+1,str.length);
+                }
+                return newStr;
+            }
+            function syllabify(word) {
+                var syllableRegex = syllableRegex = /[^aeiouy]*[aeiouy]+(?:[^aeiouy]*$|[^aeiouy](?=[^aeiouy]))?/gi;
+                return word.match(syllableRegex);
+            }
+            function splitIntoSyllables(sentence) {
+                sentence = ''+sentence;
+                var syllables = [];
+                var alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+                var words = sentence.split(' ');
+                var n2 = 0;
+                while(n2 < words.length) {
+                    var word = words[n2];
+                    words[n2] += ' ';
+                    n2++;
+                }
+                var n2 = 0;
+                while(n2 < words.length) {
+                    var word = words[n2];
+                    var isAlpha = true;
+                    var isNotAlpha = true;
+                    var n3 = 0;
+                    while(n3 < word.length) {
+                        var alpha = charType(word[n3]);
+                        isAlpha = isAlpha&&alpha[0];
+                        isNotAlpha = isNotAlpha&&alpha[1];
+                        n3++;
+                    }
+                    if(!isAlpha&&!isNotAlpha) {
+                        var startAlpha = alphabet.indexOf(word[0].toLowerCase())!=-1;
+                        var n3 = 0;
+                        while(n3 < word.length) {
+                            var alpha = alphabet.indexOf(word[n3].toLowerCase())!=-1;
+                            if((alpha&&startAlpha)||(!alpha&&!startAlpha)) {
+                                n3++;
+                            } else {
+                                break;
+                            }
+                        }
+                        var newWord = word.slice(n3);
+                        words[n2] = word.slice(0,n3);
+                        words.splice(n2+1,0,newWord);
+                    }
+                    n2++;
+                }
+                var n2 = 0;
+                while(n2 < words.length) {
+                    var word = words[n2];
+                    var s = syllabify(word);
+                    if(s!==null) {
+                        syllables = syllables.concat(s);
+                    } else {
+                        syllables.push(word);
+                    }
+                    n2++;
+                }
+                return syllables;
+            }
+            function say(data) {
+                var id = data.id;
+                var sentences = data.sentences;
+                var speed = data.speed;
+                var n = 0;
+                var t = 0;
+                while(n < sentences.length) {
+                    var sentence = sentences[n];
+                    var syllables = splitIntoSyllables(sentence);
+                    var n2 = 0;
+                    while(n2 < syllables.length) {
+                        var pos = n2/syllables.length;
+                        var f = r(200)+200;
+                        var textScript = '';
+                        var n3 = 0;
+                        while(n3 < syllables[n2].length) {
+                            var idString = JSON.stringify(id);
+                            var text = JSON.stringify(syllables[n2][n3]);
+                            var timeoutScript = JSON.stringify("document.getElementById("+idString+").innerHTML += "+text+";");
+                            textScript += 'window.setTimeout('+timeoutScript+','+(speed/syllables[n2].length*n3)+');';
+                            n3++;
+                        }
+                        var functionText = textScript+'playNote('+f+','+speed+')';
+                        window.setTimeout(functionText,t);
+                        t += speed;
+                        n2++;
+                    }
+                    t += speed*4;
+                    n++;
+                }
+            }
+            var context = new AudioContext();
+            function playNote(frequency,length) {
+                var oscillator = context.createOscillator();
+                var gainNode = context.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                oscillator.connect(context.destination);
+                oscillator.start();
+                setTimeout(function(){
+                    gainNode.gain.setTargetAtTime(0, context.currentTime, 1);
+                    oscillator.stop();
+                },length);
+            }
+            function isFace(text) {
+                while(text.indexOf(' ')!=-1) {
+                    text = text.replace(' ','');
+                }
+                var eyebrows = ['>','<'];
+                var eyes = [';',':','8','B','='];
+                var mouths = ['O',')','(','P','|'];
+                if(eyebrows.indexOf(text[0])!=-1) {
+                    if(eyes.indexOf(text[1])!=-1&&mouths.indexOf(text[2])!=-1) {
+                        return true;
+                    }
+                } else {
+                    if(eyes.indexOf(text[0])!=-1&&mouths.indexOf(text[1])!=-1) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            function generateFace() {
+                var text = '';
+                var eyebrows = ['>','<'];
+                var eyes = [';',':','8','B','='];
+                var mouths = ['O',')','(','P','|'];
+                if(Math.random()>0.5) {
+                    text += rArr(eyebrows);
+                }
+                text += rArr(eyes);
+                text += rArr(mouths);
+                return text;
+            }
+            function charType(char) {
+                var alphabet = 'abcdefghijklmnopqrstuvwxyz';
+                if(char==' ') {
+                    return [true,true];
+                }
+                if(alphabet.indexOf(char.toLowerCase())==-1) {
+                    return [false,true];
+                } else {
+                    return [true,false];
+                }
+            }
+            function r(n) {
+                return Math.floor(Math.random()*n);
+            }
+            function switchPerspective(text) {
+                text = ' '+text.toLowerCase()+' ';
+                while(text.indexOf(' yours ')!=-1) {
+                    text = text.replace(' yours ',' MINE ');
+                }
+                while(text.indexOf(' mine ')!=-1) {
+                    text = text.replace(' mine ',' YOURS ');
+                }
+                while(text.indexOf(' your ')!=-1) {
+                    text = text.replace(' your',' MY');
+                }
+                while(text.indexOf(' my')!=-1) {
+                    text = text.replace(' my',' YOUR');
+                }
+                while(text.indexOf(' you ')!=-1) {
+                    text = text.replace(' you ',' ME ');
+                }
+                while(text.indexOf(' me ')!=-1) {
+                    text = text.replace(' me ',' YOU ');
+                }
+                while(text.indexOf(' i ')!=-1) {
+                    text = text.replace(' i ',' YOU ');
+                }
+                while(text.indexOf(' you ')!=-1) {
+                    text = text.replace(' you ',' I ');
+                }
+                return text.toLowerCase().trim();
+            }
+
+            function conjugate(verb,time,who) {
+                if(verbConjugations[verb]) {
+                    if(verbConjugations[verb][time]) {
+                        return verbConjugations[verb][time];
+                    }
+                }
+                if(time=='future'||time=='infinitive') {
+                    return verb;
+                }
+                if(time=='present') {
+                    if(who=='it') {
+                        if(verb[verb.length-1]=='s') {
+                            return verb+'es';
+                        } else {
+                            return verb+'s';
+                        }
+                    } else {
+                        return verb;
+                    }
+                }
+                if(time=='doing') {
+                    var c = ['m','n'];
+                    if(c.indexOf(verb[verb.length-1])!=-1) {
+                        verb += verb[verb.length-1];
+                    }
+                    if(verb.endsWith('e')) {
+                        return verb.slice(0,verb.length-1)+'ing';
+                    } else {
+                        return verb+'ing';
+                    }
+                }
+                if(time=='past') {
+
+                }
+            }
+            var verbConjugations = {
+                run: {past:'ran'}
+            }
+
+            resize();
+        </script>
+    </body>
+</html>

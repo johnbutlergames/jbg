@@ -1,0 +1,916 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Chess';
+            var dimensions = {width:1000,height:500};
+            var imgs = ["images/chess-pieces.png"];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function roundRect(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x+r,y);
+                ctx.lineTo(x+w-r,y);
+                ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                ctx.lineTo(x+w,y+h-r);
+                ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                ctx.lineTo(x+r,y+h);
+                ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                ctx.lineTo(x,y+r);
+                ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                ctx.closePath();
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro-=2;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation++;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,20);
+
+            function main() {
+                if(page==='menu') {
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = '100px Arial';
+                    ctx.fillText("Chess",500,70);
+                    ctx.save();
+                    ctx.translate(300,50);
+                    ctx.rotate(-20*Math.PI/180);
+                    drawPiece(-50,-50,100,100,"W","K");
+                    ctx.restore();
+                    ctx.save();
+                    ctx.translate(700,60);
+                    ctx.rotate(20*Math.PI/180);
+                    drawPiece(-45,-45,90,90,"B","Q");
+                    ctx.restore();
+                    //title
+
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = 'black';
+                    ctx.font = '50px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillText("2 Player",500,180);
+                    roundRect(380,140,240,80,20);
+                    ctx.stroke();
+                    //buttons
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                    if(Mouse.inBox(380,140,240,80)) {
+                        roundRect(380,140,240,80,20);
+                        ctx.fill();
+                        if(Mouse.click) {
+                            game.mode = 2;
+                            game.reset();
+                            page = 'game';
+                        }
+                    }
+                    //button hovering
+                    
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('By John Butler',500,450);
+                    //credits
+                } else if(page==='game') {
+                    game.update();
+                }
+                t++;
+            }
+            function drawPiece(x,y,w,h,c,p) {
+                var pieceNames = ["K","Q","B","H","C","P"];
+                var pieceNum = pieceNames.indexOf(p);
+                if(p=='R') {
+                    pieceNum = 4;
+                }
+                if(p=='M') {
+                    pieceNum = 0;
+                }
+                if(p=='O') {
+                    pieceNum = 5;
+                }
+                var colorNum = c=="W"?0:1;
+                ctx.drawImage(imgs[0],200*pieceNum,200*colorNum,200,200,x,y,w,h);
+            }
+            function drawChessBoard(color1,color2,x,y,w,h,string,highlightColors,selectedData) {
+                var tileWidth = (w-x)/8;
+                var tileHeight = (h-y)/8;
+                var tileX = 0;
+                while(tileX < 8) {
+                    var tileY = 0;
+                    while(tileY < 8) {
+                        if((tileX+tileY)%2) {
+                            ctx.fillStyle = color1;
+                        } else {
+                            ctx.fillStyle = color2;
+                        }
+                        ctx.fillRect(tileX*tileWidth+x,tileY*tileHeight+y,tileWidth,tileHeight);
+                        tileY++;
+                    }
+                    tileX++;
+                }
+                //draw background
+
+                var tileX = 0;
+                var tileY = 0;
+                var n = 0;
+                while(n < string.length) {
+                    var currentChar = string.slice(n,n+2);
+                    if(isNaN(Number(currentChar))) {
+                        drawPiece(tileX*tileWidth+x,tileY*tileHeight+y,tileWidth,tileHeight,currentChar[0],currentChar[1]);
+                        tileX += 1;
+                        tileY += Math.floor(tileX/8);
+                        tileX%=8;
+                    } else {
+                        var number = Number(currentChar);
+                        tileX += number;
+                        tileY += Math.floor(tileX/8);
+                        tileX%=8;
+                    }
+                    n+=2;
+                }
+                //draw pieces
+
+                var tileX = 0;
+                var tileY = 0;
+                n = 0;
+                while(n < highlightColors.length) {
+                    var number = Number(highlightColors.slice(n,n+2));
+                    var color = highlightColors.slice(n,n+9);
+                    if(isNaN(number)) {
+                        ctx.fillStyle = color.slice(0,7);
+                        ctx.globalAlpha = parseInt("0x"+color.slice(7,9))/255;
+                        ctx.fillRect(tileX*tileWidth+x,tileY*tileHeight+y,tileWidth,tileHeight);
+                        ctx.globalAlpha = 1;
+                        tileX += 1;
+                        tileY += Math.floor(tileX/8);
+                        tileX%=8;
+                        n += 9;
+                    } else {
+                        tileX += number;
+                        tileY += Math.floor(tileX/8);
+                        tileX%=8;
+                        n += 2;
+                    }
+                }
+                //draw highlight
+
+                if(selectedData.selected) {
+                    ctx.setLineDash([10]);
+                    ctx.lineDashOffset = selectedData.offset;
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = selectedData.color;
+                    ctx.strokeRect(selectedData.x*tileWidth+x,selectedData.y*tileHeight+y,tileWidth,tileHeight);
+                    ctx.setLineDash([]);
+                }
+            }
+            function boardDataToString(data) {
+                var s = "";
+                var x = 0;
+                var number = 0;
+                while(x < data.length) {
+                    var y = 0;
+                    while(y < data.length) {
+                        if(data[x][y]) {
+                            if(number!=0) {
+                                var n = ""+number;
+                                if(n.length==1) {
+                                    n = "0"+n;
+                                }
+                                s += n;
+                                number = 0;
+                            }
+                            s += data[x][y];
+                        } else {
+                            number++;
+                        }
+                        y++;
+                    }
+                    x++;
+                }
+                return s;
+            }
+            function decodeBoardString(string) {
+                var b = [[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
+                var tileX = 0;
+                var tileY = 0;
+                var n = 0;
+                while(n < string.length) {
+                    var currentChar = string.slice(n,n+2);
+                    if(isNaN(Number(currentChar))) {
+                        b[tileY][tileX] = currentChar;
+                        tileX += 1;
+                        tileY += Math.floor(tileX/8);
+                        tileX%=8;
+                    } else {
+                        var number = Number(currentChar);
+                        tileX += number;
+                        tileY += Math.floor(tileX/8);
+                        tileX%=8;
+                    }
+                    n+=2;
+                }
+                return b;
+            }
+            var game = {
+                reset: function() {
+                    this.board = decodeBoardString("WCWHWBWQWKWBWHWCWPWPWPWPWPWPWPWP32BPBPBPBPBPBPBPBPBCBHBBBQBKBBBHBC");
+                    this.history = [];
+                    this.history.push(this.turn[0].toUpperCase()+boardDataToString(this.board));
+                },
+                history: [],
+                placeInHistory: 0,
+                board: [],
+                mode: "",
+                update: function() {
+                    var validMoves = decodeBoardString("");
+                    if(this.selected.selected) {
+                        validMoves = this.findLegalMoves(this.selected.x,this.selected.y);
+                    }
+                    var highlight = [];
+                    var x = 0;
+                    while(x < 8) {
+                        highlight.push([]);
+                        var y = 0;
+                        while(y < 8) {
+                            if(this.selected.selected&&validMoves[x][y]) {
+                                if(this.board[this.selected.y][this.selected.x][1]=='P'&&(x==0||x==7)) {
+                                    highlight[x].push("#AA00AA88");
+                                } else if(this.board[x][y]===0) {
+                                    highlight[x].push("#0000FF88");
+                                } else if(this.board[x][y][0].toLowerCase()===this.turn[0]) {
+                                    highlight[x].push("#AA00AA88");
+                                } else {
+                                    highlight[x].push("#FF000088");
+                                }
+                            } else {
+                                highlight[x].push(0);
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    highlight = boardDataToString(highlight);
+                    drawChessBoard("rgb(255,200,200)","rgb(220,160,140)",10,10,490,490,boardDataToString(this.board),highlight,{selected:this.selected.selected,offset:t,color:"black",x:this.selected.x,y:this.selected.y});
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(10,10,480,480);
+                    //draw game board
+
+                    var gameWon = false;
+                    if(this.findKing('b')===false) {
+                        gameWon = 'White';
+                    } else if(this.findKing('w')===false) {
+                        gameWon = 'Black';
+                    }
+
+                    var pawnPromotion = false;
+                    var pawns = this.findPieces(this.turn[0].toUpperCase()+'P');
+                    var n = 0;
+                    while(n < pawns.length) {
+                        if(pawns[n][0]==0||pawns[n][0]==7) {
+                            pawnPromotion = n;
+                            this.selected.y = pawns[n][0];
+                            this.selected.x = pawns[n][1];
+                        }
+                        n++;
+                    }
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = "50px Arial";
+                    var text = "White's Turn";
+                    if(this.turn==='black') {
+                        text = "Black's Turn";
+                    }
+                    if(gameWon) {
+                        text = gameWon+' Wins!';
+                    }
+                    ctx.fillText(text,750,50);
+                    //title
+
+                    ctx.beginPath();
+                    ctx.moveTo(505,80);
+                    ctx.lineTo(990,80);
+                    ctx.stroke();
+                    //lines
+
+                    if(Mouse.clickInBox(10,10,480,480)&&!gameWon&&pawnPromotion===false) {
+                        var y = Math.floor((Mouse.x-10)/60);
+                        var x = Math.floor((Mouse.y-10)/60);
+                        if(this.selected.selected) {
+                            if(this.selected.x===y&&this.selected.y===x) {
+                                this.selected.selected = false;
+                            } else if(validMoves[x][y]) {
+                                var pieceToMove = this.board[this.selected.y][this.selected.x];
+                                if((pieceToMove[1]=='K'&&this.board[x][y][1]=='C')||(pieceToMove[1]=='C'&&this.board[x][y][1]=='K')) {
+                                    if(pieceToMove[1]=='K'&&this.board[x][y][1]=='C') {
+                                        pieceToMove = pieceToMove[0]+'M';
+                                        this.board[x][y] = this.board[x][y][0]+'R';
+                                    } else {
+                                        pieceToMove = pieceToMove[0]+'R';
+                                        this.board[x][y] = this.board[x][y][0]+'M';
+                                        pieceToMove = this.board[x][y];
+                                        var x2 = x;
+                                        var y2 = y;
+                                        x = this.selected.y;
+                                        y = this.selected.x;
+                                        this.selected.y = x2;
+                                        this.selected.x = y2;
+                                    }
+                                    if(y>this.selected.x) {
+                                        game.board[x][y-2] = this.board[x][y];
+                                        game.board[x][y-1] = pieceToMove;
+                                        console.log('right');
+                                    } else {
+                                        game.board[x][y+3] = this.board[x][y];
+                                        game.board[x][y+2] = pieceToMove;
+                                        console.log('left');
+                                    }
+                                    this.board[this.selected.y][this.selected.x] = 0;
+                                    this.board[x][y] = 0;
+                                } else {
+                                    if(pieceToMove[1]=='C') {
+                                        pieceToMove = pieceToMove[0]+'R';
+                                    }
+                                    if(pieceToMove[1]=='K') {
+                                        pieceToMove = pieceToMove[0]+'M';
+                                    }
+                                    if(pieceToMove[1]=='P'&&Math.abs(x-this.selected.y)>1) {
+                                        pieceToMove = pieceToMove[0]+'O';
+                                    }
+                                    this.board[x][y] = pieceToMove;
+                                    this.board[this.selected.y][this.selected.x] = 0;
+                                }
+                                this.selected.selected = false;
+                                this.selected.x = y;
+                                this.selected.y = x;
+                                if(this.board[x][y][1]!='P'||(x!=0&&x!=7)) {
+                                    if(this.turn==='white') {
+                                        this.turn = 'black';
+                                    } else {
+                                        this.turn = 'white';
+                                    }
+                                }
+                                var pawns = this.findPieces(this.turn[0].toUpperCase()+'O');
+                                var n = 0;
+                                while(n < pawns.length) {
+                                    this.board[pawns[n][0]][pawns[n][1]] = this.turn[0].toUpperCase()+'P';
+                                    n++;
+                                }
+                                this.history.push(this.turn[0].toUpperCase()+boardDataToString(this.board));
+                            } else if(this.board[x][y]&&this.board[x][y][0].toLowerCase()===this.turn[0]) {
+                                this.selected.x = y;
+                                this.selected.y = x;
+                            } else {
+                                this.selected.selected = false;
+                            }
+                        } else if(this.board[x][y]&&this.board[x][y][0].toLowerCase()===this.turn[0]) {
+                            this.selected.selected = true;
+                            this.selected.x = y;
+                            this.selected.y = x;
+                        }
+                    } else if(pawnPromotion!==false&&gameWon===false) {
+                        this.selected.selected = true;
+                        ctx.font = '30px Arial';
+                        ctx.fillText('Select Pawn Promotion:',750,120);
+                        var types = ['Q','R','B','H'];
+                        var n = 0;
+                        while(n < 4) {
+                            ctx.lineWidth = 4;
+                            ctx.strokeRect(535+n*110,150,90,90);
+                            drawPiece(535+n*110,150,90,90,this.turn[0].toUpperCase(),types[n]);
+                            if(Mouse.inBox(535+n*110,150,90,90)) {
+                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                                ctx.fillRect(535+n*110,150,90,90);
+                                if(Mouse.click) {
+                                    this.board[this.selected.y][this.selected.x] = this.board[this.selected.y][this.selected.x][0]+types[n];
+                                    this.selected.selected = false;
+                                    if(this.turn==='white') {
+                                        this.turn = 'black';
+                                    } else {
+                                        this.turn = 'white';
+                                    }
+                                    this.history.push(this.turn[0].toUpperCase()+boardDataToString(this.board));
+                                }
+                            }
+                            n++;
+                        }
+                    }
+                    //clicking
+
+                    roundRect(520,390,100,100,20);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(570,440,35,-90*Math.PI/180,180*Math.PI/180);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(570,405);
+                    ctx.lineTo(590,400);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(570,405);
+                    ctx.lineTo(585,420);
+                    ctx.stroke();
+                    if(Mouse.inBox(520,390,100,100)&&this.history.length>1) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        roundRect(520,390,100,100,20);
+                        ctx.fill();
+                        if(Mouse.click) {
+                            var lastMove = this.history[this.history.length-2];
+                            if(lastMove[0]=='B') {
+                                this.turn = 'black';
+                            } else {
+                                this.turn = 'white';
+                            }
+                            this.board = decodeBoardString(lastMove.slice(1));
+                            this.history.pop();
+                            this.selected.selected = false;
+                        }
+                    }
+                    //undo button
+
+                    roundRect(650,390,100,100,20);
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.font = '30px Arial';
+                    ctx.fillText("Back",700,440);
+                    if(Mouse.inBox(650,390,100,100)) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        roundRect(650,390,100,100,20);
+                        ctx.fill();
+                        if(Mouse.click) {
+                            page = 'menu';
+                        }
+                    }
+                    //back button
+                },
+                selected: {selected:false,x:0,y:0},
+                turn: "white",
+                isSpotToMoveLegal: function(x,y,c) {
+                    if(this.board[x][y]===0||this.board[x][y][0].toLowerCase()!==c) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                },
+                isSpotInBoard: function(x,y) {
+                    if(x>=0&&x<8&&y>=0&&y<8) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                },
+                findKing: function(color) {
+                    var x = 0;
+                    while(x < this.board.length) {
+                        var y = 0;
+                        while(y < this.board.length) {
+                            if(this.board[x][y]&&this.board[x][y][0].toLowerCase()==color&&(this.board[x][y][1]=='K'||this.board[x][y][1]=='M')) {
+                                return [x,y];
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    return false;
+                },
+                findPieces: function(piece) {
+                    var arr = [];
+                    var x = 0;
+                    while(x < this.board.length) {
+                        var y = 0;
+                        while(y < this.board[x].length) {
+                            if(this.board[x][y]===piece) {
+                                arr.push([x,y]);
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    return arr;
+                },
+                findLegalMoves: function(x,y) {
+                    var moves = decodeBoardString("");
+                    var color = this.board[y][x][0].toLowerCase();
+                    var piece = this.board[y][x][1];
+                    var p = this.board[y][x][1];
+                    if(piece=='R') {
+                        piece = 'C';
+                    }
+                    if(piece=='M') {
+                        piece = 'K';
+                    }
+                    if(piece=='O') {
+                        piece = 'P';
+                    }
+                    switch(piece) {
+                        case "P":
+                            var directionToMove = -1;
+                            if(color=='w') {
+                                directionToMove = 1;
+                            }
+                            if(this.isSpotInBoard(x,y+directionToMove)&&this.board[y+directionToMove][x]===0) {
+                                moves[y+directionToMove][x] = 1;
+                                if((directionToMove===-1&&y===6)||(directionToMove===1&&y===1)) {
+                                    if(this.board[y+directionToMove*2][x]===0) {
+                                        moves[y+directionToMove*2][x] = 1;
+                                    }
+                                }
+                            }
+                            if(this.isSpotInBoard(x+1,y+directionToMove)&&this.board[y+directionToMove][x+1]) {
+                                moves[y+directionToMove][x+1] = 1;
+                            }
+                            if(this.isSpotInBoard(x-1,y+directionToMove)&&this.board[y+directionToMove][x-1]) {
+                                moves[y+directionToMove][x-1] = 1;
+                            }
+                            var otherTeam = this.turn=='white'?'B':'W';
+                            var otherPawns = this.findPieces(otherTeam+'O');
+                            var n = 0;
+                            while(n < otherPawns.length) {
+                                if(otherPawns[n][0]==y&&Math.abs(otherPawns[n][1]-x)==1) {
+                                    moves[y+directionToMove][otherPawns[n][1]] = 1;
+                                }
+                                n++;
+                            }
+                            break;
+                        case "H":
+                            if(this.isSpotInBoard(x-1,y-2)) {
+                                moves[y-2][x-1] = 1;
+                            }
+                            if(this.isSpotInBoard(x+1,y-2)) {
+                                moves[y-2][x+1] = 1;
+                            }
+                            if(this.isSpotInBoard(x-1,y+2)) {
+                                moves[y+2][x-1] = 1;
+                            }
+                            if(this.isSpotInBoard(x+1,y+2)) {
+                                moves[y+2][x+1] = 1;
+                            }
+                            if(this.isSpotInBoard(x-2,y-1)) {
+                                moves[y-1][x-2] = 1;
+                            }
+                            if(this.isSpotInBoard(x+2,y-1)) {
+                                moves[y-1][x+2] = 1;
+                            }
+                            if(this.isSpotInBoard(x-2,y+1)) {
+                                moves[y+1][x-2] = 1;
+                            }
+                            if(this.isSpotInBoard(x+2,y+1)) {
+                                moves[y+1][x+2] = 1;
+                            }
+                            break;
+                        case "B":
+                            var xmove = -1;
+                            while(xmove < 2) {
+                                var ymove = -1;
+                                while(ymove < 2) {
+                                    var n = 1;
+                                    while(true) {
+                                        if(!this.isSpotInBoard(x+xmove*n,y+ymove*n)) {
+                                            break;
+                                        }
+                                        if(this.board[y+ymove*n][x+xmove*n]) {
+                                            if(this.board[y+ymove*n][x+xmove*n][0].toLowerCase()===this.turn[0]) {
+                                                break;
+                                            } else {
+                                                moves[y+ymove*n][x+xmove*n] = 1;
+                                                break;
+                                            }
+                                        } else {
+                                            moves[y+ymove*n][x+xmove*n] = 1;
+                                        }
+                                        n++;
+                                    }
+                                    ymove+=2;
+                                }
+                                xmove+=2;
+                            }
+                            break;
+                        case "C":
+                            var m = [[1,0],[-1,0],[0,1],[0,-1]];
+                            var n2 = 0;
+                            while(n2 < m.length) {
+                                var xmove = m[n2][0];
+                                var ymove = m[n2][1];
+                                var n = 1;
+                                while(true) {
+                                    if(!this.isSpotInBoard(x+xmove*n,y+ymove*n)) {
+                                        break;
+                                    }
+                                    if(this.board[y+ymove*n][x+xmove*n]) {
+                                        if(this.board[y+ymove*n][x+xmove*n][0].toLowerCase()===this.turn[0]) {
+                                            break;
+                                        } else {
+                                            moves[y+ymove*n][x+xmove*n] = 1;
+                                            break;
+                                        }
+                                    } else {
+                                        moves[y+ymove*n][x+xmove*n] = 1;
+                                    }
+                                    n++;
+                                }
+                                n2++;
+                            }
+                            if(p==='C') {
+                                var cors = this.findKing(this.turn[0]);
+                                if(cors!=false) {
+                                    if(this.board[cors[0]][cors[1]][1]=='K') {
+                                        var direction = x>cors[1]?-1:1;
+                                        var canCastle = true;
+                                        var n2 = 1;
+                                        while(true) {
+                                            if(x+direction*n2==cors[1]) {
+                                                break;
+                                            } else if(this.board[y][x+direction*n2]) {
+                                                canCastle = false;
+                                                break;
+                                            }
+                                            n2++;
+                                        }
+                                        if(canCastle) {
+                                            moves[cors[0]][cors[1]] = 1;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case "Q":
+                            var xmove = -1;
+                            while(xmove < 2) {
+                                var ymove = -1;
+                                while(ymove < 2) {
+                                    var n = 1;
+                                    while(true) {
+                                        if(!this.isSpotInBoard(x+xmove*n,y+ymove*n)) {
+                                            break;
+                                        }
+                                        if(this.board[y+ymove*n][x+xmove*n]) {
+                                            if(this.board[y+ymove*n][x+xmove*n][0].toLowerCase()===this.turn[0]) {
+                                                break;
+                                            } else {
+                                                moves[y+ymove*n][x+xmove*n] = 1;
+                                                break;
+                                            }
+                                        } else {
+                                            moves[y+ymove*n][x+xmove*n] = 1;
+                                        }
+                                        n++;
+                                    }
+                                    ymove+=1;
+                                }
+                                xmove+=1;
+                            }
+                            break;
+                        case "K":
+                            var xmove = -1;
+                            while(xmove < 2) {
+                                var ymove = -1;
+                                while(ymove < 2) {
+                                    if(this.isSpotInBoard(x+xmove,y+ymove)) {
+                                        if(this.board[y+ymove][x+xmove]) {
+                                            if(this.board[y+ymove][x+xmove][0].toLowerCase()!==this.turn[0]) {
+                                                moves[y+ymove][x+xmove] = 1;
+                                            }
+                                        } else {
+                                            moves[y+ymove][x+xmove] = 1;
+                                        }
+                                    }
+                                    ymove+=1;
+                                }
+                                xmove+=1;
+                            }
+                            if(p==='K') {
+                                var pieces = this.findPieces(this.turn[0].toUpperCase()+'C');
+                                var n = 0;
+                                while(n < pieces.length) {
+                                    var direction = x>pieces[n][1]?-1:1;
+                                    var canCastle = true;
+                                    var n2 = 1;
+                                    while(true) {
+                                        if(x+direction*n2==pieces[n][1]) {
+                                            break;
+                                        } else if(this.board[y][x+direction*n2]) {
+                                            canCastle = false;
+                                            break;
+                                        }
+                                        n2++;
+                                    }
+                                    if(canCastle) {
+                                        moves[pieces[n][0]][pieces[n][1]] = 1;
+                                    }
+                                    n++;
+                                }
+                            }
+                            break;
+                    }
+                    var x = 0;
+                    while(x < moves.length) {
+                        var y = 0;
+                        while(y < moves[x].length) {
+                            if(moves[x][y]&&this.board[x][y]&&this.board[x][y][0].toLowerCase()===this.turn[0]&&this.board[this.selected.y][this.selected.x][1]!=='C'&&this.board[this.selected.y][this.selected.x][1]!=='K') {
+                                moves[x][y] = 0;
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    return moves;
+                }
+            }
+            var page = 'menu';
+            var t = 0;
+            /*
+            Description of Pieces:
+            The W or B at the beginning indicates the color of the piece (white/black)
+            The other letter indicates the type of piece:
+            P-Pawn
+            O-Pawn that has just moved two steps forward
+            H-Horse/Knight
+            B-Bishop
+            R-Rook that has moved
+            C-Rook (Castle) that has not been moved
+            Q-Queen
+            K-King that has not been moved
+            M-King that has been moved
+            */
+        </script>
+    </body>
+</html>

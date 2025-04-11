@@ -1,0 +1,726 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Physics Simulator';
+            var dimensions = {width:2000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+            }
+
+            function physics(data) {
+                var _default = {objects:[],damping:0.98,gravity:{x:0,y:0}};
+                var keys = Object.keys(_default);
+                var n = 0;
+                while(n < keys.length) {
+                    if(data[keys[n]]===undefined) {
+                        data[keys[n]] = _default[keys[n]];
+                    }
+                    n++;
+                }
+                var objects = data.objects;
+                var damping = data.damping;
+                var gravity = data.gravity;
+                var n = 0;
+                while(n < objects.length) {
+                    var object = objects[n];
+                    var _default = {dynamic:true,type:'circle',xmove:0,ymove:0}
+                    var keys = Object.keys(_default);
+                    var n2 = 0;
+                    while(n2 < keys.length) {
+                        if(object[keys[n2]]===undefined) {
+                            object[keys[n2]] = _default[keys[n2]];
+                        }
+                        n2++;
+                    }
+
+                    if(object.type=='circle') {
+                        object.mass = object.r**2*Math.PI;
+                        //calculate mass
+
+                        object.totalMass = object.mass;
+                        //init total mass
+
+                        object.x += object.xmove;
+                        object.y += object.ymove;
+                        //move
+
+                        object.xmove *= damping;
+                        object.ymove *= damping;
+                        //damping
+
+                        if(object.dynamic) {
+                            object.xmove += data.gravity.x;
+                            object.ymove += data.gravity.y;
+                        }
+                        //gravity
+                    }
+                    if(object.type=='line') {
+                        var c1 = objects[object.c1];
+                        var c2 = objects[object.c2];
+                        c1.totalMass += c2.mass;
+                        c2.totalMass += c1.mass;
+                    }
+                    object.id = n;
+                    n++;
+                }
+                var static = [];
+                var dynamic = [];
+                var n = 0;
+                while(n < objects.length) {
+                    var object = objects[n];
+                    if(object.dynamic) {
+                        dynamic.push(object);
+                    } else {
+                        static.push(object);
+                    }
+                    n++;
+                }
+                var n = 0;
+                while(n < dynamic.length) {
+                    var object = dynamic[n];
+                    var n2 = 0;
+                    while(n2 < objects.length) {
+                        var object2 = objects[n2];
+                        if(object.id!==object2.id) {
+                            if(object.type=='circle'&&object2.type=='circle') {
+                                var dist = distTo(object.x,object.y,object2.x,object2.y);
+                                if(dist<object.r+object2.r) {
+                                    resolveCircleCollisions(object,object2,data.damping);
+                                }
+                            }
+                        }
+                        n2++;
+                    }
+                    n++;
+                }
+                var n = 0;
+                while(n < objects.length) {
+                    var o = objects[n];
+                    if(o.type=='line') {
+                        var c1 = objects[o.c1];
+                        var c2 = objects[o.c2];
+                        var d = resolveLineLength(o,c1,c2);
+                        if(d) {
+                            objects.splice(n,1);
+                            n--;
+                        }
+                    }
+                    n++;
+                }
+            }
+
+            function resolveLineLength(l,c1,c2) {
+                var dir = dirTo(c1.x,c1.y,c2.x,c2.y);
+                var dist = distTo(c1.x,c1.y,c2.x,c2.y);
+                var move;
+                if(l.elastic) {
+                    move = distToMove((dist-l.length)*l.strength,dir);
+                    if(l.break!==undefined&&distTo(0,0,move[0],move[1])>l.break) {
+                        return true;
+                    }
+                } else {
+                    move = distToMove(dist-l.length,dir);
+                }
+                if(!c1.dynamic&&!c2.dynamic) {
+                    return false;
+                }
+                if(c1.dynamic&&!c2.dynamic) {
+                    return resolveLineLength(l,c2,c1);
+                }
+                var oldAngle = dirTo(c1.x-c1.xmove,c1.y-c1.ymove,c2.x-c2.xmove,c2.y-c2.ymove);
+                if(!c1.dynamic) {
+                    c2.x -= move[0];
+                    c2.y -= move[1];
+                } else {
+                    c1.x += move[0]/2;
+                    c1.y += move[1]/2;
+                    c2.x -= move[0]/2;
+                    c2.y -= move[1]/2;
+                }
+                var newAngle = dirTo(c1.x,c1.y,c2.x,c2.y);
+                var angleChange = newAngle-oldAngle;
+                if(!c1.dynamic) {
+                    var r2 = rotate(0,0,c2.xmove,c2.ymove,-angleChange);
+                    c2.xmove = r2[0];
+                    c2.ymove = r2[1];
+                } else {
+                    var r1 = rotate(0,0,c1.xmove,c1.ymove,-angleChange);
+                    c1.xmove = r1[0];
+                    c1.ymove = r1[1];
+                    var r2 = rotate(0,0,c2.xmove,c2.ymove,-angleChange);
+                    c2.xmove = r2[0];
+                    c2.ymove = r2[1];
+                }
+                return false;
+            }
+
+            function resolveCircleCollisions(c1,c2,e) {
+                var dist = distTo(c1.x,c1.y,c2.x,c2.y);
+                var dx = c2.x-c1.x; //x distance
+                var dy = c2.y-c1.y; //y distance
+                var nx = dx/dist;
+                var ny = dy/dist;
+                var s = c1.r+c2.r-dist; //collision size
+                var k = -2 * ((c2.xmove - c1.xmove) * nx + (c2.ymove - c1.ymove) * ny) / (1/c1.totalMass + 1/c2.totalMass); //energy
+                if(c1.dynamic&&c2.dynamic) {
+                    c1.xmove -= k * nx / c1.totalMass*e;
+                    c1.ymove -= k * ny / c1.totalMass*e;
+                    c2.xmove += k * nx / c2.totalMass*e;
+                    c2.ymove += k * ny / c2.totalMass*e;
+                    var xmove = nx*s;
+                    var ymove = ny*s;
+                    c1.x -= xmove * (1-(c1.mass)/(c1.mass+c2.mass));
+                    c1.y -= ymove * (1-(c1.mass)/(c1.mass+c2.mass));
+                    c2.x += xmove * (1-(c2.mass)/(c1.mass+c2.mass));
+                    c2.y += ymove * (1-(c2.mass)/(c1.mass+c2.mass));
+                } else if(c1.dynamic&&!c2.dynamic) {
+                    c1.xmove -= k * nx / c2.totalMass*e;
+                    c1.ymove -= k * ny / c2.totalMass*e;
+                    c1.x -= nx * s;
+                    c1.y -= ny * s;
+                } else if(!c1.dynamic&&c2.dynamic) {
+                    resolveCircleCollisions(c2,c1);
+                    //flip collision
+                }
+            }
+
+            var game = {
+                paused: false,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    cam.update();
+                    if(!this.paused) {
+                        physics({objects:this.objects.objects,damping:0.99,gravity:{x:0,y:gravity}});
+                    }
+                    this.objects.update();
+
+                    if(Keys.down[32]) {
+                        this.paused = !this.paused;
+                    }
+                    //pause/unpause
+
+                    if(Keys.keys[67]) {
+                        this.objects.objects = [];
+                    }
+                    //clear
+
+                    if(Keys.down[82]) {
+                        gravity *= -1;
+                    }
+                    //reverse gravity
+
+                    var n = 0;
+                    while(n < 9) {
+                        if(Keys.down[n+49]) {
+                            game.scene(n);
+                        }
+                        n++;
+                    }
+                    //set scene
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(1000-cam.x,500-cam.y);
+                    ctx.scale(cam.zoom,cam.zoom);
+                    this.objects.draw();
+                    ctx.restore();
+
+                    if(this.paused) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.fillRect(0,0,2000,1000);
+                    }
+
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.fillRect(0,0,2000,60);
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'left';
+                    ctx.font = '37px Arial';
+                    ctx.fillText('Space: Pause/Unpause, Click & Drag: Spawn, A: Rapid Spawn, C: Clear, X: Delete, 1-7: Set Scene, R: Reverse Gravity',20,40);
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var _delete = this.updateObject(this.objects[n]);
+                            if(_delete) {
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                        if(Mouse.down&&this.create.create==false) {
+                            this.create.create = true;
+                            this.create.x = Mouse.x;
+                            this.create.y = Mouse.y;
+                        }
+                        if(this.create.create||Keys.keys[65]) {
+                            if(!Keys.keys[65]) {
+                                ctx.beginPath();
+                                ctx.strokeStyle = 'black';
+                                ctx.lineWidth = 2;
+                                ctx.moveTo(this.create.x,this.create.y);
+                                ctx.lineTo(Mouse.x,Mouse.y);
+                                ctx.stroke();
+                                if(!Mouse.down) {
+                                    this.create.create = false;
+                                    var b = {};
+                                    b.type = 'circle';
+                                    b.x = this.create.x-1000+Math.random();
+                                    b.y = this.create.y-500+Math.random();
+                                    b.r = 40;
+                                    var dir = dirTo(this.create.x,this.create.y,Mouse.x,Mouse.y);
+                                    var dist = distTo(this.create.x,this.create.y,Mouse.x,Mouse.y);
+                                    var move = distToMove(dist/20,dir+180);
+                                    b.xmove = move[0];
+                                    b.ymove = move[1];
+                                    this.objects.push(b);
+                                }
+                            } else {
+                                var b = {};
+                                b.type = 'circle';
+                                b.x = Mouse.x-1000+Math.random();
+                                b.y = Mouse.y-500+Math.random();
+                                b.r = 40;
+                                this.objects.push(b);
+                            }
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            this.drawObject(this.objects[n]);
+                            n++;
+                        }
+                    },
+                    updateObject: function(o) {
+                        var _delete = false;
+
+                        if(o.type=='circle') {
+                            if(o.dynamic) {
+                                if(o.x<o.r-1000) {
+                                    o.x = o.r*2-2000-o.x;
+                                    o.xmove *= -0.95;
+                                }
+                                if(o.y<o.r-500) {
+                                    o.y = o.r*2-1000-o.y;
+                                    o.ymove *= -0.95;
+                                }
+                                if(o.x>1000-o.r) {
+                                    o.x = 2000-o.r*2-o.x;
+                                    o.xmove *= -0.95;
+                                }
+                                if(o.y>500-o.r) {
+                                    o.y = 1000-o.r*2-o.y;
+                                    o.ymove *= -0.95;
+                                }
+                            }
+
+                            if(Keys.keys[88]) {
+                                if(distTo(o.x,o.y,Mouse.x-1000,Mouse.y-500)<=o.r) {
+                                    _delete = true;
+                                }
+                            }
+                            //delete
+                        }
+
+                        return _delete;
+                    },
+                    drawObject: function(o) {
+                        if(o.type=='circle') {
+                            ctx.fillStyle = 'black';
+                            if(o.color!==undefined) {
+                                ctx.fillStyle = o.color;
+                            }
+                            ctx.beginPath();
+                            ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                            ctx.fill();
+                        } else if(o.type=='line') {
+                            var c1 = this.objects[o.c1];
+                            var c2 = this.objects[o.c2];
+                            ctx.lineWidth = 2;
+                            ctx.strokeStyle = 'black';
+                            ctx.beginPath();
+                            ctx.moveTo(c1.x,c1.y);
+                            ctx.lineTo(c2.x,c2.y);
+                            ctx.stroke();
+                        }
+                    },
+                    create: {
+                        create: false,
+                        x: 0,
+                        y: 0
+                    }
+                },
+                scene: function(n) {
+                    this.objects.objects = getScene(n);
+                    physics({objects:this.objects.objects,damping:0.99,gravity:{x:0,y:gravity}});
+                }
+            }
+
+
+            var cam = {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                update: function() {
+                }
+            }
+
+            function getScene(scene) {
+                var objects = [];
+                if(scene==0) {
+                    var n = 0;
+                    while(n < 100) {
+                        var o = {};
+                        o.r = Math.random()*50+10;
+                        o.x = Math.random()*2000-1000;
+                        o.y = Math.random()*1000-500;
+                        o.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                        objects.push(o);
+                        n++;
+                    }
+                } else if(scene==1) {
+                    var n = 0;
+                    while(n < 100) {
+                        var o = {};
+                        o.r = 50;
+                        o.x = Math.random()*2000-1000;
+                        o.y = Math.random()*1000-500;
+                        o.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                        objects.push(o);
+                        n++;
+                    }
+                } else if(scene==2) {
+                    var n = 0;
+                    while(n < 100) {
+                        var o = {};
+                        o.r = Math.random()*50+10;
+                        o.x = Math.random()*2000-1000;
+                        o.y = Math.random()*1000-500;
+                        o.dynamic = Math.floor(Math.random()*2);
+                        o.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                        if(!o.dynamic) {
+                            var s = Math.random()*200;
+                            o.color = 'rgb('+s+','+s+','+s+')';
+                        }
+                        objects.push(o);
+                        n++;
+                    }
+                } else if(scene==3) {
+                    var n = 0;
+                    while(n < 50) {
+                        var o = {};
+                        o.x = n%5*80-100;
+                        o.y = Math.floor(n/5)*80-260;
+                        o.r = 40;
+                        o.color = 'rgb(100,50,0)';
+                        objects.push(o);
+                        n++;
+                    }
+                } else if(scene==4) {
+                    var n = 0;
+                    while(n < 25) {
+                        var o = {};
+                        o.x = n%5*200-500;
+                        o.y = Math.floor(n/5)*200-450;
+                        o.r = 20;
+                        objects.push(o);
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < 24) {
+                        if(n%5==4) {
+                            n++;
+                            continue;
+                        }
+                        var l = {type:'line'};
+                        l.c1 = n;
+                        l.c2 = n+1;
+                        l.length = 200;
+                        objects.push(l);
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < 24) {
+                        if(n%5==4) {
+                            n++;
+                            continue;
+                        }
+                        var l = {type:'line'};
+                        l.c1 = (n*5)%25+Math.floor(n/5);
+                        l.c2 = (n*5)%25+5+Math.floor(n/5);
+                        l.length = 200;
+                        objects.push(l);
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < 20) {
+                        if(n%5==4) {
+                            n++;
+                            continue;
+                        }
+                        var l = {type:'line'};
+                        l.c1 = n;
+                        l.c2 = n+6;
+                        l.length = 282.8;
+                        objects.push(l);
+                        n++;
+                    }
+                    var n = 5;
+                    while(n < 25) {
+                        if(n%5==4) {
+                            n++;
+                            continue;
+                        }
+                        var l = {type:'line'};
+                        l.c1 = n;
+                        l.c2 = n-4;
+                        l.length = 282.8;
+                        objects.push(l);
+                        n++;
+                    }
+                } else if(scene==5) {
+                    var n = 0;
+                    while(n < 10) {
+                        objects.unshift({x:n*100-400,y:0,dynamic:false,r:10});
+                        if(n!=9) {
+                            objects.unshift({x:n*100-400,y:200,r:20});
+                        } else {
+                            objects.unshift({x:n*100-200,y:0,r:20,ymove:5});
+                        }
+                        objects.push({type:'line',c1:n*2,c2:n*2+1,length:170});
+                        n++;
+                    }
+                } else if(scene==6) {
+                    objects.push({x:-100,y:-300,dynamic:false,r:5});
+                    objects.push({x:-700,y:-300,r:100});
+                    objects.push({type:'line',c1:0,c2:1,length:600});
+                    var n = 0;
+                    while(n < 98) {
+                        var o = {};
+                        o.x = n%7*40-50;
+                        o.y = Math.floor(n/7)*40-40;
+                        o.r = 20;
+                        o.color = 'rgb(100,50,0)';
+                        objects.push(o);
+                        n++;
+                    }
+                }
+                return objects;
+            }
+
+            var gravity = 0.05;
+
+            game.scene(0);
+            /*
+            Notes:
+            Two types of objects: circles and lines
+            circles are either static or dynamic
+            circle: {x,y,radius,dynamic?}
+            line: {c1,c2,length,type,strength}
+            Two types of collisions: circle-circle and circle-line
+            */
+        </script>
+    </body>
+</html>

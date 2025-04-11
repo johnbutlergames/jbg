@@ -1,0 +1,446 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script src="merge-blocks.js"></script>
+    <script src="generate-level.js"></script>
+    <script src="game.js"></script>
+    <script src="home.js"></script>
+    <script src="items.js"></script>
+    <canvas id="canvas"></canvas>
+    <script>
+        var t = 0;
+        var title = "Escape the Horde";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {
+            "bagOfGold": "images/bag-of-gold.png",
+            "emptyBag": "images/empty-bag.png"
+        };
+        var audios = {};
+
+        initialize();
+        window.setInterval(update, 10);
+        Loading.loaded = true;
+        Loading.intro = 0;
+
+        function resolveBlockCollision(dynamicBlock, staticBlock, axis) {
+            var c1 = { x: dynamicBlock.x + dynamicBlock.w / 2, y: dynamicBlock.y + dynamicBlock.h / 2 };
+            var c2 = { x: staticBlock.x + staticBlock.w / 2, y: staticBlock.y + staticBlock.h / 2 };
+            var dimension = axis == "x" ? "w" : "h";
+            if (c1[axis] < c2[axis]) {
+                dynamicBlock[axis] = staticBlock[axis] - dynamicBlock[dimension];
+            } else {
+                dynamicBlock[axis] = staticBlock[axis] + staticBlock[dimension];
+            }
+        }
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var menu = {
+            page: "new game",
+            switchPage: "new game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            titleScreenZombies: [],
+            confirmClearSaveAnimation: 0,
+            confirmClearSave: false,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.page == "game") this.switchPageAnimation = 0;
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                /*ctx.save();
+                ctx.translate(500, 500);
+                ctx.scale(10, 10);
+                var o = { type: "collectable", collectableType: "gem", x: 0, y: 0, value: 5, animationOffset: 0 };
+                game.objects.drawObject(o);
+                ctx.restore();
+                return;/**/
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = easeInOut(this.switchPageAnimation / this.switchPageAnimationThreshold);
+                    ctx.fillStyle = "black";
+                    if (this.switchPage == this.page) {
+                        ctx.fillRect(-100 + 1400 * (1 - a), 0, 1400, 1000);
+                    } else {
+                        ctx.fillRect(-100 - 1400 * (1 - a), 0, 1400, 1000);
+                    }
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "home") {
+                    home.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "home") {
+                    home.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.newGame();
+                    updateSaveData();
+                } else if (page == "home") {
+                    home.updateEffects();
+                } else if(page == "new day") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+
+                var n = 0;
+                for (var x = 0; x < 1000; x += 200) {
+                    for (var y = 0; y < 1000; y += 200) {
+                        if ((x + y) / 200 % 2) continue;
+                        ctx.save();
+                        ctx.translate(x + 100, y + 100);
+                        var s = easeInOut((a - n * 5) / 20);
+                        ctx.globalAlpha = s;
+                        ctx.scale(s, s);
+                        ctx.fillStyle = "rgb(240,240,240)";
+                        ctx.fillRect(-100, -100, 200, 200);
+                        ctx.restore();
+                        n++;
+                    }
+                }
+
+                var titleAnimations = [easeInOut((a - 0) / 30), easeInOut((a - 20) / 30), easeInOut((a - 40) / 30)];
+                var positions = [{ x: 360, y: 180 }, { x: 529, y: 280 }, { x: 640, y: 390 }];
+                var texts = "Escape the Horde".split(" ");
+                var sizes = [130, 50, 130];
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    ctx.fillStyle = "black";
+                    ctx.roundRect(-width / 2 - 50, -height / 2 - 50, width + 100, height + 100, 5);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    ctx.fillStyle = "white";
+                    ctx.roundRect(-width / 2 - 40, -height / 2 - 40, width + 80, height + 80, 4);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    ctx.fillText(texts[n], 0, 0);
+                    ctx.restore();
+                }
+
+                var a2 = easeInOut((a - 70) / 30);
+                ctx.save();
+                ctx.translate(790, 525);
+                ctx.scale(a2, a2);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 20px Trebuchet MS";
+                ctx.fillText("By John Butler", 0, 0);
+                ctx.restore();
+
+                var animation = easeInOut(this.confirmClearSaveAnimation / 30);
+                var a3 = easeInOut((a - 70) / 30)
+                ctx.save();
+                ctx.translate(500 - animation * 1000, 680);
+                ctx.scale(a3, a3);
+                ctx.fillStyle = "black";
+                ctx.roundRect(-230, -75, 460, 150, 5);
+                ctx.fill();
+                ctx.fillStyle = "white";
+                if (Mouse.inBox(-220 + 500, -65 + 680, 440, 130)) ctx.fillStyle = "rgb(235,235,235)";
+                ctx.roundRect(-220, -65, 440, 130, 4);
+                ctx.fill();
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 80px Trebuchet MS";
+                if (saveDataStored) {
+                    ctx.fillText("Continue", 0, 0);
+                } else {
+                    ctx.fillText("New Game", 0, 0);
+                }
+                ctx.restore();
+
+                if (saveDataStored) {
+                    var a4 = easeInOut((a - 100) / 30);
+                    ctx.save();
+                    ctx.translate(500 - animation * 1000, 870);
+                    ctx.scale(a4, a4);
+                    ctx.fillStyle = "black";
+                    ctx.roundRect(-230, -75, 460, 150, 5);
+                    ctx.fill();
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(-220 + 500, -65 + 870, 440, 130)) ctx.fillStyle = "rgb(235,235,235)";
+                    ctx.roundRect(-220, -65, 440, 130, 4);
+                    ctx.fill();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 80px Trebuchet MS";
+                    ctx.fillText("New Game", 0, 0);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.translate(1500 - animation * 1000, 680);
+                    ctx.fillStyle = "black";
+                    ctx.roundRect(-230, -75, 460, 150, 5);
+                    ctx.fill();
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(-220 + 500, -65 + 680, 440, 130)) ctx.fillStyle = "rgb(235,235,235)";
+                    ctx.roundRect(-220, -65, 440, 130, 4);
+                    ctx.fill();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 80px Trebuchet MS";
+                    ctx.fillText("Proceed", 0, 0);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.translate(1500 - animation * 1000, 870);
+                    ctx.fillStyle = "black";
+                    ctx.roundRect(-230, -75, 460, 150, 5);
+                    ctx.fill();
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(-220 + 500, -65 + 870, 440, 130)) ctx.fillStyle = "rgb(235,235,235)";
+                    ctx.roundRect(-220, -65, 440, 130, 4);
+                    ctx.fill();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 80px Trebuchet MS";
+                    ctx.fillText("Cancel", 0, 0);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.translate(1500 - animation * 1000, 580);
+                    ctx.font = "bold 30px Trebuchet MS";
+                    ctx.textAlign = "center";
+                    ctx.fillText("Are you sure? This will delete your past progress.", 0, 0);
+                    ctx.restore();
+                }
+
+                for (var o of this.titleScreenZombies) {
+                    game.objects.drawObject(o);
+                }
+            },
+            updateTitleScreen: function () {
+                if (this.confirmClearSave) {
+                    this.confirmClearSaveAnimation++;
+                } else {
+                    this.confirmClearSaveAnimation--;
+                }
+                this.confirmClearSaveAnimation = Math.max(Math.min(this.confirmClearSaveAnimation, 30), 0);
+                var a = easeInOut(this.confirmClearSaveAnimation / 30)
+                this.titleScreenAnimation++;
+
+                var positions = [{ x: 360, y: 180 }, { x: 529, y: 280 }, { x: 640, y: 390 }];
+                var texts = "Escape the Horde".split(" ");
+                var sizes = [130, 50, 130];
+                var blocks = [
+                    { x: -230 + 500 - a * 1000, y: -75 + 680, w: 460, h: 150, name: "continue" },
+                    { x: -230 + 500 - a * 1000, y: -75 + 870, w: 460, h: 150, name: "new game" },
+                    { x: -230 + 1500 - a * 1000, y: -75 + 680, w: 460, h: 150, name: "proceed" },
+                    { x: -230 + 1500 - a * 1000, y: -75 + 870, w: 460, h: 150, name: "cancel" }
+                ];
+                if (!saveDataStored) blocks.find(e => e.name == "new game").delete = true;
+                blocks = blocks.filter(e => !e.delete);
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    blocks.push({
+                        x: position.x - width / 2 - 50,
+                        y: position.y - height / 2 - 50,
+                        w: width + 100,
+                        h: height + 100
+                    });
+                }
+                for (var o of this.titleScreenZombies) {
+                    o.cx = o.x + o.w / 2;
+                    o.cy = o.y + o.h / 2;
+                    var dist = distTo(o.x, o.y, o.target.x, o.target.y);
+                    var dir = dirTo(o.x, o.y, o.target.x, o.target.y);
+                    var move = distToMove(Math.min(o.speed, dist), dir);
+                    o.move = move;
+                    o.timeToSwitchTarget--;
+                    if (o.timeToSwitchTarget <= 0) {
+                        o.timeToSwitchTarget = Math.random() * 500 + 100;
+                        var dist = 200 + Math.random() * 500;
+                        var move = distToMove(dist, Math.random() * 360);
+                        o.target.x += move.x;
+                        o.target.y += move.y;
+                        o.target.x = Math.max(Math.min(o.target.x, 985), 0);
+                        o.target.y = Math.max(Math.min(o.target.y, 985), 0);
+                    }
+                }
+                for (var n = 0; n < this.titleScreenZombies.length; n++) {
+                    var o = this.titleScreenZombies[n];
+                    for (var n2 = n + 1; n2 < this.titleScreenZombies.length; n2++) {
+                        var o2 = this.titleScreenZombies[n2];
+                        var dist = distTo(o.x, o.y, o2.x, o2.y);
+                        if (dist > o.r + o2.r) continue;
+                        var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                        var move = distToMove(o.r + o2.r - dist, dir);
+                        o.move.x -= move.x / 2;
+                        o.move.y -= move.y / 2;
+                        o2.move.x += move.x / 2;
+                        o2.move.y += move.y / 2;
+                    }
+                }
+                for (var o of this.titleScreenZombies) {
+                    if (o.timeToWait >= 0) {
+                        o.timeToWait--;
+                        continue;
+                    }
+                    o.x += o.move.x;
+                    for (var o2 of blocks) {
+                        if (!blocksColliding(o, o2)) continue;
+                        resolveBlockCollision(o, o2, "x");
+                    }
+                    o.y += o.move.y;
+                    for (var o2 of blocks) {
+                        if (!blocksColliding(o, o2)) continue;
+                        resolveBlockCollision(o, o2, "y");
+                    }
+                }
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+                if (a < 40) return;
+                if (Mouse.clickInBox(-200 + 500, -65 + 680, 400, 130)) {
+                    if (this.confirmClearSave) {
+                        this.switchPage = "new game";
+                    } else if (!saveDataStored) {
+                        this.switchPage = "new game";
+                    } else {
+                        this.switchPage = "home";
+                    }
+                }
+                if (Mouse.clickInBox(-220 + 500, -65 + 870, 440, 130)) {
+                    if (this.confirmClearSave) {
+                        this.confirmClearSave = false;
+                    } else {
+                        this.confirmClearSave = true;
+                    }
+                }
+            },
+            resetTitleScreen: function () {
+                this.titleScreenZombies = [];
+                for (var n = 0; n < 25; n++) {
+                    var o = {};
+                    if (Math.random() < 0.5) {
+                        o.x = Math.random() * 985;
+                        if (Math.random() < 0.5) {
+                            o.y = -15;
+                        } else {
+                            o.y = 1010;
+                        }
+                    } else {
+                        o.y = Math.random() * 985;
+                        if (Math.random() < 0.5) {
+                            o.x = -15;
+                        } else {
+                            o.x = 1010;
+                        }
+                    }
+                    o.timeToWait = Math.random() * 300;
+                    o.w = 15;
+                    o.h = 15;
+                    o.r = 8;
+                    o.speed = 0.6;
+                    o.type = "zombie";
+                    o.timeToSwitchTarget = Math.random() * 500 + 500;
+                    o.target = {};
+                    o.target.x = Math.random() * 985;
+                    o.target.y = Math.random() * 985;
+                    this.titleScreenZombies.push(o);
+                }
+            }
+        }
+
+        function updateSaveData() {
+            window.localStorage.setItem("escapethehordesavedata", JSON.stringify(data));
+        }
+        var saveDataStored = true;
+        var data = {};
+        function initSaveData() {
+            var storedData = window.localStorage.getItem("escapethehordesavedata");
+            if (storedData) {
+                saveDataStored = true;
+                data = JSON.parse(storedData);
+            } else {
+                saveDataStored = false;
+            }
+        }
+
+        initSaveData();
+        menu.resetTitleScreen();
+        game.reset();
+    </script>
+</body>
+
+</html>

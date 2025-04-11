@@ -1,0 +1,54 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Highscores - John Butler Games</title>
+    <meta charset="utf-8">
+    <meta name="google-site-verification" content="H6sTO6-eWEFsKEkNMgry8dN0L2-k3s2lyog0GWD2NO4" />
+    <meta name="description" content="Free online games to play.">
+    <meta name="keywords" content="john, butler, games, johnbutlergames, highscores">
+    <meta name="author" content="John Butler">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="game-data.json"></script>
+    <script src="scripts.js"></script>
+    <script src="updates.json"></script>
+    <script src="highscores.json"></script>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EXRQS6M7G7"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-EXRQS6M7G7');
+</script>
+
+<body>
+    <div class="section" id="left-section"></div>
+    <div class="section" id="right-section"></div>
+    <div class="section" id="center-section">
+        <h2 class="title" id="highscores-title">Highscores:</h2>
+        <br>
+        <table>
+            <tbody id="highscore-table">
+                <tr>
+                    <th>
+                        <div>Game:</div>
+                    </th>
+                    <th>
+                        <div>Who:</div>
+                    </th>
+                    <th>
+                        <div>Score:</div>
+                    </th>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+    </div>
+</body>
+
+</html>

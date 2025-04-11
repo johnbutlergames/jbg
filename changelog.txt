@@ -1,0 +1,141 @@
+5-28-2024: Released Opposite Day 2.
+2-26-2024: Released Battle Blocks.
+1-10-2024: Removed the Merch link in the navigation.
+1-4-2024: Updated Opposite Day to 1.1.0. Made better scroll graphics for recommended game section on game pages.
+12-21-2023: Released Gift Match.
+12-11-2023: Released Clicks Per Minute.
+12-5-2023: Updated Escape the Horde to 1.2.0.
+12-4-2023: Updated Morse Code to 1.2.1.
+12-3-2023: Released Micro Factory.
+11-9-2023: Updated Escape the Horde to b1.1.0.
+10-30-2023: Released Escape the Horde.
+10-29-2023: Updated Morse Code to 1.2.0.
+10-18-2023: Updated Morse Code to 1.1.0.
+9-30-2023: Updated Atom to 1.2.0.
+9-25-2023: Updated Atom to b1.1.0.
+9-23-2023: Added the timeline tab. Released Atom.
+9-18-2023: Updated Unscramble to 1.0.2.
+8-23-2023: Updated Swoop to b1.4.0.
+8-22-2023: Updated Color Blind to 2.1.0.
+8-17-2023: Updated Color Blind to 2.0.0.
+8-14-2023: Released Gym Daddy.
+8-13-2023: Updated Growth to a1.2.0.
+8-7-2023: Updated Embedded Triangles to 2.0.0. Updated Pathfinder to 1.2.0.
+8-6-2023: Updated Unscramble to 1.0.1. Updated Hamburger to 2.0.1.
+8-5-2023: Updated Growth to a1.1.0.
+7-31-2023: Updated Shoot Em Up to b1.1.0.
+7-24-2023: Updated Mountain Parallax to 1.0.2. Updated Night and Day to 1.0.1.
+7-23-2023: Updated 2048 to 1.1.0.
+7-20-2023: Updated the ease-in-out function in game-setup.js, making it start at 0 and end at 1, instead of starting at a fraction above zero and ending a fraction above 1.
+7-12-2023: Updated Cascading Data to 1.1.0.
+7-11-2023: Updated Numbermind to 2.1.0.
+7-9-2023: Released Growth. Made games that you have never played before also show that they have been updated when I update them.
+7-8-2023: Added a "New Versions" section at the top of the home page and shortened the "New Games" section.
+7-7-2023: Updated Numbermind to b2.0.0. When a game is updated it's game card now takes on a red look to attract attention.
+7-3-2023: Updated Rainbow Blast to 1.1.0. Updated Opposite Day to 1.1.0.
+7-2-2023: Updated Pathfinder to 1.1.0. Fixed links in the updates section linking to invalid URLs.
+7-1-2023: The "You Might Also Like" section on the game page now shows games that are actually relevant to the one you are playing. The "You Might Also Like" section also now scrolls instead of stacking the games that don't fit underneath. Updated Snake Simulator to 1.1.0.
+6-15-2023: Update Swoop to b1.3.1.
+6-14-2023: Update Swoop to b1.3.0.
+6-13-2023: Update Swoop to b1.2.0.
+6-12-2023: Update Swoop to b1.1.0. Fixed some of the site icons not loading. Added a "You might also like" section on the game page.
+5-30-2023: You can now view the versions of every game on johnbutlergames as well as their changelogs.
+5-29-2023: Updated Snake Adventure to 1.5.0.
+5-24-2023: Released beta stage of Shoot Em Up.
+5-17-2023: Updated Snake Adventure to b1.4.1.
+5-16-2023: Released alpha stage of The Labyrinth.
+5-15-2023: Updated Snake Adventure to b1.4.0.
+5-12-2023: Updated Snake Adventure to b1.3.0.
+5-11-2023: Updated Snake Adventure to b1.2.0.
+5-9-2023: Released alpha stage of Swoop. Updated Snake Adventure to b1.1.0.
+5-8-2023: Released alpha stage of Snake Adventure.
+5-4-2023: Added Jello Gun. Updated Emergence, making cells move together when they form groups, making lone cells move around randomly, adding spiraling behavior.
+5-3-2023: Updated Mountian Parallax, adding smooth camera motion. Released Emergence.
+5-2-2023: Released Fire Simulation.
+5-1-2023: Released Mountain Parallax.
+4-30-2023: Released Night And Day.
+4-28-2023: Released Spiral.
+4-27-2023: Made game cards hide icons, versions, and parts of titles when they get too small. Re-added Gravity Drill.
+4-23-2023: Added versions to games.
+3-8-2022: Made some levels in opposite day a little bit more user friendly.
+3-7-2022: Fixed a bug where you could go to a game that didn't exist, and then it would show up in the "Continue Playing" section. Fixed the youtube logo showing above the navigation and the search results. Put jbg fonts into their own folder.
+3-6-2023: Released Ramp It Up.
+3-1-2023: I just released my first youtube video! You can watch it at https://www.youtube.com/watch?v=9WylnaMm08k&t=5s
+2-23-2023: Redesigned website layout.
+10-30-2022: Redesigned Hamburger, making it much more interactive.
+10-26-2022: Updated Circles, adding movement prompts, collectables, and updating intro screen.
+10-7-2022: Added 2048.
+10-3-2022: Updated website layout.
+8-28-2022: Added the Merch tab. Buy some merch to support me!
+8-21-2022: Disabled the minimap on Ghost Town mobile because it was causing too much lag. Converted Translator to mobile. Converted 3d Simulator to mobile. Converted Circles to mobile. Converted Mini Golf to mobile.
+8-19-2022: Converted Tic Tac Toe to mobile. Converted Dodge to mobile. Converted Plotless Story Generator to mobile. Converted Snowman Builder to mobile. Fixed johnbutlergames not working on iPhones.
+8-18-2022: Fixed Color Blind time limit calculation. Converted Coin Dash to mobile.
+8-17-2022: Fixed some glitches in mobile Unscramble. Converted Constellations to mobile. Converted Cascading Data to mobile. Redesigned Color Blind. Converted Color Blind to mobile. Added joystick controls to mobile Opposite Day.
+8-16-2022: Johnbutlergames mobile version is now available! Just go to johnbutlergames.com on your phone. Converted Don't Shrink to mobile. Converted Geometric Clock to mobile. Converted Fireworks to mobile. Converted Unscramble to mobile. Deleted "CATE" from Unscramble word list. Removed letter spin from mobile Unscramble. Converted Opposite Day to mobile.
+6-29-2022: Updated Solar System Simulator, adding WASD camera controls and planet images.
+6-18-2022: Added Geometric Clock.
+6-11-2022: Updated Coin Dash, adding sound effects. Redirected sound files to johnbutlergames.w3spaces.com. Organized game images into folders.
+6-10-2022: Added Polygon Defense.
+5-19-2022: Updated Dont Shrink, changing the keybinds to only Space, X, and click, and adding a tutorial.
+5-16-2022: Redirected all images to johnbutlergames.w3spaces.com to let the alt url work. Updated Tic-Tac-Toe, adding AI.
+5-7-2022: Poll has ended. Added sandbox.
+4-28-2022: Updated website layout. Added a poll.
+4-23-2022: Updated website layout. Updated Logic Tanks, adding speedrun option.
+4-22-2022: Fixed level select glitch in Logic Tanks.
+4-21-2022: Redesigned Car Simulator.
+4-18-2022: Updated Blasty Ball, adding keybind hints.
+4-12-2022: Updated Unscramble, adding SHOUT to word list. Added Logic Tanks.
+4-8-2022: Updated Unscramble, fixing lowercase s in SLEET.
+3-16-2022: Updated Mini Golf, fixing infinite shots.
+3-14-2022: Added Mini Golf.
+3-12-2022: Updated Jump, fixing sound buffer error, added saving data, and removing platforms that move up and down.
+3-6-2022: Updated Unscramble, fixing click error.
+3-2-2022: Updated Ghost Town, addding gameplay hints.
+3-1-2022: Updated Ghost Town, adding different highscores for each game mode.
+2-23-2022: Updated Unscramble, adding more words, new animation, changed lose text, and different word length calculator. Updated Coin Dash, adding World 1 speed run and locking levels 2-9 until previous are completed. Updated instructions for all games.
+2-19-2022: Updated loading screen for all games. Updated Unscramble, adding five letter words.
+2-18-2022: Updated Unscramble, fixing nonexistant gif, adding word bubble animation, and updating 4 letter words.
+2-17-2022: Updated Minesweeper flag image. Added Unscramble.
+2-3-2022: Updated Coin Dash, finishing all levels in World 1.
+2-1-2022: Updated Coin Dash, adding replays. Fixed links on highscore page. Added Solar System Simulator.
+1-31-2022: Updated Physics Simulator, fixing physics glitch between large and small objects.
+1-18-2022: Updated Highscores page to have links in titles.
+1-25-2022: Updated Jump, fixing loading error. Updated Search Bar, making it include more relevant results.
+1-24-2022: Updated Coin Dash, adding Level 6, reducing lag from particle effects, making jump allowed 5 frames after falling off block or wall, and updating instructions.
+1-19-2022: Updated Coin Dash, fixing tall spikes not killing player.
+1-18-2022: Updated Coin Dash, fixing spike hitboxes and spring smash glitch.
+1-17-2022: Updated Dodge, changing player character. Updated Slide Puzzle, creating better controls. Added Ping Pong. Updated Circles, removing music. Updated Don't Shrink, making clearer sounds. Updated Gravity Drill, fixing sound loading error.
+1-16-2022: Fixed Updated icons so they actually show when games are updated.
+1-15-2022: Updated Snake, smoothing out move animation and adding quit button.
+1-14-2022: Updated Coin Dash, adding Level 5 and quit button.
+1-13-2022: Fixed Opposite Day collision glitches.
+1-12-2022: Updated Coin Dash, adding different player colors, Level 4, and fixing timer glitch.
+1-11-2022: Added Coin Dash.
+1-10-2022: Fixed "Snakle" typo in game of the day and game spinner.
+1-8-2022: Changed Game of The Day and Game Spinner to only show games that are fun to play.
+1-7-2022: Updated Snowman Builder, adding pause menu and tutorial text.
+1-6-2022: Updated Minesweeper, fixing explosion glitch. Made all work in progress logos a Work In Progress png, and made them redirect to the game file instead of the game page.
+1-4-2022: Added "Updated!" icon to games that are updated.
+1-3-2022: Updated Minesweeper, adding in game menu and stopwatch. Added fullscreen button to game page. Updated Blasty Ball, adding power-ups and AI. Updated fireworks to have less lag.
+12-31-2021: Changed Image Swirler into Image Scrambler, updating to make it way faster and adding better controls. Updated Physics Simulator instructions. Added saving highscores to Snowman Builder, Color Blind, Ghost Town, and Snake. Added previews when you mouse over an image of a game.
+12-29-2021: Added Last Updated text to game page. Updated Updates section, adding links to games.
+12-28-2021: Changed 2d Vision into 3d Simulator, making it 3d. Changed icon for 3d Simulator. Removed Pathfinder from Logic category. Updated Ghost Town, adding diagonal player images and a better candy moving into cauldron animation. Updated Snowman Builder, adding 15 different types of snowmen and sandbox mode.
+12-27-2021: Merged Net Simulator into Physics Simulator. Updated Physics Simulator, adding more scenes, making it more user friendly, and adding springs. Updated Physics Simulator icon.
+12-24-2021: Added Fireworks. Updated Color Blind instructions.
+12-23-2021: Optimized Ghost Town drawing algorithm, bringing fps back to 50. Updated Circles icon. Updated Don't Shrink icon.
+12-18-2021: Fixed A-Z Games page glitch.
+12-17-2021: Updated Snake, adding WASD controls. Updated Ghost Town, adding minimap, player candy counter, and updating difficulty select.
+12-16-2021: Removed AI Car Driving from Skill Games. Added left navigation. Added highscores page. Combined Small Projects and HTML/Simulation into Miscellaneous. Changed game of the day image into link. Fixed typo in game spinner.
+12-15-2021: Updated Dodge, fixing level glitches in 14 and 20.
+12-14-2021: Added Snowman Builder. Updated Random Game Spinner, changing name to "Game Spinner" and adding wobble animation.
+12-7-2021: Added Updates Section.
+12-6-2021: Updated Don't Shrink again, fixing a few glitches and creating better effects.
+12-5-2021: Updated Don't Shrink, adding background.
+12-4-2021: Updated Numbermind, centering game and adding background.
+12-3-2021: Renovated Dodge.
+12-2-2021: Tweaked Opposite Day.
+12-1-2021: Renovated Car Simulator and Chess. Added trail effect to Blasty Ball.
+11-30-2021: Renovated AI Car Driving, renovated Gravity Drill.
+11-28-2021: Updated Blasty Ball, adding a menu, game options, and different round types.
+11-23-2021: Added Kaleidoscope. Removed Redtangle. Fixed loading error for Jump, Gravity Drill, and Don't Shrink. Fixed disappearing player glitch in Jump.
+11-21-2021: Added changelog. Updated Translator, adding McDonald's option.

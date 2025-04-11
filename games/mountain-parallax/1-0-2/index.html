@@ -1,0 +1,195 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Mountain Parallax";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                ctx.fillStyle = "rgb(100,220,255)";
+                ctx.fillRect(0,0,1000,1000);
+
+                updateCam();
+                
+                drawSun();
+                
+                ctx.save();
+                ctx.translate(-500,0);
+                
+                drawClouds(3);
+
+                ctx.save();
+                ctx.translate(-cam.x/3,-cam.y/3+400);
+                drawMountains(mountains.layer3,"rgb(150,150,150)");
+                ctx.restore();
+                
+                drawClouds(2);
+
+                ctx.save();
+                ctx.translate(-cam.x/2,-cam.y/2+520);
+                drawMountains(mountains.layer2,"rgb(120,120,120)");
+                ctx.restore();
+                
+                drawClouds(1);
+
+                ctx.save();
+                ctx.translate(-cam.x,-cam.y+640);
+                drawMountains(mountains.layer1,"rgb(90,90,90)");
+                ctx.restore();
+                
+                drawClouds(0);
+
+                ctx.restore();
+            }
+            
+            function drawClouds(layer) {
+                for(var o of clouds) {
+                    if(o.z<layer) continue;
+                    ctx.save();
+                    ctx.translate((o.x-1000-cam.x)/o.z+1000,(o.y-cam.y)/o.z);
+                    ctx.scale(1/o.z,1/o.z);
+                    ctx.translate(190,150);
+                    ctx.fillStyle = "white";
+                    ctx.globalAlpha = 0.5;
+                    ctx.scale(1,1.5);
+                    ctx.beginPath();
+                    ctx.arc(0,0,100,Math.PI,0);
+                    ctx.arc(-120,0,70,Math.PI,0);
+                    ctx.arc(120,0,70,Math.PI,0);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+            
+            function drawSun() {
+                ctx.save();
+                ctx.translate(-cam.x/10,-cam.y/10);
+                ctx.beginPath();
+                ctx.arc(0,0,100,0,2*Math.PI);
+                ctx.fillStyle = "yellow";
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function drawMountains(arr,mountainColor) {
+                for(var o of arr) {
+                    if(o.type=="mountain") {
+                        drawMountain(o,mountainColor);
+                    }
+                }
+            }
+
+            function drawMountain(o,color) {
+                ctx.save();
+                ctx.translate(o.x,o.y);
+                var grd = ctx.createLinearGradient(0,-150,0,-50);
+                if(o.height<-150) {
+                    grd.addColorStop(0,"white");
+                    grd.addColorStop(0.4,"white");
+                }
+                grd.addColorStop(1,color);
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.moveTo(o.points[0].x,o.points[0].y);
+                for(var n=1;n<o.points.length;n++) {
+                    ctx.lineTo(o.points[n].x,o.points[n].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                if(o.height<-150) {
+                    ctx.strokeStyle = grd;
+                    ctx.lineWidth = 10;
+                    ctx.lineJoin = "round";
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function generateMountains() {
+                var arr = [];
+                for(var x=0;x<2000;) {
+                    var o = {};
+                    var m = generateMountain()
+                    o.points = m.points;
+                    o.height = m.height;
+                    o.x = x;
+                    o.y = 0;
+                    o.type = "mountain";
+                    arr.push(o);
+                    x += 20+Math.random()*200;
+                }
+                arr = arr.sort((a,b)=>b.height-a.height);
+                return arr;
+            }
+
+            function generateMountain() {
+                var height = Math.random()*-200;
+                var base = 600;
+                var left = -600+Math.random()*200-100;
+                var right = 600+Math.random()*200-100;
+                var leftPoints = 5+Math.random()*3;
+                var rightPoints = 5+Math.random()*3;
+                var points = [];
+                points.push({x:left,y:base});
+                for(var n=1;n<leftPoints-1;n++) {
+                    var x = left*(1-(n/leftPoints/5+0.8));
+                    var y = base+(height-base)*(n/leftPoints/5+0.8);
+                    x += Math.random()*16-8;
+                    y += Math.random()*16-8;
+                    points.push({x:x,y:y});
+                }
+                points.push({x:0,y:height});
+                for(var n=1;n<rightPoints-1;n++) {
+                    var x = right*(n/leftPoints/5);
+                    var y = base+(height-base)*(1-(n/leftPoints/5));
+                    x += Math.random()*16-8;
+                    y += Math.random()*16-8;
+                    points.push({x:x,y:y});
+                }
+                points.push({x:right,y:base});
+                return {
+                    points: points,
+                    height: height
+                };
+            }
+
+            function updateCam() {
+                var x = Mouse.x-500;
+                var y = (Mouse.y-500)/7
+                cam.x = cam.x*0.9+x*0.1;
+                cam.y = cam.y*0.9+y*0.1;
+            }
+
+            var cam = {
+                x: 0,
+                y: 0
+            }
+
+            var mountains = {
+                layer1: [],
+                layer2: [],
+                layer3: []
+            }
+
+            var clouds = [];
+            for(var n=0;n<15;n++) {
+                var o = {};
+                o.x = n*200-300;
+                o.y = Math.random()*100+Math.sin(n)*150+150;
+                o.z = Math.random()*2+1+(n%2==0?0:0.5);
+                clouds.push(o);
+            }
+
+            mountains.layer1 = generateMountains();
+            mountains.layer2 = generateMountains();
+            mountains.layer3 = generateMountains();
+        </script>
+    </body>
+</html>

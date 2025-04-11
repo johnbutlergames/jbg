@@ -1,0 +1,185 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Rogue Roller";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+        }
+
+        var menu = {
+            page: "new game",
+            switchPage: "new game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.objects.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                ctx.save();
+                ctx.translate(500, 500);
+                ctx.scale(this.cam.zoom, this.cam.zoom);
+                ctx.translate(-this.cam.x, -this.cam.y);
+                this.objects.draw();
+                ctx.restore();
+            },
+            reset: function () {
+                this.objects.objects = [
+                    {
+                        type: "player",
+                        dynamic: true,
+                        x: 0,
+                        y: 0,
+                        xmove: 0,
+                        ymove: 0
+                    }
+                ];
+            },
+            objects: {
+                objects: [],
+                update: function () {
+                    for (var o of this.objects) {
+                        this.updateObject(o);
+                    }
+                    var static = this.objects.filter(e => !e.dynamic);
+                    var dynamic = this.objects.filter(e => e.dynamic);
+                    for (var n = 0; n < dynamic.length; n++) {
+                        var o = dynamic[n];
+                        o.x += o.xmove;
+                    }
+                    for (var n = 0; n < dynamic.length; n++) {
+                        var o = dynamic[n];
+                        o.y += o.ymove;
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                updateObject: function (o) {
+                    if (o.type == "player") {
+                        o.xmove *= 0.98;
+                        o.ymove *= 0.98;
+                        if(Keys.keys[37]) {
+                            o.xmove -= 0.1;
+                        }
+                        if(Keys.keys[39]) {
+                            o.xmove += 0.1;
+                        }
+                        if(Keys.keys[38]) {
+                            o.ymove -= 0.1;
+                        }
+                        if(Keys.keys[40]) {
+                            o.ymove += 0.1;
+                        }
+                    }
+                },
+                drawObject: function (o) {
+                    if (o.type == "player") {
+                        ctx.fillStyle = "red";
+                        ctx.fillRect(o.x, o.y, 100, 100);
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                update: function () {
+
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

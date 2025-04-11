@@ -1,0 +1,1595 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Snowman Builder';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+                Mouse.downStart = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                word += String.fromCharCode(event.keyCode);
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var word = '';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                downStart: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function resolveCollision(b1,b2,e) {
+                if(b1.static!=true||b2.static!=true) {
+                    var d = distTo(b1.x,b1.y,b2.x,b2.y);
+                    var dx = b2.x-b1.x;
+                    var dy = b2.y-b1.y;
+                    var nx = dx/d;
+                    var ny = dy/d;
+                    var s = b1.r + b2.r - d;
+                    var k = -2 * ((b2.xmove - b1.xmove) * nx + (b2.ymove - b1.ymove) * ny) / (1/b1.mass + 1/b2.mass);
+                    if(!isNaN(k)) {
+                        if(b1.static!=true&&b2.static!=true) {
+                            b1.xmove -= k * nx / b1.mass*e;
+                            b1.ymove -= k * ny / b1.mass*e;
+                            b2.xmove += k * nx / b2.mass*e;
+                            b2.ymove += k * ny / b2.mass*e;
+                            b1.x -= nx * s/2;
+                            b1.y -= ny * s/2;
+                            b2.x += nx * s/2;
+                            b2.y += ny * s/2;
+                        } else {
+                            if(b1.stable) {
+                                var b3 = JSON.parse(JSON.stringify(b2));
+                                b2 = JSON.parse(JSON.stringify(b1));
+                                b1 = JSON.parse(JSON.stringify(b3));
+                            }
+                            b1.xmove -= k * nx / b1.mass*e;
+                            b1.ymove -= k * ny / b1.mass*e;
+                            b2.xmove += k * nx / b2.mass*e;
+                            b2.ymove += k * ny / b2.mass*e;
+                            b1.x -= nx * s;
+                            b1.y -= ny * s;
+                        }
+                    }
+                }
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function capitalize(sentence) {
+                var words = sentence.split(' ');
+                var n = 0;
+                while(n < words.length) {
+                    words[n] = words[n][0].toUpperCase()+words[n].slice(1);
+                    n++;
+                }
+                return words.join(' ');
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.downStart = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(word.endsWith("JOHNBUTLERGAMES")) {
+                    word = '';
+                    johnbutlergames();
+                }
+
+                ctx.fillStyle = '#90a1d5';
+                ctx.fillRect(0,0,1000,1000);
+                //draw background
+
+                particles.update();
+                particles.draw();
+                //snow particles
+
+                if(page=='menu') {
+                    menu.update();
+                } else if(page=='game') {
+                    game.tick();
+                }
+
+                t++;
+            }
+
+            var menu = {
+                page: 'home',
+                yoffset: 0,
+                update: function() {
+                    ctx.save();
+                    ctx.translate(0,this.yoffset);
+
+                    if(this.yoffset<0) {
+                        this.yoffset *= 1.1;
+                    }
+                    if(this.yoffset<-1000) {
+                        game.reset();
+                        game.yoffset = 1000;
+                        page = 'game';
+                    }
+
+                    if(this.page=='home') {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '100px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Snowman Builder',500,150);
+                        //title
+
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.fillText('By John Butler',500,920);
+                        //credits
+
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 10;
+                        ctx.strokeRect(400,320,200,120);
+                        if(Mouse.inBox(400,320,200,120)&&this.yoffset==0) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                            ctx.fillRect(400,320,200,120);
+                            if(Mouse.click) {
+                                this.yoffset = -1;
+                                game.mode = 'normal';
+                            }
+                        }
+                        ctx.fillStyle = 'white';
+                        ctx.fillText('Play',500,400);
+                        //play button
+
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 10;
+                        ctx.strokeRect(350,520,300,120);
+                        if(Mouse.inBox(350,520,300,120)&&this.yoffset==0) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                            ctx.fillRect(350,520,300,120);
+                            if(Mouse.click) {
+                                this.yoffset = -1;
+                                game.mode = 'sandbox';
+                                game.reset();
+                            }
+                        }
+                        ctx.fillStyle = 'white';
+                        ctx.fillText('Sandbox',500,600);
+                        //sandbox button
+
+                        ctx.fillText('Highscore: '+highscore,500,780);
+                        //highscore
+                    }
+                    ctx.restore();
+                }
+            }
+
+            var game = {
+                score: 0,
+                snowmenComplete: [],
+                snowmenPercents: [],
+                typesCompleted: [],
+                mode: 'normal',
+                yoffset: 0,
+                snowmanPercent: 0,
+                scan: 0,
+                scanx: 0,
+                newSnomanAnimation: 0,
+                gameOverAnimation: 0,
+                snapshotSize: [1,1,1,1,1],
+                paused: false,
+                tick: function() {
+                    if(this.yoffset>0) {
+                        this.yoffset *= 0.95;
+                        if(this.yoffset<1) {
+                            this.yoffset = 0;
+                        }
+                    } else {
+                        this.update();
+                    }
+                    ctx.save();
+                    ctx.translate(0,this.yoffset);
+                    this.draw();
+                    ctx.restore();
+                },
+                update: function() {
+                    if(!this.paused) {
+                        this.objects.update();
+                        this.usingSnowballs.update();
+                    } else {
+                        this.usingSnowballs.using = false;
+                    }
+
+                    if(this.scan>0) {
+                        this.scan++;
+                        if(this.scan==150) {
+                            this.typesCompleted.push(this.targetSnowman.type);
+                            this.snowmenComplete.push(JSON.stringify(this.objects.objects));
+                            if(this.snowmenComplete.length==5) {
+                                this.gameOverAnimation = 1;
+                                var n = 0;
+                                while(n < this.snowmenPercents.length) {
+                                    this.score += Math.round(this.snowmenPercents[n]*1000);
+                                    n++;
+                                }
+                            } else {
+                                this.scan = 0;
+                                this.newTargetSnowman();
+                            }
+                        }
+                    }
+
+                    if(this.newSnowmanAnimation>0) {
+                        this.newSnowmanAnimation--;
+                    }
+
+                    if(this.gameOverAnimation>0) {
+                        highscore = Math.max(this.score,highscore);
+                        localStorage.setItem('snowmanbuilderhighscore',highscore);
+                        this.gameOverAnimation++;
+                    }
+
+                    if(this.mode=='sandbox') {
+                        this.sandbox.update();
+                    }
+                },
+                draw: function() {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0,900,1000,100);
+                    //ground
+
+                    this.objects.draw();
+                    //draw snowballs
+
+                    this.usingSnowballs.draw();
+                    //draw using snowballs
+
+                    if(this.mode!='sandbox') {
+                        this.drawTargetSnowman();
+                        //draw target snowman
+
+                        if(this.scan>0) {
+                            this.drawScan();
+                        }
+                        //draw scan
+
+                        ctx.fillStyle = 'white';
+                        ctx.font = '50px Trebuchet MS';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(Math.min(this.snowmenComplete.length+1,5)+'/5',215,55);
+                        //draw snowmen completed text
+
+                        ctx.fillText(capitalize(this.targetSnowman.type),215,115);
+                        //draw current snowman type
+
+                        ctx.fillText('Level: '+capitalize(this.targetSnowman.level),215,170);
+                        //draw current snowman level
+
+                        if(this.gameOverAnimation>0) {
+                            this.drawGameOverMenu();
+                        }
+                    }
+
+                    if(this.mode=='sandbox') {
+                        this.sandbox.draw();
+                    } else if(this.snowmenComplete.length==0&&this.objects.objects.length==0) {
+                        ctx.fillStyle = 'white';
+                        ctx.font = '50px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.fillText("Click and drag a snowball to throw it...",500,270);
+                    }
+
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 5;
+                    ctx.strokeRect(920,10,70,70);
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(930,20,20,50);
+                    ctx.fillRect(960,20,20,50);
+                    if(Mouse.inBox(920,10,70,70)&&!this.paused) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                        ctx.fillRect(920,10,70,70);
+                        if(Mouse.down) {
+                            this.paused = true;
+                        }
+                    }
+                    if(Keys.down[32]) {
+                        this.paused = !this.paused;
+                    }
+
+                    if(this.paused) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                        ctx.fillRect(0,0,1000,1000);
+                        //background
+
+                        ctx.fillStyle = 'white';
+                        ctx.font = '100px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.fillText("Paused",500,200);
+                        //title
+
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 10;
+                        ctx.strokeRect(350,320,300,120);
+                        if(Mouse.inBox(350,320,300,120)&&this.yoffset==0) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                            ctx.fillRect(350,320,300,120);
+                            if(Mouse.click) {
+                                this.paused = false;
+                            }
+                        }
+                        ctx.fillStyle = 'white';
+                        ctx.fillText('Resume',500,400);
+                        //resume button
+
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 10;
+                        ctx.strokeRect(350,520,300,120);
+                        if(Mouse.inBox(350,520,300,120)&&this.yoffset==0) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                            ctx.fillRect(350,520,300,120);
+                            if(Mouse.click) {
+                                page = 'menu';
+                                menu.yoffset = 0;
+                            }
+                        }
+                        ctx.fillStyle = 'white';
+                        ctx.fillText('Quit',500,600);
+                        //quit button
+                    }
+                    //draw pause menu
+                },
+                drawGameOverMenu: function() {
+                    ctx.fillStyle = 'rgba(0,0,0,'+((Math.min(this.gameOverAnimation,100))*0.006)+')';
+                    ctx.fillRect(0,0,1000,1000);
+                    var x = (Math.max(100-this.gameOverAnimation,0)/2)**2;
+                    ctx.save();
+                    ctx.translate(-x,0);
+
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'center';
+                    ctx.font = '70px Trebuchet MS';
+                    ctx.fillText('Snowmen Complete!',500,150);
+
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 10;
+                    ctx.strokeRect(180,520,240,120);
+                    if(Mouse.inBox(180,520,240,120)&&this.yoffset==0) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                        ctx.fillRect(180,520,240,120);
+                        if(Mouse.click) {
+                            this.reset();
+                        }
+                    }
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Retry',300,600);
+                    //retry button
+
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 10;
+                    ctx.strokeRect(180,720,240,120);
+                    if(Mouse.inBox(180,720,240,120)&&this.yoffset==0) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                        ctx.fillRect(180,720,240,120);
+                        if(Mouse.click) {
+                            page = 'menu';
+                            menu.yoffset = 0;
+                        }
+                    }
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Quit',300,800);
+                    //quit button
+
+                    ctx.fillText('Score: '+this.score,700,700);
+                    //score text
+
+                    var n = 0;
+                    while(n < this.snowmenComplete.length) {
+                        var objects = JSON.parse(this.snowmenComplete[n]);
+                        var cors = [n*150+200,320+Math.sin(t/50+n)*10];
+                        var percent = 2-this.snapshotSize[n];
+                        cors[0] = cors[0]*percent+500*(1-percent);
+                        cors[1] = cors[1]*percent+750*(1-percent);
+                        ctx.save();
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 8;
+                        ctx.strokeRect(n*150+100,220+Math.sin(t/50+n)*10,200,200);
+                        ctx.font = "40px Trebuchet MS";
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(Math.round(this.snowmenPercents[n]*100)+'%',n*150+200,480+Math.sin(t/50+n)*10);
+                        ctx.translate(cors[0],cors[1]);
+                        ctx.scale(this.snapshotSize[n]*0.2,this.snapshotSize[n]*0.2);
+                        ctx.translate(-500,-500);
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 40;
+                        ctx.fillStyle = '#90a1df';
+                        ctx.fillRect(0,0,1000,1000);
+                        ctx.strokeRect(0,0,1000,1000);
+                        ctx.beginPath();
+                        ctx.rect(0,0,1000,1000);
+                        ctx.clip();
+                        var n2 = 0;
+                        while(n2 < objects.length) {
+                            var obj = objects[n2];
+                            if(obj.type=='stick') {
+                                this.objects.drawObject(obj);
+                            }
+                            n2++;
+                        }
+                        var n2 = 0;
+                        while(n2 < objects.length) {
+                            var obj = objects[n2];
+                            if(obj.type!='stick') {
+                                this.objects.drawObject(obj);
+                            }
+                            n2++;
+                        }
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0,900,1000,100);
+                        ctx.restore();
+                        if(Mouse.inBox(n*150+125,265,150,150)) {
+                            this.snapshotSize[n] += 0.04;
+                        }
+                        this.snapshotSize[n] *= 0.98;;
+                        this.snapshotSize[n] = Math.min(Math.max(this.snapshotSize[n],1),2);
+                        n++;
+                    }
+                    //snapshots
+
+                    ctx.restore();
+                },
+                drawScan: function() {
+                    if(this.scan<50) {
+                        ctx.globalAlpha = Math.max(Math.min((this.scan)/50,1),0);
+                    } else {
+                        ctx.globalAlpha = Math.max(Math.min((200-this.scan)/50,1),0);
+                    }
+                    ctx.font = '70px Trebuchet MS';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(Math.round(this.snowmanPercent*100)+'%',this.scanX,400)
+                    ctx.globalAlpha = 1;
+                },
+                snowmanFinished: function() {
+                    this.snowmanPercent = this.checkSnowman();
+                    this.snowmenPercents.push(this.snowmanPercent);
+                    this.scan = 1;
+                },
+                drawTargetSnowman: function() {
+                    ctx.fillStyle = '#90a1d5';
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 5;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(2.5,2.5,200,200);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.clip();
+                    //frame
+
+                    ctx.save();
+                    ctx.translate(-150,-270);
+                    ctx.scale(0.5,0.5);
+
+                    var n = 0;
+                    while(n < this.targetSnowman.objects.length) {
+                        var obj = this.targetSnowman.objects[n];
+                        if(obj.type=='stick') {
+                            this.objects.drawObject(obj);
+                        }
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < this.targetSnowman.objects.length) {
+                        var obj = this.targetSnowman.objects[n];
+                        if(obj.type!='stick') {
+                            this.objects.drawObject(obj);
+                        }
+                        n++;
+                    }
+                    //snowman
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0,900,1000,100);
+                    //ground
+
+                    ctx.restore();
+                    ctx.restore();
+                },
+                reset: function() {
+                    this.usingSnowballs.objects = [];
+                    this.paused = false;
+                    this.snowmenComplete = [];
+                    this.objects.objects = [];
+                    if(this.mode!='sandbox') {
+                        this.newTargetSnowman();
+                    }
+                    this.gameOverAnimation = 0;
+                    this.snowmenPercents = [];
+                    this.score = 0;
+                    this.scan = 0;
+                    this.typesCompleted = [];
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            object.id = n;
+                            this.updateObject(object);
+                            if(object.r<=0) {
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            if(object.type=='stick') {
+                                this.drawObject(object);
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            if(object.type!='stick') {
+                                this.drawObject(object);
+                            }
+                            n++;
+                        }
+                    },
+                    updateObject: function(obj) {
+                        if(obj.decay!==undefined) {
+                            obj.r -= obj.decay;
+                        }
+                        //decay
+
+                        if(obj.posTracking===undefined) {
+                            obj.posTracking = [];
+                        }
+                        //init position tracking
+
+                        obj.posTracking.push({x:obj.x,y:obj.y});
+                        if(obj.posTracking.length>50) {
+                            obj.posTracking.shift();
+                        }
+                        //track position
+
+                        obj.mass = obj.r**2*Math.PI;
+                        //calculate mass
+
+                        if(!obj.static) {
+                            obj.x += obj.xmove;
+                            obj.y += obj.ymove;
+                        }
+                        //move
+
+                        obj.xmove *= 0.99;
+                        obj.ymove *= 0.99;
+                        //damping
+
+                        obj.ymove += 0.05;
+                        //gravity
+
+                        if(obj.type=='stick'&&!obj.static) {
+                            obj.angle = dirTo(0,0,obj.xmove,obj.ymove);
+                        }
+                        //change angle for stick
+
+                        var turnStatic = false;
+
+                        if(obj.y+obj.r>900) {
+                            obj.y = 900-obj.r;
+                            obj.ymove *= 0.7;
+                            obj.xmove *= 0.7;
+
+                            if(obj.turnStatic) {
+                                turnStatic = true;
+                            }
+                        }
+                        //ground
+
+                        var collideObj;
+
+                        if(!obj.static) {
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                if(n!=obj.id) {
+                                    var obj2 = this.objects[n];
+                                    var dist;
+                                    if(obj.type!='stick'&&obj2.type!='stick') {
+                                        dist = distTo(obj.x,obj.y,obj2.x,obj2.y)-obj.r-obj2.r;
+                                    } else if(obj.type=='stick'&&obj2.type!='stick') {
+                                        var c1 = rotate(obj.x,obj.y,obj.x,obj.y-obj.r,-obj.angle);
+                                        var c2 = rotate(obj.x,obj.y,obj.x,obj.y-obj.r,180-obj.angle);
+                                        dist = distTo(obj2.x,obj2.y,c1[0],c1[1])-obj2.r-5;
+                                        dist = Math.min(dist,distTo(obj2.x,obj2.y,c2[0],c2[1])-obj2.r-5);
+                                    } else if(obj.type!='stick'&&obj2.type=='stick') {
+                                        var c1 = rotate(obj2.x,obj2.y,obj2.x,obj2.y-obj2.r,-obj2.angle);
+                                        var c2 = rotate(obj2.x,obj2.y,obj2.x,obj2.y-obj2.r,180-obj2.angle);
+                                        dist = distTo(obj.x,obj.y,c1[0],c1[1])-obj.r-5;
+                                        dist = Math.min(dist,distTo(obj.x,obj.y,c2[0],c2[1])-obj.r-5);
+                                    }
+                                    if(dist<0) {
+                                        if(obj2.static&&obj.turnStatic) {
+                                            turnStatic = true;
+                                            if(obj.type!='stick'&&obj2.type!='stick') {
+                                                resolveCollision(obj,obj2,0.9);
+                                            }
+                                        } else {
+                                            resolveCollision(obj,obj2,0.9);
+                                        }
+                                        collideObj = obj2;
+                                    }
+                                }
+                                n++;
+                            }
+                        }
+                        //resolve collisions
+
+                        if(turnStatic) {
+                            obj.static = true;
+                            var n = 0;
+                            while(n < obj.r/5) {
+                                var o = {};
+                                if(obj.type=='stick') {
+                                    if(collideObj!==undefined&&collideObj.type!='stick') {
+                                        collideObj.static = false;
+                                        //o.x = (collideObj.x+obj.x)/2+Math.random()-0.5;
+                                        //o.y = (collideObj.y+obj.y)/2+Math.random()-0.5;
+                                    }
+                                } else {
+                                    o.x = obj.x+Math.random()-0.5;
+                                    o.y = obj.y+Math.random()-0.5;
+                                }
+                                var move = distToMove(5,Math.random()*360);
+                                o.xmove = move[0];
+                                o.ymove = move[1];
+                                o.r = 5;
+                                o.decay = 0.015;
+                                this.objects.push(o);
+                                n++;
+                            }
+                        }
+                        //if a thrown snowball hits a static thing, it turns static
+                    },
+                    drawObject: function(obj) {
+                        if(game.scan>200&&game.gameOverAnimation==0) {
+                            ctx.globalAlpha = 1-Math.max(Math.min((game.scan-200)/50,1),0);
+                        }
+                        if(game.newSnowmanAnimation>0) {
+                            ctx.globalAlpha = 1-game.newSnowmanAnimation/50;
+                        }
+
+                        var radius = obj.r;
+                        if(obj.type!=='stick') {
+                            if(obj.turnStatic) {
+                                radius += 10;
+                                if(obj.posTracking) {
+                                    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                                    ctx.beginPath();
+                                    ctx.moveTo(obj.posTracking[0].x,obj.posTracking[0].y);
+                                    var n = 1;
+                                    while(n < obj.posTracking.length) {
+                                        var last = obj.posTracking[n-1];
+                                        var p = obj.posTracking[n];
+                                        var dir = dirTo(p.x,p.y,last.x,last.y);
+                                        var d = obj.r*n/40;
+                                        var r = rotate(p.x,p.y,p.x,p.y-d,-dir+90);
+                                        ctx.lineTo(r[0],r[1]);
+                                        n++;
+                                    }
+                                    var n = obj.posTracking.length-1;
+                                    while(n > 0) {
+                                        var last = obj.posTracking[n-1];
+                                        var p = obj.posTracking[n];
+                                        var dir = dirTo(p.x,p.y,last.x,last.y);
+                                        var d = obj.r*n/40;
+                                        var r = rotate(p.x,p.y,p.x,p.y-d,-dir-90);
+                                        ctx.lineTo(r[0],r[1]);
+                                        n--;
+                                    }
+                                    ctx.lineTo(obj.posTracking[0].x,obj.posTracking[0].y);
+                                    ctx.fill();
+                                    //trail
+                                }
+                            }
+                            ctx.fillStyle = 'white';
+                            ctx.beginPath();
+                            ctx.arc(obj.x,obj.y,radius,0,2*Math.PI);
+                            ctx.fill();
+                            //snowball
+                        } else {
+                            ctx.strokeStyle = 'rgb(150,100,50)';
+                            ctx.lineWidth = 5;
+                            ctx.lineCap = 'round';
+                            ctx.save();
+                            ctx.translate(obj.x,obj.y);
+                            ctx.rotate(obj.angle*Math.PI/180);
+                            ctx.scale((obj.r+20)/20,(obj.r+20)/20);
+                            ctx.beginPath();
+                            ctx.moveTo(0,-10);
+                            ctx.lineTo(0,10);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+
+                        if(obj.type=='head'||obj.type=='alien head'||obj.type=='dog head'||obj.type=='snowclops head'||obj.type=='bird head') {
+                            var angle = obj.x-500;
+                            if(obj.angle!==undefined) {
+                                angle = obj.angle;
+                            }
+
+                            ctx.save();
+                            ctx.translate(obj.x,obj.y);
+                            ctx.rotate(angle*Math.PI/180);
+                            ctx.scale(radius/28,radius/28);
+                            ctx.fillStyle = 'black';
+
+                            if(obj.type=='dog head'||obj.type=='bird head') {
+                                ctx.beginPath();
+                                ctx.arc(10,-8,5,0,2*Math.PI);
+                                ctx.fill();
+                                if(obj.type=='dog head') {
+                                    ctx.beginPath();
+                                    ctx.arc(33,0,7,0,2*Math.PI);
+                                    ctx.fill();
+                                } else if(obj.type=='bird head') {
+                                    ctx.beginPath();
+                                    ctx.moveTo(27,-6);
+                                    ctx.lineTo(27,6);
+                                    ctx.lineTo(33,0);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                }
+                            } else if(obj.type=='snowclops head') {
+                                ctx.beginPath();
+                                ctx.fillStyle = 'black';
+                                ctx.arc(0,0,10,0,2*Math.PI);
+                                ctx.fill();
+                            } else {
+                                ctx.beginPath();
+                                ctx.arc(-10,-7,5,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.beginPath();
+                                ctx.arc(10,-7,5,0,2*Math.PI);
+                                ctx.fill();
+                                if(obj.type=='alien head') {
+                                    ctx.beginPath();
+                                    ctx.arc(0,-15,5,0,2*Math.PI);
+                                    ctx.fill();
+                                }
+                            }
+
+                            ctx.restore();
+                        }
+                        //draw snowman head
+
+                        ctx.globalAlpha = 1;
+                    }
+                },
+                newTargetSnowman: function() {
+                    this.objects.objects = [];
+                    var options = [];
+                    var n = 0;
+                    while(n < snowmen.length) {
+                        if(this.typesCompleted.indexOf(snowmen[n].type)==-1) {
+                            options.push(snowmen[n]);
+                        }
+                        n++;
+                    }
+                    if(game.snowmenComplete.length==0) {
+                        this.targetSnowman = options[0];
+                    } else {
+                        this.targetSnowman = options[Math.floor(Math.random()*options.length)];
+                    }
+                    var n = 0;
+                    while(n < this.targetSnowman.objects.length) {
+                        this.targetSnowman.objects[n].turnStatic = true;
+                        n++;
+                    }
+                    this.usingSnowballs.objects = JSON.parse(JSON.stringify(this.targetSnowman.objects));
+                    var spots = [];
+                    var places = [];
+                    var n = 0;
+                    while(n < this.usingSnowballs.objects.length) {
+                        spots.push(n);
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < this.usingSnowballs.objects.length) {
+                        var obj = this.usingSnowballs.objects[n];
+                        if(obj.left) {
+                            var i = spots.length-1;
+                            places[spots[i]] = n;
+                            spots.splice(i,1);
+                        } else if(obj.right) {
+                            places[spots[0]] = n;
+                            spots.shift();
+                        }
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < this.usingSnowballs.objects.length) {
+                        var obj = this.usingSnowballs.objects[n];
+                        if(!obj.left&&!obj.right) {
+                            var i = Math.floor(Math.random()*spots.length);
+                            places[spots[i]] = n;
+                            spots.splice(i,1);
+                        }
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < this.usingSnowballs.objects.length) {
+                        var obj = this.usingSnowballs.objects[n];
+                        var spot = places.indexOf(n);
+                        var angle = 180*spot/(places.length-1);
+                        var r = rotate(500,700,800,700,angle);
+                        obj.x = r[0]+Math.random()*100-50;
+                        obj.y = r[1]+Math.random()*100-50;
+                        n++;
+                    }
+                    this.newSnowmanAnimation = 50;
+                },
+                targetSnowman: [],
+                checkSnowman: function() {
+                    var avgObjects = {x:0,y:0};
+                    var avgTarget = {x:0,y:0};
+                    var gameObjects = [];
+                    var n = 0;
+                    while(n < this.objects.objects.length) {
+                        var obj = this.objects.objects[n];
+                        if(obj.turnStatic) {
+                            gameObjects.push(obj);
+                        }
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < gameObjects.length) {
+                        var obj = gameObjects[n];
+                        if(obj.turnStatic==true) {
+                            avgObjects.x += obj.x;
+                            avgObjects.y += obj.y;
+                        }
+                        n++;
+                    }
+                    avgObjects.x /= gameObjects.length;
+                    avgObjects.y /= gameObjects.length;
+                    game.scanX = avgObjects.x;
+                    var n = 0;
+                    while(n < this.targetSnowman.objects.length) {
+                        var obj = this.targetSnowman.objects[n];
+                        avgTarget.x += obj.x;
+                        avgTarget.y += obj.y;
+                        n++;
+                    }
+                    avgTarget.x /= this.targetSnowman.objects.length;
+                    avgTarget.y /= this.targetSnowman.objects.length;
+                    var move = {};
+                    move.x = avgTarget.x-avgObjects.x;
+                    move.y = avgTarget.y-avgObjects.y;
+                    var dists = [];
+                    var n = 0;
+                    while(n < gameObjects.length) {
+                        var obj = gameObjects[n];
+                        var targetObj = false;
+                        var n2 = 0;
+                        while(n2 < this.targetSnowman.objects.length) {
+                            var obj2 = this.targetSnowman.objects[n2];
+                            if(obj.type==obj2.type&&obj.r==obj2.r) {
+                                var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                if(targetObj===false||dist<targetObj[1]) {
+                                    targetObj = [obj2,dist];
+                                }
+                            }
+                            n2++;
+                        }
+                        if(targetObj!==false) {
+                            var target = JSON.parse(JSON.stringify(targetObj[0]));
+                            target.x -= move.x;
+                            target.y -= move.y;
+                            var dist = distTo(target.x,target.y,obj.x,obj.y);
+                            dists.push(dist);
+                        }
+                        n++;
+                    }
+                    var avgDist = 0;
+                    var n = 0;
+                    while(n < dists.length) {
+                        avgDist += dists[n];
+                        n++;
+                    }
+                    avgDist /= dists.length;
+                    return Math.min(1,Math.max(1.1-avgDist/100,0));
+                },
+                usingSnowballs: {
+                    objects: [],
+                    using: false,
+                    usingAngle: 0,
+                    update: function() {
+                        if(Mouse.downStart&&this.using===false) {
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                var obj = this.objects[n];
+                                var dist = distTo(obj.x,obj.y,Mouse.x,Mouse.y);
+                                if(dist<obj.r+10) {
+                                    this.using = n;
+                                }
+                                n++;
+                            }
+                        }
+
+                        if(this.using!==false) {
+                            this.usingAngle -= 0.5;
+
+                            var obj = this.objects[this.using];
+                            var speed = distTo(obj.x,obj.y,Mouse.x,Mouse.y);
+                            var dir = dirTo(Mouse.x,Mouse.y,obj.x,obj.y);
+                            var move = distToMove(Math.min(speed/30,8),dir);
+                            obj.xmove = move[0];
+                            obj.ymove = move[1];
+
+                            if(!Mouse.down) {
+                                this.use();
+                            }
+                            if(Keys.keys[88]) {
+                                this.using = false;
+                                if(game.mode=='sandbox') {
+                                    this.objects = [];
+                                }
+                            }
+                        }
+                        if(word.endsWith("RAGEQUIT")) {
+                            for(var n=this.objects.length-1;n>=0;n--) {
+                                this.using = n;
+                                var obj = this.objects[this.using];
+                                var dir = dirTo(500,500,obj.x,obj.y);
+                                var move = distToMove(8,dir);
+                                obj.xmove = move[0];
+                                obj.ymove = move[1];
+                                this.use();
+                            }
+                            word = '';
+                        }
+
+                        if(this.objects.length==0&&game.scan==0&&game.mode!=='sandbox') {
+                            var static = true;
+                            var n = 0;
+                            while(n < game.objects.objects.length) {
+                                var obj = game.objects.objects[n];
+                                if(obj.turnStatic&&!obj.static) {
+                                    static = false;
+                                    break;
+                                }
+                                n++;
+                            }
+                            if(static) {
+                                game.snowmanFinished();
+                            }
+                        }
+                    },
+                    draw: function() {
+                        if(game.yoffset==0) {
+                            if(this.using!==false) {
+                                var obj = this.objects[this.using];
+                                if(obj.type=='stick') {
+                                    obj.angle = dirTo(obj.x,obj.y,Mouse.x,Mouse.y);
+                                }
+                                var trail = [];
+                                var point = {x:obj.x,y:obj.y,xmove:obj.xmove,ymove:obj.ymove};
+                                var n = 0;
+                                while(n < 500) {
+                                    point.x += point.xmove;
+                                    point.y += point.ymove;
+                                    //move
+
+                                    point.xmove *= 0.99;
+                                    point.ymove *= 0.99;
+                                    //damping
+
+                                    point.ymove += 0.05;
+                                    //gravity
+
+                                    trail.push({x:point.x,y:point.y});
+                                    n++;
+                                }
+
+                                ctx.lineDashOffset = this.usingAngle;
+                                ctx.beginPath();
+                                ctx.setLineDash([1,50]);
+                                ctx.strokeStyle = 'white';
+                                ctx.lineCap = 'round';
+                                ctx.lineWidth = 10;
+                                ctx.moveTo(trail[0],trail[1]);
+                                var n = 0;
+                                while(n < trail.length) {
+                                    ctx.lineTo(trail[n].x,trail[n].y);
+                                    n++;
+                                }
+                                ctx.stroke();
+                                //draw shooting forecast
+
+                                var c = 2*Math.PI*(obj.r+20);
+                                ctx.beginPath();
+                                ctx.setLineDash([c/8,c/8]);
+                                ctx.arc(obj.x,obj.y,obj.r+20,0,2*Math.PI);
+                                ctx.stroke();
+                                //draw spinning outline
+
+                                ctx.lineDashOffset = 0;
+                                ctx.setLineDash([]);
+
+                                ctx.fillStyle = 'white';
+                                ctx.font = '30px Trebuchet MS';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('X to Cancel Throw',obj.x,obj.y-obj.r-50);
+                                //draw cancel text
+                            }
+                        }
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            if(obj.type=='stick') {
+                                game.objects.drawObject(obj);
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            if(obj.type!='stick') {
+                                game.objects.drawObject(obj);
+                            }
+                            n++;
+                        }
+                    },
+                    use: function() {
+                        var obj = this.objects[this.using];
+                        game.objects.objects.push(JSON.parse(JSON.stringify(obj)));
+                        //throw snowball
+
+                        this.objects.splice(this.using,1);
+                        //delete snowball
+
+                        this.using = false;
+                    }
+                },
+                sandbox: {
+                    type: 0,
+                    types: ['','head','alien head','snowclops head','dog head','bird head','stick'],
+                    r: 20,
+                    update: function() {
+                        if(!game.paused) {
+                            if(this.type<0) {
+                                this.type += this.types.length;
+                            }
+                            this.type %= this.types.length;
+
+                            if(Mouse.inBox(20,190,220,30)&&Mouse.down) {
+                                this.r = (Mouse.x-20)/2;
+                            }
+                            this.r = Math.min(Math.max(this.r,5),205);
+
+                            if(Mouse.down&&Keys.keys[88]) {
+                                var n = 0;
+                                while(n < game.objects.objects.length) {
+                                    var o = game.objects.objects[n];
+                                    if(o.turnStatic) {
+                                        var dist = distTo(o.x,o.y,Mouse.x,Mouse.y);
+                                        if(dist<o.r+10) {
+                                            game.objects.objects.splice(n,1);
+                                            n--;
+                                        }
+                                    }
+                                    n++;
+                                }
+                            }
+                            //delete
+
+                            if(Keys.keys[67]) {
+                                game.objects.objects = [];
+                            }
+                            //clear
+                        }
+                    },
+                    draw: function() {
+                        var object = {};
+                        object.type = this.types[this.type];
+                        object.r = 20;
+                        object.angle = 0;
+                        object.x = 130;
+                        object.y = 70;
+                        object.turnStatic = true;
+                        game.objects.drawObject(object);
+                        //current object
+
+                        ctx.strokeStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.font = '60px Trebuchet MS';
+                        ctx.lineWidth = 5;
+                        ctx.fillStyle = 'white';
+                        ctx.strokeRect(30,45,50,50);
+                        ctx.fillText('<',55,90);
+                        if(Mouse.inBox(30,45,50,50)) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                            ctx.fillRect(30,45,50,50);
+                            if(Mouse.click) {
+                                this.type--;
+                            }
+                        }
+                        ctx.fillStyle = 'white';
+                        ctx.strokeRect(180,45,50,50);
+                        ctx.fillText('>',205,90);
+                        if(Mouse.inBox(180,45,50,50)) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                            ctx.fillRect(180,45,50,50);
+                            if(Mouse.click) {
+                                this.type++;
+                            }
+                        }
+                        //buttons
+
+                        ctx.font = '50px Trebuchet MS';
+                        ctx.fillStyle = 'white';
+                        ctx.fillText('Size:',130,170);
+                        //size text
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                        ctx.fillRect(30,200,200,10);
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(10+this.r*2,190,10,30);
+                        //size slider
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                        ctx.fillRect(0,0,264,254);
+                        ctx.strokeRect(2,2,260,250);
+                        //border
+
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'left';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('C - Clear',20,300);
+                        ctx.fillText('X+Click - Delete',20,350);
+                        //instructions
+
+                        if(Keys.keys[88]) {
+                            ctx.strokeStyle = 'red';
+                            ctx.lineWidth = 15;
+                            ctx.lineCap = 'round';
+                            ctx.beginPath();
+                            ctx.moveTo(Mouse.x-25,Mouse.y-25);
+                            ctx.lineTo(Mouse.x+25,Mouse.y+25);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(Mouse.x+25,Mouse.y-25);
+                            ctx.lineTo(Mouse.x-25,Mouse.y+25);
+                            ctx.stroke();
+                        }
+                        //delete
+
+                        if(!Mouse.inBox(0,0,264,254)&&!Keys.keys[88]&&!game.paused) {
+                            var object = {};
+                            object.x = Mouse.x;
+                            object.y = Mouse.y;
+                            object.type = this.types[this.type];
+                            object.r = this.r;
+                            object.turnStatic = true;
+                            object.angle = 0;
+                            if(game.usingSnowballs.using===false) {
+                                ctx.globalAlpha = 0.7;
+                                game.objects.drawObject(object);
+                                ctx.globalAlpha = 1;
+                                if(Mouse.down) {
+                                    game.usingSnowballs.using = 0;
+                                    game.usingSnowballs.objects.push(object);
+                                }
+                            }
+                        }
+                        //using object
+                    }
+                }
+            }
+
+            var particles = {
+                particles: [],
+                update: function() {
+                    if(Math.random()>0.8) {
+                        this.particles.push({x:Math.random()*1200-100,y:-50,xmove:0,ymove:0,move:Math.random()*200});
+                    }
+                    //add snow particles
+
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        p.x += p.xmove;
+                        p.y += p.ymove;
+                        //move
+
+                        p.xmove *= 0.99;
+                        p.ymove *= 0.99;
+                        //damping
+
+                        p.ymove += 0.01;
+                        //gravity
+
+                        p.move++;
+                        p.xmove = Math.sin(p.move/50)/10;
+                        //move snow left and right
+
+                        if(p.y>1000) {
+                            this.particles.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                },
+                draw: function() {
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(p.x,p.y,4,4);
+                        n++;
+                    }
+                },
+                reset: function() {
+                    this.particles = [];
+                    var n = 0;
+                    while(n < 200) {
+                        var p = {};
+                        p.x = Math.random()*1200-100;
+                        p.y = Math.random()*1100-100;
+                        p.xmove = 0;
+                        p.ymove = 0.5;
+                        p.move = Math.random()*200;
+                        this.particles.push(p);
+                        n++;
+                    }
+                }
+            }
+
+            particles.reset();
+
+            var page = 'menu';
+            var t = 0;
+            var highscore = 0;
+            if(localStorage.getItem('snowmanbuilderhighscore')!=null) {
+                highscore = localStorage.getItem('snowmanbuilderhighscore');
+            }
+
+            var snowmen = [
+                {type:'snowman',level:'medium',objects:[{x:500,y:850,r:50},{x:500,y:760,r:40},{x:500,y:690,r:30,type:'head'},{x:420,y:760,r:40,angle:90,type:'stick',left:true},{x:580,y:760,r:40,angle:90,type:'stick',right:true}]},
+                {type:'tall snowman',level:'medium',objects:[{x:500,y:850,r:50},{x:500,y:777,r:43},{x:500,y:705,r:36},{x:500,y:645,r:30,type:'head'},{x:420,y:705,r:40,angle:90,type:'stick',left:true},{x:580,y:705,r:40,angle:90,type:'stick',right:true}]},
+                {type:'baby snowman',level:'easy',objects:[{x:500,y:860,r:40},{x:500,y:790,r:30,type:'head'},{x:430,y:830,r:30,angle:90,type:'stick',left:true},{x:570,y:830,r:30,angle:90,type:'stick',right:true}]},
+                {type:'fat snowman',level:'easy',objects:[{x:500,y:830,r:100},{x:500,y:700,r:30,type:'head'},{x:370,y:820,r:30,angle:90,type:'stick',left:true},{x:630,y:820,r:30,angle:90,type:'stick',right:true}]},
+                {type:'upside down snowman',level:'medium',objects:[{x:500,y:710,r:50},{x:500,y:800,r:40},{x:500,y:870,r:30,type:'head'},{x:420,y:800,r:40,angle:90,type:'stick',left:true},{x:580,y:800,r:40,angle:90,type:'stick',right:true}]},
+                {type:'snow dog',level:'hard',objects:[{type:'stick',x:425,y:885,r:20,angle:0},{type:'stick',x:475,y:885,r:20,angle:0},{x:450,y:820,r:40},{x:400,y:800,r:10},{x:500,y:770,r:20,type:'dog head',right:true}]},
+                {type:'snow alien',level:'medium',objects:[{x:500,y:880,r:20},{x:500,y:840,r:20},{x:500,y:790,r:30,type:'alien head'},{x:470,y:735,r:30,angle:150,type:'stick',left:true},{x:530,y:735,r:30,angle:30,type:'stick',right:true}]},
+                {type:'dead snowman',level:'easy',objects:[{x:400,y:850,r:50},{x:510,y:860,r:40},{x:600,y:870,r:30,type:'head'}]},
+                {type:'snowclops',level:'medium',objects:[{x:500,y:840,r:60},{x:500,y:730,r:50},{x:500,y:650,r:30,type:'snowclops head'},{x:410,y:730,r:40,angle:90,type:'stick',left:true},{x:590,y:730,r:40,angle:90,type:'stick',right:true}]},
+                {type:'bobblehead',level:'medium',objects:[{x:500,y:850,r:50},{x:500,y:760,r:40},{x:500,y:650,r:70,type:'head'},{x:420,y:760,r:40,angle:90,type:'stick',left:true},{x:580,y:760,r:40,angle:90,type:'stick',right:true}]},
+                {type:'snow bodybuilder',level:'hard',objects:[{x:500,y:850,r:50},{x:500,y:760,r:40},{x:500,y:690,r:30,type:'head'},{x:430,y:760,r:20,left:true},{x:400,y:740,r:13,left:true},{x:570,y:760,r:20,right:true},{x:600,y:740,r:13,right:true}]},
+                {type:'snolar bear',level:'hard',objects:[{x:440,y:885,r:15},{x:560,y:880,r:20},{x:440,y:800,r:70},{x:560,y:810,r:50},{type:'dog head',x:630,y:800,r:20,angle:0},{x:350,y:790,r:10,left:true}]},
+                {type:'snowball fight',level:'hard',objects:[{x:400,y:870,r:30},{x:400,y:815,r:25},{x:400,y:770,r:20,type:'head',angle:0},{x:600,y:870,r:30},{x:600,y:815,r:25},{x:600,y:770,r:20,type:'head',angle:0},{x:565,y:770,r:15,left:true},{type:'stick',right:true,x:445,y:805,r:20,angle:45}]},
+                {type:'snow penguin',level:'easy',objects:[{x:500,y:870,r:30},{x:500,y:810,type:'bird head',r:20}]},
+                {type:'snow caterpillar',level:'hard',objects:[{x:400,y:880,r:20},{x:440,y:880,r:20},{x:480,y:880,r:20},{x:520,y:880,r:20},{x:560,y:880,r:20},{type:'stick',x:570,y:840,angle:30,r:20},{type:'stick',x:550,y:840,angle:-30,r:20}]}
+            ]
+
+            /*
+            More types of snowmen:
+            snow santa
+            snow sheep
+            snow gnome
+            snow queen
+            snow king
+            snow bunny
+            snow leapord
+            abominable snowman
+            polar express
+            */
+
+            /*
+            To Do:
+            More snowmen types
+            Add sound
+            add gallery
+            */
+
+            function johnbutlergames() {
+                game.objects.drawObject = function(obj) {
+                    if(game.scan>200&&game.gameOverAnimation==0) {
+                        ctx.globalAlpha = 1-Math.max(Math.min((game.scan-200)/50,1),0);
+                    }
+                    if(game.newSnowmanAnimation>0) {
+                        ctx.globalAlpha = 1-game.newSnowmanAnimation/50;
+                    }
+
+                    var radius = obj.r;
+                    if(obj.type!=='stick') {
+                        if(obj.turnStatic) {
+                            radius += 10;
+                            if(obj.posTracking) {
+                                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                                ctx.beginPath();
+                                ctx.moveTo(obj.posTracking[0].x,obj.posTracking[0].y);
+                                var n = 1;
+                                while(n < obj.posTracking.length) {
+                                    var last = obj.posTracking[n-1];
+                                    var p = obj.posTracking[n];
+                                    var dir = dirTo(p.x,p.y,last.x,last.y);
+                                    var d = obj.r*n/40;
+                                    var r = rotate(p.x,p.y,p.x,p.y-d,-dir+90);
+                                    ctx.lineTo(r[0],r[1]);
+                                    n++;
+                                }
+                                var n = obj.posTracking.length-1;
+                                while(n > 0) {
+                                    var last = obj.posTracking[n-1];
+                                    var p = obj.posTracking[n];
+                                    var dir = dirTo(p.x,p.y,last.x,last.y);
+                                    var d = obj.r*n/40;
+                                    var r = rotate(p.x,p.y,p.x,p.y-d,-dir-90);
+                                    ctx.lineTo(r[0],r[1]);
+                                    n--;
+                                }
+                                ctx.lineTo(obj.posTracking[0].x,obj.posTracking[0].y);
+                                ctx.fill();
+                                //trail
+                            }
+                        }
+                        ctx.fillStyle = 'blue';
+                        ctx.beginPath();
+                        ctx.fillRect(obj.x-radius,obj.y-radius,radius*2,radius*2);
+                        ctx.fill();
+                        //snowball
+                    } else {
+                        ctx.strokeStyle = 'rgb(150,100,50)';
+                        ctx.lineWidth = 5;
+                        ctx.lineCap = 'round';
+                        ctx.save();
+                        ctx.translate(obj.x,obj.y);
+                        ctx.rotate(obj.angle*Math.PI/180);
+                        ctx.scale((obj.r+20)/20,(obj.r+20)/20);
+                        ctx.beginPath();
+                        ctx.moveTo(0,-10);
+                        ctx.lineTo(0,10);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if(obj.type=='head'||obj.type=='alien head'||obj.type=='dog head'||obj.type=='snowclops head'||obj.type=='bird head') {
+                        var angle = obj.x-500;
+                        if(obj.angle!==undefined) {
+                            angle = obj.angle;
+                        }
+
+                        ctx.save();
+                        ctx.translate(obj.x,obj.y);
+                        ctx.rotate(angle*Math.PI/180);
+                        ctx.scale(radius/28,radius/28);
+                        ctx.fillStyle = 'black';
+
+                        if(obj.type=='dog head'||obj.type=='bird head') {
+                            ctx.beginPath();
+                            ctx.arc(10,-8,5,0,2*Math.PI);
+                            ctx.fill();
+                            if(obj.type=='dog head') {
+                                ctx.beginPath();
+                                ctx.arc(33,0,7,0,2*Math.PI);
+                                ctx.fill();
+                            } else if(obj.type=='bird head') {
+                                ctx.beginPath();
+                                ctx.moveTo(27,-6);
+                                ctx.lineTo(27,6);
+                                ctx.lineTo(33,0);
+                                ctx.closePath();
+                                ctx.fill();
+                            }
+                        } else if(obj.type=='snowclops head') {
+                            ctx.beginPath();
+                            ctx.fillStyle = 'black';
+                            ctx.arc(0,0,10,0,2*Math.PI);
+                            ctx.fill();
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(-10,-7,5,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(10,-7,5,0,2*Math.PI);
+                            ctx.fill();
+                            if(obj.type=='alien head') {
+                                ctx.beginPath();
+                                ctx.arc(0,-15,5,0,2*Math.PI);
+                                ctx.fill();
+                            }
+                        }
+
+                        ctx.restore();
+                    }
+                    //draw snowman head
+
+                    ctx.globalAlpha = 1;
+                }
+            }
+        </script>
+    </body>
+</html>

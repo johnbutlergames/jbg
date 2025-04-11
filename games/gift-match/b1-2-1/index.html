@@ -1,0 +1,723 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Gift Match";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var t = 0;
+
+        function distanceToExitRectangle(angle, w, h) {
+            angle = (angle % 360 + 360) % 360;
+            var cornerAngle = dirTo(0, 0, w, -h);
+            if (angle > 180 - cornerAngle && angle < 360 - cornerAngle) angle -= 180;
+            if (angle < cornerAngle || angle > 360 - cornerAngle) {
+                return (h / 2) / Math.sin((90 - angle) * Math.PI / 180);
+            } else {
+                return (w / 2) / Math.cos((90 - angle) * Math.PI / 180);
+            }
+        }
+
+        var menu = {
+            page: "new game",
+            switchPage: "new game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                    ctx.save();
+                    ctx.globalAlpha = a;
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0, 0, 1500, 1000);
+                    ctx.restore();
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            score: 0,
+            time: 0,
+            gameOver: false,
+            update: function () {
+                if (this.gameOver) {
+                    game.level.updateGameOver();
+                } else {
+                    this.objects.update();
+                    this.level.update();
+                    this.updateTime();
+                }
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                this.level.drawBackground();
+                this.objects.draw();
+                this.level.draw();
+            },
+            reset: function () {
+                this.time = 6000;
+                this.score = 0;
+                this.gameOver = false;
+                this.level.reset();
+            },
+            updateTime: function () {
+                this.time--;
+                this.time = Math.max(this.time, 0);
+                if (this.time == 0) {
+                    this.endGame();
+                }
+            },
+            endGame: function () {
+                this.gameOver = true;
+                this.level.selection.selected = false;
+                if (this.score > highscore) {
+                    highscore = this.score;
+                    updateHighscore();
+                }
+            },
+            objects: {
+                objects: [],
+                update: function () {
+                    var bufferDistance = 10;
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        for (var n2 = 0; n2 < this.objects.length; n2++) {
+                            var o2 = this.objects[n2];
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            if (dist >= o.radius + o2.radius + bufferDistance) continue;
+                            var penetration = o.radius + o2.radius + bufferDistance - dist;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(-penetration / 2, dir);
+                            o.x += move.x;
+                            o.y += move.y;
+                            o2.x -= move.x;
+                            o2.y -= move.y;
+                        }
+                        if (o.x - o.radius < 0) {
+                            o.x = o.radius;
+                        }
+                        if (o.y - o.radius < 100) {
+                            o.y = 100 + o.radius;
+                        }
+                        if (o.x + o.radius > 1500) {
+                            o.x = 1500 - o.radius;
+                        }
+                        if (o.y + o.radius > 1000) {
+                            o.y = 1000 - o.radius;
+                        }
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+                    ctx.rotate(o.angle * Math.PI / 180);
+
+                    if (o.type == "present") this.drawPresent(o);
+
+                    ctx.restore();
+                },
+                drawPresent: function (o) {
+                    this.drawPresentBody(o);
+                    this.drawPresentAccent(o);
+                    this.drawPresentRibbons(o);
+                    this.drawPresentBodyBorder(o);
+                },
+                drawPresentAccent: function (o) {
+                    if (!o.accent) return;
+                    ctx.save();
+                    this.drawPresentBodyShape(o);
+                    ctx.clip();
+
+                    if (o.accent.type == "stripes") {
+                        this.drawStripesAccent(o);
+                    } else if (o.accent.type == "dots") {
+                        this.drawDotsAccent(o);
+                    }
+
+                    ctx.restore();
+                },
+                drawStripesAccent: function (o) {
+                    var size = Math.max(o.w, o.h);
+                    var radialSize = size * 2;
+                    var step = o.accent.spacing;
+                    var lowerBound = o.accent.offset % (step * 2) - size / 2 - step * 2;
+                    var upperBound = size / 2 + step;
+
+                    ctx.strokeStyle = o.accent.color;
+                    ctx.lineWidth = o.accent.thickness;
+                    ctx.rotate(o.accent.angle * Math.PI / 180);
+                    for (var y = lowerBound; y < upperBound; y += step) {
+                        ctx.beginPath();
+                        ctx.moveTo(-radialSize, y);
+                        ctx.lineTo(radialSize, y);
+                        ctx.stroke();
+                    }
+                },
+                drawDotsAccent: function (o) {
+                    ctx.fillStyle = o.accent.color;
+                    var step = o.accent.spacing;
+                    for (var x = -o.w / 2, xCount = 0; x < o.w + step; x += step, xCount++) {
+                        for (var y = -o.h / 2, yCount = 0; y < o.h + step; y += step, yCount++) {
+                            var size = o.accent.sizes[(xCount + yCount) % 2];
+                            ctx.beginPath();
+                            ctx.arc(x, y, size, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    }
+                },
+                drawPresentRibbons: function (o) {
+                    if (!o.ribbon) return;
+                    ctx.save();
+                    this.drawPresentBodyShape(o);
+                    ctx.clip();
+
+                    var b = o.ribbon.thickness;
+                    var borderThickness = 3;
+
+                    var directions = o.ribbon.directionOrder;
+                    for (var direction of directions) {
+                        if (direction == "horizontal") {
+                            ctx.fillStyle = o.ribbon.borderColor;
+                            ctx.fillRect(-o.w / 2, - b / 2 - borderThickness, o.w, b + borderThickness * 2);
+                            ctx.fillStyle = o.ribbon.color;
+                            ctx.fillRect(-o.w / 2, - b / 2, o.w, b);
+                        } else if (direction == "vertical") {
+                            ctx.fillStyle = o.ribbon.borderColor;
+                            ctx.fillRect(- b / 2 - borderThickness, -o.h / 2, b + borderThickness * 2, o.h);
+                            ctx.fillStyle = o.ribbon.color;
+                            ctx.fillRect(- b / 2, -o.h / 2, b, o.h);
+                        }
+                    }
+
+                    ctx.restore();
+
+                    this.drawPresentBow(o);
+                },
+                drawPresentBow: function (o) {
+                    var borderThickness = 300 / o.ribbon.thickness;
+                    if (o.ribbon.bowPosition == "center") {
+                        ctx.save();
+                        ctx.scale(o.ribbon.thickness / 100, o.ribbon.thickness / 100);
+                        this.drawPresentBowInPosition(o, borderThickness);
+                        ctx.restore();
+                    } else {
+                        var directionIndex = ["top", "right", "bottom", "left"].indexOf(o.ribbon.bowPosition)
+                        var rotate = directionIndex * 90;
+                        dimension = ["h", "w", "h", "w"][directionIndex];
+                        var size = Math.max(o.w, o.h);
+                        ctx.save();
+                        ctx.rotate(rotate * Math.PI / 180);
+                        ctx.translate(0, -o[dimension] / 2);
+                        ctx.beginPath();
+                        ctx.rect(-size / 2, -size, size, size);
+                        ctx.clip();
+                        ctx.scale(o.ribbon.thickness / 100, o.ribbon.thickness / 100);
+                        this.drawPresentBowInPosition(o, borderThickness);
+                        ctx.restore();
+                    }
+                },
+                drawPresentBowInPosition: function (o, borderThickness) {
+                    ctx.fillStyle = o.ribbon.color;
+                    ctx.strokeStyle = o.ribbon.borderColor;
+                    ctx.lineWidth = borderThickness;
+                    ctx.lineJoin = "round";
+
+                    ctx.beginPath();
+                    ctx.moveTo(-20, 0);
+                    ctx.lineTo(-175, -150);
+                    ctx.lineTo(-50, -200);
+                    ctx.lineTo(20, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(20, 0);
+                    ctx.lineTo(175, -150);
+                    ctx.lineTo(50, -200);
+                    ctx.lineTo(-20, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 80, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                },
+                drawPresentBody: function (o) {
+                    ctx.fillStyle = o.bodyColor;
+                    this.drawPresentBodyShape(o);
+                    ctx.fill();
+                },
+                drawPresentBodyBorder: function (o) {
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 3;
+                    ctx.lineJoin = "round";
+                    ctx.lineCap = "round";
+                    this.drawPresentBodyShape(o);
+                    ctx.stroke();
+                },
+                drawPresentBodyShape: function (o) {
+                    ctx.beginPath();
+                    if (o.shape == "rectangle") {
+                        ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
+                    } else {
+                        ctx.arc(0, 0, o.size / 2, 0, 2 * Math.PI);
+                    }
+                }
+            },
+            level: {
+                levelCompleteTimer: 0,
+                level: 1,
+                update: function () {
+                    this.selection.update();
+                    if (!this.levelCompleteTimer && this.selection.correctSelection) this.completeLevel();
+                    if (this.levelCompleteTimer) this.levelCompleteTimer++;
+                    if (this.levelCompleteTimer >= 100) {
+                        this.newLevel();
+                    }
+                },
+                draw: function () {
+                    this.selection.draw();
+                    this.drawText();
+                    if (game.gameOver) this.drawGameOver();
+                },
+                reset: function () {
+                    this.level = 0;
+                    this.levelCompleteTimer = 0;
+                    this.newLevel();
+                },
+                completeLevel: function () {
+                    this.levelCompleteTimer = 1;
+                    game.score += 10;
+                    this.level++;
+                },
+                newLevel: function () {
+                    this.levelCompleteTimer = 0;
+                    this.selection.reset();
+                    this.generateLevel(4 + this.level);
+                },
+                drawText: function () {
+                    ctx.fillStyle = "rgba(255,240,240,0.7)";
+                    ctx.fillRect(0, 0, 1500, 100);
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 50px Arial";
+                    ctx.fillText(`Score: ${game.score}`, 1450, 50);
+
+                    ctx.textAlign = "left";
+                    ctx.fillText(`Time: ${Math.floor(game.time / 100)}`, 40, 50);
+                },
+                updateGameOver: function () {
+                    if (Mouse.clickInBox(750 - 300 / 2, 600, 300, 140)) {
+                        menu.switchPage = "new game";
+                    }
+                    if (Mouse.clickInBox(750 - 300 / 2, 800, 300, 140)) {
+                        menu.switchPage = "title screen";
+                    }
+                },
+                drawGameOver: function () {
+                    ctx.fillStyle = "rgba(255,240,240,0.7)";
+                    ctx.fillRect(750 / 2, 100, 750, 900);
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 100px Arial";
+                    ctx.fillText("Time's Up!", 750, 220);
+
+                    ctx.font = "bold 70px Arial";
+                    ctx.fillText(`Score: ${game.score}`, 750, 400);
+                    ctx.fillText(`Highscore: ${highscore}`, 750, 500);
+
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.lineJoin = "round";
+                    ctx.strokeRect(750 - 300 / 2, 600, 300, 140);
+                    ctx.strokeRect(750 - 300 / 2, 800, 300, 140);
+
+                    ctx.fillText(`Retry`, 750, 600 + 70);
+                    ctx.fillText(`Quit`, 750, 800 + 70);
+                },
+                drawBackground: function () {
+                },
+                selection: {
+                    selected: false,
+                    correctSelection: false,
+                    startSelectionOpacity: 0,
+                    lineOpacity: 0,
+                    correctSelectionOpacity: 0,
+                    lineCoordinates: { x1: 0, y1: 0, x2: 0, y2: 0 },
+                    buffer: 0,
+                    animationAngle: 0,
+                    lineInsideSelection: false,
+                    update: function () {
+                        if (this.selected) {
+                            this.updateActiveSelecting();
+                        } else {
+                            this.updateStartSelecting();
+                        }
+                        this.updateOpacity();
+                        this.updateLineCoordinates();
+                        this.updateAnimation();
+                    },
+                    updateAnimation: function () {
+                        this.buffer = 30 + Math.sin(t / 30) * 7;
+                        this.animationAngle = t / 2;
+                    },
+                    updateOpacity: function () {
+                        if (this.selected) {
+                            this.startSelectionOpacity += 0.1;
+                        } else {
+                            this.startSelectionOpacity -= 0.1;
+                        }
+                        this.startSelectionOpacity = Math.min(Math.max(this.startSelectionOpacity, 0), 1);
+                        if (this.selected && !this.lineInsideSelection) {
+                            this.lineOpacity += 0.1;
+                            if(!this.correctSelection) this.lineOpacity = Math.min(this.lineOpacity,0.6);
+                        } else {
+                            this.lineOpacity -= 0.1;
+                        }
+                        this.lineOpacity = Math.min(Math.max(this.lineOpacity, 0), 1);
+                        if (this.correctSelection) {
+                            this.correctSelectionOpacity += 0.1;
+                        } else {
+                            this.correctSelectionOpacity -= 0.1;
+                        }
+                        this.correctSelectionOpacity = Math.min(Math.max(this.correctSelectionOpacity, 0), 1);
+                    },
+                    updateStartSelecting() {
+                        if (!Mouse.downStart) return;
+                        for (var o of game.objects.objects) {
+                            if (o.type != "present") continue;
+                            var dist = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                            if (dist > o.radius) continue;
+                            this.selected = o;
+                            break;
+                        }
+                    },
+                    updateActiveSelecting() {
+                        if (this.correctSelection) return;
+                        if (!Mouse.down) this.selected = false;
+                        if (!this.selected.correctPresent) return;
+                        for (var o of game.objects.objects) {
+                            if (o.type != "present") continue;
+                            var dist = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                            if (dist > o.radius) continue;
+                            if (!o.correctPresent) continue;
+                            if (o.correctPresentId == this.selected.correctPresentId) continue;
+                            this.correctSelection = o;
+                        }
+                    },
+                    updateLineCoordinates: function () {
+                        if (!this.selected) {
+                            this.lineCoordinates = { x1: 0, y1: 0, x2: 0, y2: 0 };
+                            return;
+                        }
+                        if (this.correctSelection) {
+                            var c1 = this.closestSelectionCoordinate(this.selected, this.correctSelection);
+                            var c2 = this.closestSelectionCoordinate(this.correctSelection, this.selected);
+                            this.lineCoordinates.x1 = c1.x;
+                            this.lineCoordinates.y1 = c1.y;
+                            this.lineCoordinates.x2 = c2.x;
+                            this.lineCoordinates.y2 = c2.y;
+                        } else {
+                            var c1 = this.closestSelectionCoordinate(this.selected, { x: Mouse.x, y: Mouse.y });
+                            this.lineCoordinates.x1 = c1.x;
+                            this.lineCoordinates.y1 = c1.y;
+                            this.lineCoordinates.x2 = Mouse.x;
+                            this.lineCoordinates.y2 = Mouse.y;
+                            this.lineInsideSelection = false;
+                            if (distTo(this.selected.x, this.selected.y, Mouse.x, Mouse.y) < distTo(this.selected.x, this.selected.y, c1.x, c1.y)) {
+                                this.lineInsideSelection = true;
+                                this.lineCoordinates.x2 = c1.x;
+                                this.lineCoordinates.y2 = c1.y;
+                            }
+                        }
+                    },
+                    draw: function () {
+                        if (!this.selected) return;
+
+                        ctx.save();
+                        ctx.globalAlpha = this.startSelectionOpacity;
+                        this.drawSelectionAroundObject(this.selected);
+                        ctx.restore();
+
+                        if (this.correctSelection) {
+                            ctx.save();
+                            ctx.globalAlpha = this.correctSelectionOpacity;
+                            this.drawSelectionAroundObject(this.correctSelection);
+                            ctx.restore();
+                        }
+
+                        this.drawSelectionLine();
+                    },
+                    closestSelectionCoordinate: function (o, target) {
+                        var dir = dirTo(o.x, o.y, target.x, target.y);
+                        if (o.shape == "circle") {
+                            var move = distToMove(o.radius + this.buffer, dir);
+                            return { x: o.x + move.x, y: o.y + move.y };
+                        } else if (o.shape == "rectangle") {
+                            var dist = distanceToExitRectangle(o.angle - dir, o.w + this.buffer * 2, o.h + this.buffer * 2);
+                            var move = distToMove(dist, dir);
+                            return { x: o.x + move.x, y: o.y + move.y };
+                        }
+                    },
+                    drawSelectionLine: function () {
+                        ctx.save();
+                        ctx.setLineDash([50, 20]);
+                        if(this.correctSelection) ctx.setLineDash([]);
+                        ctx.lineDashOffset = -t / 2 + this.buffer;
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 7;
+                        ctx.lineCap = "round";
+                        ctx.globalAlpha = this.lineOpacity;
+                        ctx.beginPath();
+                        ctx.moveTo(this.lineCoordinates.x1, this.lineCoordinates.y1);
+                        ctx.lineTo(this.lineCoordinates.x2, this.lineCoordinates.y2);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.lineDashOffset = 0;
+                        ctx.restore();
+                    },
+                    drawSelectionAroundObject: function (o) {
+                        ctx.save();
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 7;
+                        ctx.lineCap = "round";
+                        ctx.lineJoin = "round";
+
+                        ctx.translate(o.x, o.y);
+                        ctx.rotate(o.angle * Math.PI / 180);
+                        if (o.shape == "circle") {
+                            var circumference = (o.radius + this.buffer) * 2 * Math.PI;
+                            var quarter = circumference / 4;
+                            ctx.setLineDash([quarter * 0.35, quarter * 0.65]);
+                            ctx.lineDashOffset = -this.animationAngle / 360 * circumference;
+                            ctx.beginPath();
+                            ctx.arc(0, 0, o.radius + this.buffer, 0, 2 * Math.PI);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                            ctx.lineDashOffset = 0;
+                        } else {
+                            var width = o.w + this.buffer * 2;
+                            var height = o.h + this.buffer * 2;
+                            ctx.setLineDash([width * 0.2, width * 0.6, width * 0.2 + height * 0.2, height * 0.6, height * 0.2, 0]);
+                            ctx.strokeRect(-o.w / 2 - this.buffer, -o.h / 2 - this.buffer, o.w + this.buffer * 2, o.h + this.buffer * 2);
+                            ctx.setLineDash([]);
+                        }
+                        ctx.restore();
+                    },
+                    reset: function () {
+                        this.selected = false;
+                        this.correctSelection = false;
+                    }
+                },
+                generateLevel: function (presentCount) {
+                    game.objects.objects = [];
+                    while (game.objects.objects.length < presentCount) {
+                        var o = this.generateRandomPresent();
+                        var duplicate = game.objects.objects.find(function (e) {
+                            if (e.colorScheme.name != o.colorScheme.name) return false;
+                            if (e.ribbonScheme.name != o.ribbonScheme.name) return false;
+                            if (e.shape != o.shape) return false;
+                            if (e.accent.type != o.accent.type) return false;
+                            return true;
+                        });
+                        if (duplicate) continue;
+                        o.x = Math.random() * 1500;
+                        o.y = Math.random() * 1000;
+                        o.angle = Math.random() * 360;
+                        game.objects.objects.push(o);
+                    }
+                    var correctPresent = game.objects.objects[Math.floor(Math.random() * game.objects.objects.length)];
+                    correctPresent.correctPresent = true;
+                    correctPresent.correctPresentId = 0;
+                    var secondCorrectPresent = JSON.parse(JSON.stringify(correctPresent));
+                    secondCorrectPresent.correctPresentId = 1;
+                    secondCorrectPresent.x = Math.random() * 1500;
+                    secondCorrectPresent.y = Math.random() * 1000;
+                    secondCorrectPresent.angle = Math.random() * 360;
+                    game.objects.objects.push(secondCorrectPresent);
+                },
+                generateRandomPresent: function () {
+                    var colorScheme = colorSchemes[Math.floor(Math.random() * colorSchemes.length)];
+                    var ribbonScheme = colorSchemes[Math.floor(Math.random() * colorSchemes.length)];
+
+                    var o = {};
+                    o.type = "present";
+                    o.w = Math.random() * 100 + 100;
+                    o.h = Math.random() * 100 + 100;
+                    o.colorScheme = colorScheme;
+                    o.ribbonScheme = ribbonScheme;
+                    o.size = Math.sqrt(o.w ** 2 + o.h ** 2);
+                    o.shape = Math.random() < 0.05 ? "circle" : "rectangle";
+                    if (o.shape == "circle") {
+                        o.size = Math.min(o.w, o.h);
+                        o.w = o.size
+                        o.h = o.size;
+                    }
+                    o.radius = o.size / 2;
+                    o.bodyColor = colorScheme.bodyColor;
+                    if (Math.random() < 0.1 && false) {
+                        o.accent = false;
+                    } else {
+                        o.accent = {};
+                        o.accent.type = Math.random() < 0.5 ? "dots" : "stripes";
+                        o.accent.color = "rgba(0,0,0,0.15)";
+                    }
+                    if (o.accent) {
+                        if (o.accent.type == "dots") {
+                            o.accent.sizes = [Math.random() * 5 + 5];
+                            o.accent.sizes.push(o.accent.sizes[0] * (1.5 + Math.random()));
+                            o.accent.spacing = Math.random() * 20 + 30;
+                        } else if (o.accent.type == "stripes") {
+                            o.accent.angle = Math.random() * 360;
+                            o.accent.thickness = Math.random() * 30 + 5;
+                            o.accent.spacing = Math.random() * 5 + 5 + o.accent.thickness * 2;
+                            o.accent.offset = Math.random() * o.accent.spacing;
+                        }
+                    }
+                    o.ribbon = {};
+                    o.ribbon.directionOrder = ["horizontal", "vertical"];
+                    if (Math.random() < 0.5) o.ribbon.directionOrder.unshift(o.ribbon.directionOrder.pop());
+                    o.ribbon.color = ribbonScheme.accentColor;
+                    o.ribbon.borderColor = ribbonScheme.borderColor;
+                    o.ribbon.thickness = 10 + Math.random() * 10;
+                    o.ribbon.bowPosition = ["left", "right", "bottom", "top", "center"][Math.floor(Math.random() * 5)];
+                    return o;
+                }
+            }
+        }
+
+        var colorSchemes = [];
+        var colorInfo = [
+            { name: "red", hue: 0 },
+            { name: "orange", hue: 30 },
+            { name: "yellow", hue: 60 },
+            { name: "green", hue: 120 },
+            { name: "cyan", hue: 180 },
+            { name: "blue", hue: 220 },
+            { name: "purple", hue: 270 },
+            { name: "pink", hue: 340, lightness: 160 }
+        ];
+        function generateColorSchemes() {
+            colorSchemes = [];
+            for (var o of colorInfo) {
+                var scheme = {};
+                scheme.name = o.name;
+                var hue = o.hue;
+                var saturation = o.saturation || 100;
+                var lightness = o.lightness || 100;
+                scheme.hue = o.hue;
+                scheme.saturation = o.saturation;
+                scheme.lightness = o.lightness;
+                scheme.bodyColor = `hsl(${hue},${saturation * 0.7}%,${lightness * 0.5}%)`;
+                scheme.accentColor = `hsl(${hue},${saturation * 0.8}%,${lightness * 0.5}%)`;
+                scheme.borderColor = `hsl(${hue},${saturation * 0.5}%,${lightness * 0.35}%)`;
+                colorSchemes.push(scheme);
+            }
+        }
+        generateColorSchemes();
+
+        function updateHighscore() {
+            window.localStorage.setItem("giftmatchhighscore", highscore);
+        }
+        var highscore = 0;
+        if (window.localStorage.getItem("giftmatchhighscore") != null) {
+            highscore = window.localStorage.getItem("giftmatchhighscore");
+        }
+    </script>
+</body>
+
+</html>

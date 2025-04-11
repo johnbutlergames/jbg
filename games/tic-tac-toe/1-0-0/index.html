@@ -1,0 +1,1073 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Tic Tac Toe';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = true;
+            var intro = 0;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function roundRect(x, y, width, height, radius) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=='game') {
+                    game.update();
+                } else if(page=='menu') {
+                    ctx.font = '100px Comic Sans MS';
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'blue';
+                    ctx.fillText('Tic-',200,150);
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Tac-',380,150);
+                    ctx.fillStyle = 'red';
+                    ctx.fillText('Toe',580,150);
+                    //title
+
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'white';
+                    if(Mouse.inBox(375,350,250,125)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            page = 'selectGameOptions';
+                        }
+                    }
+                    roundRect(375,350,250,125,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.font = '90px Comic Sans MS';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Play',500,440);
+                    //play button
+
+                    ctx.font = '70px Comic Sans MS';
+                    ctx.fillText('By John Butler',500,930);
+                    //credits
+
+                    ctx.lineWidth = 20;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'red';
+                    ctx.arc(200,500,40,0,2*Math.PI);
+                    ctx.stroke();
+                    ctx.lineWidth = 20;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'red';
+                    ctx.arc(800,400,40,0,2*Math.PI);
+                    ctx.stroke();
+
+                    ctx.save();
+                    ctx.translate(600,600);
+                    ctx.rotate(0.1);
+                    ctx.strokeStyle = 'blue';
+                    ctx.beginPath();
+                    ctx.moveTo(-40,-40);
+                    ctx.lineTo(40,40);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(40,-40);
+                    ctx.lineTo(-40,40);
+                    ctx.stroke();
+                    ctx.restore();
+                    ctx.save();
+                    ctx.translate(100,800);
+                    ctx.rotate(-0.1);
+                    ctx.strokeStyle = 'blue';
+                    ctx.beginPath();
+                    ctx.moveTo(-40,-40);
+                    ctx.lineTo(40,40);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(40,-40);
+                    ctx.lineTo(-40,40);
+                    ctx.stroke();
+                    ctx.restore();
+                    //x's and o's
+                } else if(page=='selectGameOptions') {
+                    ctx.font = '80px Comic Sans MS';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Options:',500,100);
+                    //title
+
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'white';
+                    if(Mouse.inBox(25,850,250,125)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            page = 'menu';
+                        }
+                    }
+                    roundRect(25,850,250,125,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.font = '90px Comic Sans MS';
+                    ctx.fillText('Back',150,940);
+                    //back button
+
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'white';
+                    if(Mouse.inBox(305,850,390,125)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            page = 'game';
+                            game.reset();
+                            game.wins = {red:0,blue:0};
+                        }
+                    }
+                    roundRect(305,850,390,125,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.font = '90px Comic Sans MS';
+                    ctx.fillText('Continue',500,940);
+                    //continue button
+
+                    ctx.font = '50px Comic Sans MS';
+
+                    ctx.lineWidth = 5;
+                    if(game.whoGoesFirst=='X') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(200,200,255)';
+                    if(Mouse.inBox(300,250,160,90)) {
+                        ctx.fillStyle = 'rgb(170,170,225)';
+                        if(Mouse.click) {
+                            game.whoGoesFirst = 'X';
+                        }
+                    }
+                    roundRect(300,250,160,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Blue',370,310);
+
+                    ctx.lineWidth = 5;
+                    if(game.whoGoesFirst=='O') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,200,200)';
+                    if(Mouse.inBox(100,250,160,90)) {
+                        ctx.fillStyle = 'rgb(225,170,170)';
+                        if(Mouse.click) {
+                            game.whoGoesFirst = 'O';
+                        }
+                    }
+                    roundRect(100,250,160,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Red',170,310);
+                    ctx.fillText('plays first.',630,300);
+                    //who plays first
+
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Red is',180,460);
+                    //who is red text
+
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Blue is',180,580);
+                    //who is blue text
+
+                    ctx.lineWidth = 5;
+                    if(game.red=='Human') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(300,400,200,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.red = 'Human';
+                        }
+                    }
+                    roundRect(300,400,200,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 5;
+                    if(game.red=='Robot 1') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(520,400,120,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.red = 'Robot 1';
+                        }
+                    }
+                    roundRect(520,400,120,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 5;
+                    if(game.red=='Robot 2') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(660,400,120,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.red = 'Robot 2';
+                        }
+                    }
+                    roundRect(660,400,120,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 5;
+                    if(game.red=='Robot 3') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(800,400,120,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.red = 'Robot 3';
+                        }
+                    }
+                    roundRect(800,400,120,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.font = '50px Comic Sans MS';
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Human',400,460);
+                    ctx.font = '40px Comic Sans MS';
+                    ctx.fillText('🤖',580,445);
+                    ctx.fillText('🤖',720,445);
+                    ctx.fillText('🤖',860,445);
+                    ctx.font = '25px Comic Sans MS';
+                    ctx.fillText('Easy',580,475);
+                    ctx.fillText('Medium',720,475);
+                    ctx.fillText('Hard',860,475);
+                    //who is red buttons
+
+                    ctx.lineWidth = 5;
+                    if(game.blue=='Human') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(300,520,200,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.blue = 'Human';
+                        }
+                    }
+                    roundRect(300,520,200,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 5;
+                    if(game.blue=='Robot 1') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(520,520,120,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.blue = 'Robot 1';
+                        }
+                    }
+                    roundRect(520,520,120,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 5;
+                    if(game.blue=='Robot 2') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(660,520,120,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.blue = 'Robot 2';
+                        }
+                    }
+                    roundRect(660,520,120,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 5;
+                    if(game.blue=='Robot 3') {
+                        ctx.lineWidth = 10;
+                    }
+                    ctx.fillStyle = 'rgb(255,255,255)';
+                    if(Mouse.inBox(800,520,120,90)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            game.blue = 'Robot 3';
+                        }
+                    }
+                    roundRect(800,520,120,90,10);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.font = '50px Comic Sans MS';
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Human',400,580);
+                    ctx.font = '40px Comic Sans MS';
+                    ctx.fillText('🤖',580,565);
+                    ctx.fillText('🤖',720,565);
+                    ctx.fillText('🤖',860,565);
+                    ctx.font = '25px Comic Sans MS';
+                    ctx.fillText('Easy',580,595);
+                    ctx.fillText('Medium',720,595);
+                    ctx.fillText('Hard',860,595);
+                    //who is blue buttons
+                }
+            }
+
+            var game = {
+                nodes: [],
+                turn: 'X',
+                win: false,
+                wins: {red:0,blue:0},
+                blue: 'Human',
+                red: 'Human',
+                startAnimation: 50,
+                update: function() {
+                    this.draw();
+                    if(this.startAnimation>0) {
+                        this.startAnimation--;
+                    } else {
+                        var animated = false;
+                        var n = 0;
+                        while(n < this.nodes.length) {
+                            if(this.nodes[n].animation>0) {
+                                animated = true;
+                                break;
+                            }
+                            n++;
+                        }
+                        if(!animated&&this.win==false) {
+                            this.updateGame();
+                        }
+                    }
+                },
+                updateGame: function() {
+                    this.calculateWin();
+                    if(this.win==false) {
+                        if((this.turn=='X'&&this.blue=='Human')||(this.turn=='O'&&this.red=='Human')) {
+                            var mouseCors = {x:Math.floor((Mouse.x-200)/200),y:Math.floor((Mouse.y-200)/200)};
+                            var onPlay = this.findNode(mouseCors.x,mouseCors.y);
+                            var onBoard = mouseCors.x>=0&&mouseCors.y>=0&&mouseCors.x<=2&&mouseCors.y<=2;
+                            if(!onPlay&&onBoard) {
+                                var color = 'red';
+                                if(this.turn=='X') {
+                                    color = 'blue';
+                                }
+                                ctx.fillStyle = color;
+                                ctx.globalAlpha = 0.3;
+                                ctx.fillRect(mouseCors.x*200+250,mouseCors.y*200+250,100,100);
+                                ctx.globalAlpha = 1;
+                                if(Mouse.click) {
+                                    this.nodes.push({x:mouseCors.x,y:mouseCors.y,type:this.turn,animation:50});
+                                    this.switchTurn();
+                                }
+                            }
+                        } else {
+                            this.getAIMove();
+                        }
+                    } else {
+                        this.win = JSON.parse(JSON.stringify(this.win));
+                        var w = this.win;
+                        if(this.win.who!=='draw') {
+                            var winDirection = dirTo(w.start.x,w.start.y,w.end.x,w.end.y);
+                            var move = distToMove(0.3,winDirection);
+                            w.start.x -= move[0];
+                            w.start.y -= move[1];
+                            w.end.x += move[0];
+                            w.end.y += move[1];
+                            w.start.x += Math.random()/4-0.125;
+                            w.start.y += Math.random()/4-0.125;
+                            w.end.x += Math.random()/4-0.125;
+                            w.end.y += Math.random()/4-0.125;
+                            w.start.x = w.start.x*200-200;
+                            w.start.y = w.start.y*200-200;
+                            w.end.x = w.end.x*200-200;
+                            w.end.y = w.end.y*200-200;
+                        }
+                        w.animation = 50;
+                    }
+                },
+                getAIMove: function() {
+                    var whoIsAI = 'red';
+                    if(this.turn=='X') {
+                        whoIsAI = 'blue';
+                    }
+                    var level = Number(this[whoIsAI].slice(6));
+                    var possibleMoves = [];
+                    for(var x=0;x<3;x++) {
+                        for(var y=0;y<3;y++) {
+                            if(!this.findNode(x,y)) {
+                                possibleMoves.push({x:x,y:y});
+                            }
+                        }
+                    }
+                    if(level==1) {
+                        var move = possibleMoves[Math.floor(Math.random()*possibleMoves.length)];
+                        this.nodes.push({x:move.x,y:move.y,type:this.turn,animation:50});
+                    } else if(level==2) {
+                        var move = this.blockOrWin();
+                        if(!move) {
+                            move = possibleMoves[Math.floor(Math.random()*possibleMoves.length)];
+                        }
+                        this.nodes.push({x:move.x,y:move.y,type:this.turn,animation:50});
+                    } else if(level==3) {
+                        if(possibleMoves.length==1) {
+                            var move = possibleMoves[0];
+                            this.nodes.push({x:move.x,y:move.y,type:this.turn,animation:50});
+                        } else {
+                            var move = this.blockOrWin();
+                            if(!move) {
+                                move = this.getMoveForAdvancedAI();
+                            }
+                            if(move===undefined) {
+                                move = possibleMoves[Math.floor(Math.random()*possibleMoves.length)];
+                            }
+                            this.nodes.push({x:move.x,y:move.y,type:this.turn,animation:50});
+                        }
+                    }
+                    this.switchTurn();
+                },
+                blockOrWin: function() {
+                    var move;
+                    var oppositeMoves = [];
+                    var sameMoves = [];
+                    for(var x=0;x<3;x++) {
+                        for(var y=0;y<3;y++) {
+                            if(!this.findNode(x,y)) continue;
+                            var node = this.findNode(x,y);
+                            if(node.type==this.turn) {
+                                sameMoves.push({x:node.x,y:node.y});
+                            } else {
+                                oppositeMoves.push({x:node.x,y:node.y});
+                            }
+                        }
+                    }
+                    var wins = [];
+                    for(var n=0;n<sameMoves.length;n++) {
+                        for(var n2=n+1;n2<sameMoves.length;n2++) {
+                            var move1 = sameMoves[n];
+                            var move2 = sameMoves[n2];
+                            if(move1.x!=move2.x&&move1.y!=move2.y&&Math.abs(move1.x-move2.x)!=Math.abs(move1.y-move2.y)) continue;
+                            if(Math.round((move1.x+move2.x)/2)==(move1.x+move2.x)/2&&Math.round((move1.y+move2.y)/2)==(move1.y+move2.y)/2) {
+                                wins.push({x:(move1.x+move2.x)/2,y:(move1.y+move2.y)/2});
+                                continue;
+                            }
+                            var line1 = {x:move2.x*2-move1.x,y:move2.y*2-move1.y};
+                            if(this.nodeOnBoard(line1.x,line1.y)) {
+                                wins.push(line1);
+                            }
+                            var line2 = {x:move1.x*2-move2.x,y:move1.y*2-move2.y};
+                            if(this.nodeOnBoard(line2.x,line2.y)) {
+                                wins.push(line2);
+                            }
+                        }
+                    }
+                    var madeMove = false;
+                    for(var n=0;n<wins.length;n++) {
+                        var win = wins[n];
+                        if(this.findNode(win.x,win.y)) {
+                            wins.splice(n,1);
+                            n--;
+                        }
+                    }
+                    if(wins.length>0) {
+                        move = wins[Math.floor(Math.random()*wins.length)];
+                        madeMove = true;
+                    }
+                    var blockWins = [];
+                    for(var n=0;n<oppositeMoves.length&&madeMove==false;n++) {
+                        for(var n2=n+1;n2<oppositeMoves.length;n2++) {
+                            var move1 = oppositeMoves[n];
+                            var move2 = oppositeMoves[n2];
+                            if(move1.x!=move2.x&&move1.y!=move2.y&&Math.abs(move1.x-move2.x)!=Math.abs(move1.y-move2.y)) continue;
+                            if(Math.round((move1.x+move2.x)/2)==(move1.x+move2.x)/2&&Math.round((move1.y+move2.y)/2)==(move1.y+move2.y)/2) {
+                                blockWins.push({x:(move1.x+move2.x)/2,y:(move1.y+move2.y)/2});
+                                continue;
+                            }
+                            var line1 = {x:move2.x*2-move1.x,y:move2.y*2-move1.y};
+                            if(this.nodeOnBoard(line1.x,line1.y)) {
+                                blockWins.push(line1);
+                            }
+                            var line2 = {x:move1.x*2-move2.x,y:move1.y*2-move2.y};
+                            if(this.nodeOnBoard(line2.x,line2.y)) {
+                                blockWins.push(line2);
+                            }
+
+                        }
+                    }
+                    for(var n=0;n<blockWins.length;n++) {
+                        var block = blockWins[n];
+                        if(this.findNode(block.x,block.y)) {
+                            blockWins.splice(n,1);
+                            n--;
+                        }
+                    }
+                    if(blockWins.length>0) {
+                        move = blockWins[Math.floor(Math.random()*blockWins.length)];
+                        madeMove = true;
+                    }
+                    if(move) return move;
+                    return false;
+                },
+                getMoveForAdvancedAI: function() {
+                    if(this.turn=='X') {
+                        return this.getMoveFromBoardState(xMoves,this.nodes);
+                    } else {
+                        return this.getMoveFromBoardState(oMoves,this.nodes);
+                    }
+                },
+                getMoveFromBoardState: function(moves,boardState) {
+                    for(var move of moves) {
+                        if(move[0].length!=boardState.length) continue;
+                        var mismatch = false;
+                        for(var node of boardState) {
+                            var match = false;
+                            for(var node2 of move[0]) {
+                                if(node.x==node2.x&&node.y==node2.y&&node.type==node2.type) match = true;
+                                if(match) break;
+                            }
+                            if(!match) mismatch = true;
+                            if(mismatch) break;
+                        }
+                        if(mismatch) continue;
+                        return move[1];
+                    }
+                },
+                calculateWin: function() {
+                    var n = 0;
+                    while(n < this.nodes.length) {
+                        var node = this.nodes[n];
+                        var xmove = -1;
+                        while(xmove < 2) {
+                            var ymove = -1;
+                            while(ymove < 2) {
+                                if(xmove==0&&ymove==0) {
+                                    ymove++;
+                                    continue;
+                                }
+                                var x = node.x;
+                                var y = node.y;
+                                var node2 = this.findNode(x+xmove,y+ymove);
+                                var node3 = this.findNode(x+xmove*2,y+ymove*2);
+                                if(node2&&node3&&node2.type==node.type&&node3.type==node.type) {
+                                    this.win = {who:node.type,start:node,end:node3};
+                                    break;
+                                }
+                                ymove++;
+                            }
+                            if(this.win) {
+                                break;
+                            }
+                            xmove++;
+                        }
+                        if(this.win) {
+                            break;
+                        }
+                        n++;
+                    }
+                    if(this.win) {
+                        if(this.win.who=='X') {
+                            this.wins.blue++;
+                        } else {
+                            this.wins.red++;
+                        }
+                    }
+                    if(this.nodes.length==9&&!this.win) {
+                        this.win = {who:'draw'};
+                    }
+                },
+                findNode: function(x,y) {
+                    var n = 0;
+                    while(n < this.nodes.length) {
+                        var node = this.nodes[n];
+                        if(node.x==x&&node.y==y) {
+                            return node;
+                        }
+                        n++;
+                    }
+                    return false;
+                },
+                nodeOnBoard: function(x,y) {
+                    return x>=0&&y>=0&&x<3&&y<3;
+                },
+                switchTurn: function() {
+                    if(this.turn=='X') {
+                        this.turn = 'O';
+                    } else {
+                        this.turn = 'X';
+                    }
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(500,500);
+                    if(this.startAnimation>0) {
+                        var s = Math.sin((50-this.startAnimation)/25)+0.08256204471819018;
+                        ctx.scale(s,s);
+                    }
+                    ctx.lineWidth = 10;
+                    ctx.strokeStyle = 'black';
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(-300,-100);
+                    ctx.lineTo(300,-100);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(-300,100);
+                    ctx.lineTo(300,100);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(-100,-300);
+                    ctx.lineTo(-100,300);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(100,-300);
+                    ctx.lineTo(100,300);
+                    ctx.stroke();
+                    //draw board
+
+                    this.drawNodes();
+                    //draw plays
+
+                    ctx.fillStyle = 'blue';
+                    ctx.textAlign = 'left';
+                    ctx.font = '100px Comic Sans MS';
+                    ctx.fillText(this.wins.blue,-450,-400);
+                    if(this.blue!='Human') {
+                        ctx.font = '50px Comic Sans MS';
+                        ctx.fillText("🤖",-450,-330);
+                    }
+
+                    ctx.fillStyle = 'red';
+                    ctx.textAlign = 'right';
+                    ctx.font = '100px Comic Sans MS';
+                    ctx.fillText(this.wins.red,450,-400);
+                    if(this.red!='Human') {
+                        ctx.font = '50px Comic Sans MS';
+                        ctx.fillText("🤖",450,-330);
+                    }
+                    //draw wins
+
+                    ctx.textAlign = 'center';
+                    if(this.win) {
+                        if(this.win.animation>0) {
+                            this.win.animation--;
+                        }
+                        //animation
+
+                        var win = 'Red'
+                        if(this.win.who=='X') {
+                            win = 'Blue';
+                        }
+                        var text = win+' Wins!';
+                        ctx.fillStyle = win.toLowerCase();
+                        if(this.win.who=='draw') {
+                            text = 'Draw!';
+                            ctx.fillStyle = 'black';
+                        }
+                        ctx.font = '130px Comic Sans MS';
+                        ctx.save();
+                        ctx.translate(0,-350);
+                        var s = Math.sin((50-this.win.animation)/25)+0.08256204471819018;
+                        ctx.scale(s,s);
+                        ctx.fillText(text,0,0);
+                        //win text
+
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(325,850,400,125)) {
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                            if(Mouse.click) {
+                                game.reset();
+                                game.startAnimation = 0;
+                            }
+                        }
+                        roundRect(-175,705,400,125,10);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '90px Comic Sans MS';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Continue',25,795);
+                        //continue button
+
+                        ctx.restore();
+                        //win text
+
+                        if(this.win&&this.win.who!='draw') {
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 20;
+                            ctx.beginPath();
+                            var w = this.win;
+                            var a = w.animation/50;
+                            ctx.moveTo(w.start.x,w.start.y);
+                            ctx.lineTo(w.end.x*(1-a)+w.start.x*a,w.end.y*(1-a)+w.start.y*a);
+                            ctx.stroke();
+                        }
+                        //draw win line
+                    }
+
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'white';
+                    if(Mouse.inBox(25,850,250,125)) {
+                        ctx.fillStyle = 'rgb(200,200,200)';
+                        if(Mouse.click) {
+                            page = 'menu';
+                        }
+                    }
+                    roundRect(-475,350,250,125,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.font = '90px Comic Sans MS';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Back',-350,440);
+                    //back button
+
+                    ctx.restore();
+                },
+                drawNodes: function() {
+                    var n = 0;
+                    while(n < this.nodes.length) {
+                        var node = this.nodes[n];
+                        ctx.save();
+                        ctx.translate(node.x*200-200,node.y*200-200);
+                        if(node.animation>0) {
+                            node.animation--;
+                            var s = Math.sin((50-node.animation)/25)+0.08256204471819018;
+                            ctx.scale(s,s);
+                        }
+                        ctx.lineWidth = 20;
+                        ctx.beginPath();
+                        if(node.type=='O') {
+                            ctx.strokeStyle = 'red';
+                            ctx.arc(0,0,40,0,2*Math.PI);
+                            ctx.stroke();
+                        } else {
+                            ctx.beginPath();
+                            ctx.strokeStyle = 'blue';
+                            ctx.moveTo(-40,-40);
+                            ctx.lineTo(40,40);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(40,-40);
+                            ctx.lineTo(-40,40);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                        n++;
+                    }
+                },
+                reset: function() {
+                    this.startAnimation = 50;
+                    this.nodes = [];
+                    this.turn = this.whoGoesFirst;
+                    this.win = false;
+                    xMoves = rotateMoves(xMoves,Math.floor(Math.random()*4)*90);
+                    oMoves = rotateMoves(oMoves,Math.floor(Math.random()*4)*90);
+                },
+                whoGoesFirst: 'X'
+            }
+
+            var xMoves = [
+                [[],{x:0,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:0,type:'O'}],{x:1,y:1}],
+                [[{x:0,y:0,type:'X'},{x:0,y:1,type:'O'}],{x:1,y:1}],
+                [[{x:0,y:0,type:'X'},{x:2,y:1,type:'O'}],{x:1,y:1}],
+                [[{x:0,y:0,type:'X'},{x:1,y:2,type:'O'}],{x:1,y:1}],
+                [[{x:0,y:0,type:'X'},{x:1,y:0,type:'O'}],{x:1,y:1}],
+                [[{x:0,y:0,type:'X'},{x:2,y:0,type:'O'}],{x:0,y:2}],
+                [[{x:0,y:0,type:'X'},{x:0,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:2,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'}],{x:2,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:0,type:'O'},{x:1,y:1,type:'X'},{x:2,y:2,type:'O'}],{x:0,y:2}],
+                [[{x:0,y:0,type:'X'},{x:0,y:1,type:'O'},{x:1,y:1,type:'X'},{x:2,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:2,y:0,type:'O'},{x:0,y:2,type:'X'},{x:0,y:1,type:'O'}],{x:2,y:2}],
+                [[{x:0,y:0,type:'X'},{x:0,y:2,type:'O'},{x:2,y:0,type:'X'},{x:1,y:0,type:'O'}],{x:2,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:2,type:'O'},{x:1,y:1,type:'X'},{x:2,y:2,type:'O'}],{x:0,y:2}],
+                [[{x:0,y:0,type:'X'},{x:2,y:1,type:'O'},{x:1,y:1,type:'X'},{x:2,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:2,y:2,type:'O'},{x:2,y:0,type:'X'},{x:1,y:0,type:'O'}],{x:0,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:2,y:0,type:'O'}],{x:0,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:0,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:1,y:0,type:'O'}],{x:1,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:1,y:2,type:'O'}],{x:1,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:0,y:1,type:'O'}],{x:2,y:1}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:2,y:1,type:'O'}],{x:0,y:1}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:1,y:0,type:'O'},{x:1,y:2,type:'X'},{x:0,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:1,y:2,type:'O'},{x:1,y:0,type:'X'},{x:2,y:0,type:'O'}],{x:0,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:2,y:1,type:'O'},{x:0,y:1,type:'X'},{x:0,y:2,type:'O'}],{x:2,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'},{x:0,y:1,type:'O'},{x:2,y:1,type:'X'},{x:2,y:0,type:'O'}],{x:0,y:2}],
+            ];
+
+            var oMoves = [
+                [[{x:0,y:0,type:'X'}],{x:1,y:1}],
+                [[{x:1,y:0,type:'X'}],{x:1,y:1}],
+                [[{x:2,y:0,type:'X'}],{x:1,y:1}],
+                [[{x:2,y:1,type:'X'}],{x:1,y:1}],
+                [[{x:2,y:2,type:'X'}],{x:1,y:1}],
+                [[{x:1,y:2,type:'X'}],{x:1,y:1}],
+                [[{x:0,y:2,type:'X'}],{x:1,y:1}],
+                [[{x:0,y:1,type:'X'}],{x:1,y:1}],
+                [[{x:1,y:1,type:'X'}],{x:0,y:0}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:1,y:2,type:'X'}],{x:2,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:1,type:'X'}],{x:2,y:2}],
+                [[{x:0,y:0,type:'X'},{x:1,y:1,type:'O'},{x:2,y:2,type:'X'}],{x:1,y:2}],
+                [[{x:0,y:2,type:"X"},{x:1,y:1,type:"O"},{x:2,y:1,type:"X"}],{x:2,y:0}],
+                [[{x:0,y:2,type:"X"},{x:1,y:1,type:"O"},{x:1,y:0,type:"X"}],{x:2,y:0}],
+                [[{x:0,y:2,type:"X"},{x:1,y:1,type:"O"},{x:2,y:0,type:"X"}],{x:2,y:1}],
+                [[{x:2,y:2,type:"X"},{x:1,y:1,type:"O"},{x:1,y:0,type:"X"}],{x:0,y:0}],
+                [[{x:2,y:2,type:"X"},{x:1,y:1,type:"O"},{x:0,y:1,type:"X"}],{x:0,y:0}],
+                [[{x:2,y:2,type:"X"},{x:1,y:1,type:"O"},{x:0,y:0,type:"X"}],{x:1,y:0}],
+                [[{x:2,y:0,type:"X"},{x:1,y:1,type:"O"},{x:0,y:1,type:"X"}],{x:0,y:2}],
+                [[{x:2,y:0,type:"X"},{x:1,y:1,type:"O"},{x:1,y:2,type:"X"}],{x:0,y:2}],
+                [[{x:2,y:0,type:"X"},{x:1,y:1,type:"O"},{x:0,y:2,type:"X"}],{x:0,y:1}],
+                [[{x:0,y:1,type:"X"},{x:1,y:1,type:"O"},{x:1,y:0,type:"X"}],{x:0,y:0}],
+                [[{x:0,y:1,type:"X"},{x:1,y:1,type:"O"},{x:2,y:0,type:"X"}],{x:0,y:2}],
+                [[{x:0,y:1,type:"X"},{x:1,y:1,type:"O"},{x:2,y:1,type:"X"}],{x:1,y:0}],
+                [[{x:0,y:1,type:"X"},{x:1,y:1,type:"O"},{x:2,y:2,type:"X"}],{x:0,y:0}],
+                [[{x:0,y:1,type:"X"},{x:1,y:2,type:"O"},{x:2,y:2,type:"X"}],{x:0,y:2}],
+                [[{x:1,y:2,type:"X"},{x:1,y:1,type:"O"},{x:0,y:1,type:"X"}],{x:0,y:2}],
+                [[{x:1,y:2,type:"X"},{x:1,y:1,type:"O"},{x:0,y:0,type:"X"}],{x:2,y:2}],
+                [[{x:1,y:2,type:"X"},{x:1,y:1,type:"O"},{x:1,y:0,type:"X"}],{x:0,y:1}],
+                [[{x:1,y:2,type:"X"},{x:1,y:1,type:"O"},{x:2,y:0,type:"X"}],{x:0,y:2}],
+                [[{x:1,y:2,type:"X"},{x:2,y:1,type:"O"},{x:2,y:0,type:"X"}],{x:2,y:2}],
+                [[{x:2,y:1,type:"X"},{x:1,y:1,type:"O"},{x:1,y:2,type:"X"}],{x:2,y:2}],
+                [[{x:2,y:1,type:"X"},{x:1,y:1,type:"O"},{x:0,y:2,type:"X"}],{x:2,y:0}],
+                [[{x:2,y:1,type:"X"},{x:1,y:1,type:"O"},{x:0,y:1,type:"X"}],{x:1,y:2}],
+                [[{x:2,y:1,type:"X"},{x:1,y:1,type:"O"},{x:0,y:0,type:"X"}],{x:2,y:2}],
+                [[{x:2,y:1,type:"X"},{x:1,y:0,type:"O"},{x:0,y:0,type:"X"}],{x:2,y:0}],
+                [[{x:1,y:0,type:"X"},{x:1,y:1,type:"O"},{x:2,y:1,type:"X"}],{x:2,y:0}],
+                [[{x:1,y:0,type:"X"},{x:1,y:1,type:"O"},{x:2,y:2,type:"X"}],{x:0,y:0}],
+                [[{x:1,y:0,type:"X"},{x:1,y:1,type:"O"},{x:1,y:2,type:"X"}],{x:2,y:1}],
+                [[{x:1,y:0,type:"X"},{x:1,y:1,type:"O"},{x:0,y:2,type:"X"}],{x:2,y:0}],
+                [[{x:1,y:0,type:"X"},{x:0,y:1,type:"O"},{x:0,y:2,type:"X"}],{x:0,y:0}],
+                [[{x:1,y:1,type:"X"},{x:0,y:0,type:"O"},{x:2,y:2,type:"X"}],{x:0,y:2}]
+            ];
+
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function rotateMoves(moves,angle) {
+                for(var move of moves) {
+                    for(var i_move of move[0]) {
+                        var cor = rotate(1,1,i_move.x,i_move.y,angle);
+                        i_move.x = Math.round(cor[0]);
+                        i_move.y = Math.round(cor[1]);
+                    }
+                    var cor = rotate(1,1,move[1].x,move[1].y,angle);
+                    move[1].x = Math.round(cor[0]);
+                    move[1].y = Math.round(cor[1]);
+                }
+                return moves;
+            }
+            
+            var page = 'menu';
+
+            game.reset();
+        </script>
+    </body>
+</html>

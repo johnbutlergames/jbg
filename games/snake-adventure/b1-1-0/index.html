@@ -1,0 +1,990 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0;
+            }
+        </style>
+        <canvas id="canvas"></canvas>
+        <script>
+            var word = "";
+            var title = "Snake Adventure";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            var canvas,ctx;
+
+            function initialize() {
+                document.title = title;
+
+                canvas = document.getElementById("canvas");
+                var ratio = dimensions.width/dimensions.height;
+                var sizeText = "min(100vw,100vh)";
+                if(ratio>1) {
+                    sizeText = `min(${100/ratio}vw,100vh)`;
+                    canvas.style.width = `calc(${sizeText} * ${ratio})`;
+                    canvas.style.height = sizeText;
+                } else if(ratio<1) {
+                    sizeText = `min(100vw,${100*ratio}vh)`;
+                    canvas.style.width = sizeText;
+                    canvas.style.height = `calc(${sizeText} * ${1/ratio})`;
+                } else {
+                    canvas.style.width = sizeText;
+                    canvas.style.height = sizeText;
+                }
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
+
+                ctx = canvas.getContext("2d");
+                canvas.onmousemove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchmove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.onclick = function(event) {
+                    Mouse.click = true;
+                }
+                canvas.onmousedown = function(event) {
+                    Mouse.down = true;
+                }
+                canvas.ontouchstart = function(event) {
+                    Mouse.down = true;
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchend = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onmouseup = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onwheel = function(event) {
+                    Mouse.scrollX = event.deltaX;
+                    Mouse.scrollY = event.deltaY;
+                    event.preventDefault();
+                }
+                window.onkeydown = function(event) {
+                    Keys.keys[event.keyCode] = true;
+                    Keys.down[event.keyCode] = true;
+                    word += String.fromCharCode(event.keyCode);
+                }
+                window.onkeyup = function(event) {
+                    Keys.keys[event.keyCode] = false;
+                    Keys.up[event.keyCode] = true;
+                }
+
+                Loading.loadLogoImage();
+                Loading.loadImages();
+                Loading.loadAudios();
+
+                for(var key of Object.keys(Physics)) {
+                    this[key] = Physics[key];
+                }
+
+                ctx.roundRect=(x,y,w,h,r)=>{
+                    ctx.beginPath();
+                    ctx.moveTo(x+r,y);
+                    ctx.lineTo(x+w-r,y);
+                    ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                    ctx.lineTo(x+w,y+h-r);
+                    ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                    ctx.lineTo(x+r,y+h);
+                    ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                    ctx.lineTo(x,y+r);
+                    ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                }
+            }
+            var Loading = {
+                animation: 0,
+                loads: 0,
+                loaded: true,
+                intro: 0,
+                logoImage: false,
+                percent: 0,
+                loadImages: function() {
+                    var keys = Object.keys(images);
+                    for(var key of keys) {
+                        var image = document.createElement("img");
+                        image.src = images[key];
+                        image.onload = function() {
+                            Loading.loads++;
+                        }
+                        images[key] = image;
+                    }
+                },
+                loadAudios: function() {
+                    var keys = Object.keys(images);
+                    for(var key of keys) {
+                        var audio = document.createElement("audio");
+                        audio.src = audios[key];
+                        audio.oncanplaythrough = function() {
+                            Loading.loads++;
+                        }
+                        audios[key] = audio;
+                    }
+                },
+                loadLogoImage: function() {
+                    this.logoImage = document.createElement("img");
+                    this.logoImage.src = "https://johnbutlergames.com/logoLarge.png";
+                    this.logoImage.onload = function() {
+                        Loading.loads++;
+                    }
+                },
+                updateLoadingScreen: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var percent = this.loads/(images.length+audios.length+1);
+                    this.percent = this.percent*0.9+percent*0.1;
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s,s);
+                    ctx.translate(-250,-250);
+                    if(percent==1) {
+                        var a = 1-this.percent*(images.length+audios.length+1)+this.loads-1;
+                        ctx.globalAlpha = a;
+                    }
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(47.5,272.5,405*this.percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*this.percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = "rgb(255,100,0)";
+                    var a = this.animation/2%40;
+                    for(var n=0;n<40;n++) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Loading...",250,250);
+                    ctx.restore();
+
+                    this.animation++;
+                    if(percent==1&&this.percent>0.99) this.loaded = true;
+                },
+                updateIntro: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var i = Math.min(Physics.easeInOut(this.intro/100),Physics.easeInOut((250-this.intro)/100));
+                    var i2 = Math.min(Physics.easeInOut(this.intro/50),Physics.easeInOut((250-this.intro)/50));
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s*i2,s*i2);
+                    ctx.translate(-250,-250);
+                    ctx.globalAlpha = i;
+                    ctx.drawImage(this.logoImage,0,0,500,500);
+                    ctx.restore();
+
+                    this.intro++;
+                    if(this.intro==300) this.intro = 0;
+                }
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h){return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h},
+                clickInBox: function(x,y,w,h){return this.inBox(x,y,w,h)&&this.click}
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            var Physics = {
+                dirTo: (x1,y1,x2,y2)=>90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI),
+                distToMove: (distance,direction)=>({x:distance*Math.sin(direction*Math.PI/180),y:-distance*Math.cos(direction*Math.PI/180)}),
+                distTo: (x1,y1,x2,y2)=>Math.sqrt((x2-x1)**2+(y2-y1)**2),
+                rotate:(cx,cy,x,y,a)=>([a=Math.PI/180*a,{x:(Math.cos(a)*(x-cx))+(Math.sin(a)*(y-cy))+cx,y:(Math.cos(a)*(y-cy))-(Math.sin(a)*(x-cx))+cy}][1]),
+                easeInOut:a=>1/(1+2.71828**(-10*(a-0.5))),
+                blocksColliding:(b1,b2)=>r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h),
+                blocksCollidingEdge:(b1,b2)=>r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h),
+                r:n=>Math.round(n*10000)/10000
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function updateBlocks(blocks,data={}) {
+                data.gravity = data.gravity||{x:0,y:0};
+                data.damping = data.damping||{x:1,y:1};
+                data.maxCollisions = data.maxCollisions||100;
+
+                function initBlock(block) {
+                    if(!block.initialized) {
+                        block.density = block.density||1;
+                        block.mass = block.mass||block.w*block.h*block.density;
+                        block.bounce = {x:1,y:1};
+                        block.move = block.move||{x:0,y:0};
+                        block.static = block.static||false;
+                        block.resting = block.resting||{x:0,y:0};
+                        block.last = block.last||{x:0,y:0}
+                        block.initialized = true;
+                    }
+
+                    block.collided = false;
+                    if(!block.static) {
+                        if(!block.resting.x) {
+                            block.move.x *= data.damping.x;
+                            block.move.x += data.gravity.x;
+                        }
+                        if(!block.resting.y) {
+                            block.move.y *= data.damping.y;
+                            block.move.y += data.gravity.y;
+                        }
+                    }
+
+                    block.resting.x = false;
+                    block.resting.y = false;
+                    block.last.x = block.x;
+                    block.last.y = block.y;
+                }
+
+                function initialize() {
+                    for(var n in blocks) {
+                        blocks[n].id = n;
+                    }
+                    for(var block of blocks) {
+                        initBlock(block);
+                    }
+                }
+
+                function resolveCollision(b1,b2,a) {
+                    if((b1.static||b1.resting[a])&&(b2.static||b2.resting[a])) return false;
+                    if(!(b2.static||b2.resting[a])&&(b1.static||b1.resting[a])) return resolveCollision(b2,b1,a);
+
+                    b1.collided = true;
+                    b2.collided = true;
+                    //blocks have collided
+
+                    var c1 = {x:b1.last.x+b1.w/2,y:b1.last.y+b1.h/2};
+                    var c2 = {x:b2.last.x+b2.w/2,y:b2.last.y+b2.h/2};
+                    //find centers
+
+                    var c = a;
+                    var dim = a=='x'?'w':'h';
+
+                    if(b2.static||b2.resting[a]) {
+                        //static-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            b1[a] = b2[a]+b2[dim];
+                        } else {
+                            b1[a] = b2[a]-b1[dim];
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b1.resting[a] = true;
+                    } else {
+                        //dynamic-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            var dist = b2[a]+b2[dim]-b1[a];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        } else {
+                            var dist = b2[a]-b1[a]-b1[dim];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b2.move[a] = avg;
+                    }
+                    return true;
+                }
+
+                function updateStaticAxis(a) {
+                    for(var block of blocks) {
+                        if(!block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                }
+
+                function updateAxis(a) {
+                    for(var block of blocks) {
+                        if(block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                    var n3 = 0;
+                    while(n3<data.maxCollisions) {
+                        var collisions = false;
+                        for(var n=0;n<blocks.length;n++) {
+                            var block = blocks[n];
+                            for(var n2=n+1;n2<blocks.length;n2++) {
+                                var block2 = blocks[n2];
+                                if(blocksColliding(block,block2)) {
+                                    var x = resolveCollision(block2,block,a);
+                                    var y = resolveCollision(block,block2,a);
+                                    collisions = collisions||x||y;
+                                }
+                            }
+                        }
+                        if(!collisions) break;
+                        n3++;
+                    }
+                }
+
+                initialize();
+                updateStaticAxis("x");
+                updateAxis("x");
+                updateStaticAxis("y");
+                updateAxis("y");
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        Loading.updateIntro();
+                    } else {
+                        main();
+                    }
+                } else {
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+            }
+
+            function f(s) {
+                ctx.font = s+"px Arial";
+            }
+
+            var menu = {
+                page: "title screen",
+                switchPage: "game",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 0,//100,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        //switch page animation
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                }
+            }
+
+            var game = {
+                tickDelay: 20,
+                timeUntilTick: 0,
+                apples: 0,
+                update: function() {
+                    this.chunks.update();
+                    this.objects.update();
+                    this.snake.update();
+                    this.cam.update();
+
+                    this.timeUntilTick--;
+                    if(this.timeUntilTick<=0) {
+                        this.tick();
+                        this.timeUntilTick = this.tickDelay;
+                    }
+                },
+                tick: function() {
+                    this.snake.tick();
+                    this.objects.tick();
+                },
+                updateEffects: function() {
+                    this.particles.update();
+                },
+                reset: function() {
+                    this.snake.reset();
+                    this.particles.reset();
+                    this.chunks.reset();
+                    this.objects.reset();
+                    this.cam.reset();
+                    this.apples = 0;
+                },
+                draw: function() {
+                    this.drawBackgroundTiling();
+
+                    ctx.save();
+                    ctx.translate(-this.cam.x*this.tileSize,-this.cam.y*this.tileSize);
+                    ctx.save();
+                    ctx.scale(this.tileSize/100,this.tileSize/100);
+                    this.objects.draw();
+                    this.snake.draw();
+                    ctx.restore();
+                    this.particles.draw();
+                    ctx.restore();
+
+                    this.drawStats();
+                },
+                drawStats: function() {
+                    ctx.fillStyle = "black";
+                    ctx.font = "bold 50px Arial";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Apples: "+this.apples,975,50);
+                },
+                cam: {
+                    targetX: 0,
+                    targetY: 0,
+                    x: 0,
+                    y: 0,
+                    update: function() {
+                        this.x = this.x*0.99+this.targetX*0.01+(game.snake.animatedPosition.x-this.x)/50;
+                        this.y = this.y*0.99+this.targetY*0.01;
+                        this.targetX += 0.01;
+                        this.targetX = Math.max(this.targetX,game.snake.animatedPosition.x-20);
+                    },
+                    reset: function() {
+                        this.targetX = -100;
+                        this.targetY = 0;
+                        this.x = -6;
+                        this.y = 0;
+                    }
+                },
+                keys: {
+                    left: [37],
+                    right: [39],
+                    up: [38],
+                    down: [40]
+                },
+                chunks: {
+                    chunks: [],
+                    chunkId: 0,
+                    currentX: 0,
+                    update: function() {
+                        if(game.cam.x>this.currentX-32) {
+                            this.createNewChunk();
+                        }
+                        this.chunks = this.chunks.filter(function(e){
+                            return e.x>game.cam.x-32;
+                        });
+                    },
+                    reset: function() {
+                        this.chunks = [];
+                        this.chunkId = 0;
+                        this.currentX = 0;
+                    },
+                    createNewChunk: function() {
+                        var chunk = {};
+                        chunk.id = this.chunkId;
+                        chunk.x = this.currentX;
+                        chunk.w = 16;
+                        this.addObjectsToChunk(chunk);
+                        this.chunks.push(chunk);
+                        this.currentX += chunk.w;
+                        this.chunkId++;
+                    },
+                    addObjectsToChunk: function(o) {
+                        var objects = this.createObjectsForChunk(o);
+                        for(var o2 of objects) {
+                            o2.chunkId = o.id;
+                            game.objects.objects.push(o2);
+                        }
+                    },
+                    createObjectsForChunk: function(o) {
+                        var objects = [];
+                        objects.push({type:"apple",x:o.x+8,y:Math.floor(Math.random()*16)});
+                        objects.push({type:"apple",x:o.x+16,y:Math.floor(Math.random()*16)});
+                        var hole = Math.floor(Math.random()*16);
+                        for(var n=0;n<16;n++) {
+                            if(Math.abs(n-hole)<2) continue;
+                            objects.push({type:"wall",x:o.x+5,y:n});
+                        }
+                        return objects;
+                    },
+                    giveObjectChunkId: function(o) {
+                        var chunk = this.chunkContainsCoordinate(o.x,o.y);
+                        if(chunk===undefined) return;
+                        o.chunkId = chunk.id;
+                    },
+                    chunkContainsCoordinate: function(x,y) {
+                        return this.chunks.find(function(o){
+                            if(x<o.x) return false;
+                            if(x>o.x+o.w) return false;
+                            return true;
+                        });
+                    }
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                    },
+                    tick: function() {
+                        for(var o of this.objects) {
+                            this.tickObject(o);
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            this.drawObject(o);
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(!game.chunks.chunks.find(e=>e.id==o.chunkId)) o.delete = true;
+                    },
+                    tickObject: function(o) {
+                        if(o.type=="apple") {
+                            var x = game.snake.x;
+                            var y = game.snake.y;
+                            if(o.x==x&&o.y==y) {
+                                o.delete = true;
+                                game.apples++;
+                                game.particles.createAppleParticles(o);
+                            }
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.type=="snake object") {
+                            this.drawSnakeObject(o);
+                        }
+                        if(o.type=="apple") {
+                            this.drawApple(o);
+                        }
+                        if(o.type=="wall") {
+                            this.drawWall(o);
+                        }
+                    },
+                    drawSnakeObject: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x*100+50,o.y*100+50);
+                        if(o.first) {
+                            var animation = 1-game.timeUntilTick/game.tickDelay;
+                            var clipSize = animation*100+50;
+                            var rotate = {left:180,right:0,up:90,down:270}[o.primaryDirection];
+                            ctx.rotate(rotate*Math.PI/180);
+                            ctx.beginPath();
+                            ctx.rect(-50,-50,clipSize,100);
+                            ctx.clip();
+                            ctx.rotate(-rotate*Math.PI/180);
+                        }
+                        this.drawSnakeSegment(o);
+                        ctx.restore();
+                    },
+                    drawSnakeSegment: function(o) {
+                        ctx.fillStyle = "rgb(0,100,0)";
+                        ctx.beginPath();
+                        ctx.arc(0,0,33.3,0,2*Math.PI);
+                        ctx.fill();
+                        if(o.neighbors.left) {
+                            ctx.fillStyle = "rgb(0,100,0)";
+                            ctx.fillRect(-33.3,-33.3,33.3,66.6);
+                            ctx.fillStyle = "rgb(0,80,0)";
+                            ctx.fillRect(-67.6,-33.3,35.3,66.6);
+                        }
+                        if(o.neighbors.right) {
+                            ctx.fillStyle = "rgb(0,100,0)";
+                            ctx.fillRect(0,-33.3,33.3,66.6);
+                            ctx.fillStyle = "rgb(0,80,0)";
+                            ctx.fillRect(32.3,-33.3,35.3,66.6);
+                        }
+                        if(o.neighbors.up) {
+                            ctx.fillStyle = "rgb(0,100,0)";
+                            ctx.fillRect(-33.3,-33.3,66.6,33.3);
+                            ctx.fillStyle = "rgb(0,80,0)";
+                            ctx.fillRect(-33.3,-67.6,66.6,35.3);
+                        }
+                        if(o.neighbors.down) {
+                            ctx.fillStyle = "rgb(0,100,0)";
+                            ctx.fillRect(-33.3,0,66.6,33.3);
+                            ctx.fillStyle = "rgb(0,80,0)";
+                            ctx.fillRect(-33.3,32.3,66.6,35.3);
+                        }
+                    },
+                    drawSnakeHead: function() {
+                        ctx.fillStyle = "rgb(0,100,0)";
+                        ctx.beginPath();
+                        ctx.arc(0,-2,33.3,0,2*Math.PI);
+                        ctx.fill();
+                        var animation = 1-game.timeUntilTick/game.tickDelay;
+                        var turn = game.snake.directionHistory[0]-game.snake.directionHistory[1];
+                        if(turn==90||turn==-270) {
+                            ctx.fillRect(0,-33.3+100*animation,33.3,33.3);
+                        } else if(turn==-90||turn==270) {
+                            ctx.fillRect(-33.3,-33.3+100*animation,33.3,33.3);
+                        }
+                        if(animation<0.25) return;
+                        ctx.fillRect(-33.3,0,66.6,33.3);
+                    },
+                    drawAnimatedRotationSnakeHead: function() {
+                        ctx.fillStyle = "black";
+                        ctx.beginPath();
+                        ctx.arc(-10,-10,5,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(10,-10,5,0,2*Math.PI);
+                        ctx.fill();
+                    },
+                    drawApple: function(o) {
+                        ctx.fillStyle = "red";
+                        ctx.beginPath();
+                        ctx.arc(o.x*100+50,o.y*100+50,33.3,0,2*Math.PI);
+                        ctx.fill();
+                    },
+                    drawWall: function(o) {
+                        ctx.fillStyle = "rgb(50,50,50)";
+                        ctx.fillRect(o.x*100,o.y*100,100,100);
+                    },
+                    createObject: function(o) {
+                        game.chunks.giveObjectChunkId(o);
+                        this.objects.push(o);
+                    }
+                },
+                tileSize: 62.5,
+                drawBackgroundTiling: function() {
+                    var tileSize = this.tileSize;
+                    var xOffset = -(this.cam.x*this.tileSize)%(tileSize*2);
+                    var yOffset = -(this.cam.y*this.tileSize)%(tileSize*2);
+                    for(var x=-2;x<18;x++) {
+                        for(var y=-2;y<18;y++) {
+                            var color = this.getTileColor(x,y);
+                            ctx.fillStyle = color;
+                            ctx.fillRect(x*tileSize+xOffset,y*tileSize+yOffset,tileSize+1,tileSize+1);
+                        }
+                    }
+                },
+                getTileColor: function(x,y) {
+                    if((x+y)%2==0) {
+                        return "rgb(110,220,110)";
+                    } else {
+                        return "rgb(90,200,90)";
+                    }
+                },
+                snake: {
+                    x: 0,
+                    y: 0,
+                    animatedDirection: 0,
+                    oldDirection: 0,
+                    direction: 0,
+                    newDirection: 0,
+                    directionQueue: [],
+                    move: {x:0,y:0},
+                    animatedPosition: {x:0,y:0},
+                    positionHistory: [],
+                    directionHistory: [],
+                    update: function() {
+                        this.handleInput();
+                        this.updateAnimatedPosition();
+                        this.updateAnimatedHeadRotation();
+                    },
+                    updateAnimatedPosition: function() {
+                        var a = game.timeUntilTick/game.tickDelay;
+                        this.animatedPosition.x = this.x-this.move.x*a;
+                        this.animatedPosition.y = this.y-this.move.y*a;
+                    },
+                    updateAnimatedHeadRotation: function() {
+                        this.animatedDirection += turn(this.animatedDirection,this.direction)/5;
+                        this.animatedDirection = this.direction;
+                    },
+                    tick: function() {
+                        this.finalizeDirection();
+
+                        this.positionHistory.unshift({x:this.x,y:this.y});
+                        this.createSnakeObject(JSON.parse(JSON.stringify(this.positionHistory)));
+                        this.positionHistory.pop();
+
+                        this.moveSpace();
+
+                        this.detectCollisions();
+                    },
+                    finalizeDirection: function() {
+                        this.oldDirection = this.direction;
+                        this.direction = this.newDirection;
+                        while(this.directionQueue.length>2) this.directionQueue.pop();
+                        if(this.directionQueue.length>0) {
+                            this.changeDirection(this.directionQueue[0]);
+                        }
+                        this.directionQueue.shift();
+                        this.directionHistory.pop();
+                        this.directionHistory.unshift(this.direction);
+                        this.move = distToMove(1,this.direction);
+                        this.move.x = Math.round(this.move.x);
+                        this.move.y = Math.round(this.move.y);
+                    },
+                    moveSpace: function() {
+                        this.x += this.move.x;
+                        this.y += this.move.y;
+                        this.x = Math.round(this.x);
+                        this.y = Math.round(this.y);
+                    },
+                    createSnakeObject: function(positionData) {
+                        game.objects.objects.map(function(e){
+                            if(e.type!="snake object") return;
+                            if(!e.first);
+                            e.first = false;
+                        });
+
+                        var lastPosition = this.positionHistory[1];
+                        var nextPosition = {x:this.x+this.move.x,y:this.y+this.move.y};
+                        var o = {};
+                        o.x = this.x;
+                        o.y = this.y;
+                        o.neighbors = {
+                            left: false,
+                            right: false,
+                            up: false,
+                            down: false,
+                        };
+                        o.first = true;
+                        if(nextPosition.x>this.x) {
+                            o.neighbors.right = true;
+                            o.primaryDirection = "right";
+                        }
+                        if(nextPosition.x<this.x) {
+                            o.neighbors.left = true;
+                            o.primaryDirection = "left";
+                        }
+                        if(nextPosition.y>this.y) {
+                            o.neighbors.down = true;
+                            o.primaryDirection = "up";
+                        }
+                        if(nextPosition.y<this.y) {
+                            o.neighbors.up = true;
+                            o.primaryDirection = "down";
+                        }
+                        if(lastPosition.x>this.x) {
+                            o.neighbors.right = true;
+                        }
+                        if(lastPosition.x<this.x) {
+                            o.neighbors.left = true;
+                        }
+                        if(lastPosition.y>this.y) {
+                            o.neighbors.down = true;
+                        }
+                        if(lastPosition.y<this.y) {
+                            o.neighbors.up = true;
+                        }
+                        o.type = "snake object";
+                        game.objects.createObject(o);
+                    },
+                    handleInput: function() {
+                        var left = game.keys.left.some(e=>Keys.down[e]);
+                        var right = game.keys.right.some(e=>Keys.down[e]);
+                        var up = game.keys.up.some(e=>Keys.down[e]);
+                        var down = game.keys.down.some(e=>Keys.down[e]);
+                        if(this.direction==this.newDirection) {
+                            if(left) this.changeDirection(270);
+                            if(right) this.changeDirection(90);
+                            if(up) this.changeDirection(0);
+                            if(down) this.changeDirection(180);
+                        } else {
+                            if(left) this.directionQueue.push(270);
+                            if(right) this.directionQueue.push(90);
+                            if(up) this.directionQueue.push(0);
+                            if(down) this.directionQueue.push(180);
+                        }
+                    },
+                    changeDirection: function(dir) {
+                        var difference = Math.abs(dir-this.direction);
+                        if(!(difference==90||difference==270)) return;
+                        this.newDirection = dir;
+                        var move = distToMove(1,this.newDirection);
+                        this.nextMove = move;
+                    },
+                    draw: function() {
+                        var a = game.timeUntilTick/game.tickDelay;
+                        var xAnimate = -this.move.x*a;
+                        var yAnimate = -this.move.y*a;
+                        ctx.save();
+                        ctx.translate((this.x+xAnimate)*100+50,(this.y+yAnimate)*100+50);
+                        ctx.save();
+                        ctx.rotate(this.direction*Math.PI/180);
+                        game.objects.drawSnakeHead();
+                        ctx.restore();
+                        ctx.save();
+                        ctx.rotate(this.animatedDirection*Math.PI/180);
+                        game.objects.drawAnimatedRotationSnakeHead();
+                        ctx.restore();
+                        ctx.restore();
+                    },
+                    detectCollisions: function() {
+                        var objects = game.objects.objects.filter(function(e){
+                            return e.x==game.snake.x&&e.y==game.snake.y;
+                        });
+                        objects = objects.filter(function(e){
+                            if(e.type=="wall") return true;
+                            if(e.type=="snake object") return true;
+                            return false;
+                        });
+                        if(objects.length==0) return;
+                        game.reset();//game over!
+                    },
+                    reset: function() {
+                        var yPos = 8;
+                        this.move = {x:1,y:0};
+                        this.x = 0;
+                        this.y = yPos;
+                        this.direction = 90;
+                        this.newDirection = 90;
+                        this.animatedPosition = {x:1,y:yPos};
+                        this.positionHistory = [{x:-1,y:yPos},{x:-2,y:yPos},{x:-3,y:yPos}];
+                        this.directionHistory = [90,90,90];
+                    }
+                },
+                particles: {
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            this.drawObject(o);
+                        }
+                    },
+                    addParticle: function(o) {
+                        if(!o.alpha) o.alpha = 2;
+                        if(!o.decay) o.decay = 0.02;
+                        if(!o.xmove) o.xmove = 0;
+                        if(!o.ymove) o.ymove = 0;
+                        if(!o.damping) o.damping = 1;
+                        if(!o.color) o.color = "red";
+                        if(!o.radius) o.radius = 5;
+                        if(!o.update) o.update = function(){}
+                        this.objects.push(o);
+                    },
+                    updateObject: function(o) {
+                        o.alpha -= o.decay;
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.xmove *= o.damping;
+                        o.ymove *= o.damping;
+                        o.update();
+                        if(o.alpha<=0) o.delete = true;
+                    },
+                    drawObject: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        ctx.globalAlpha = Math.min(Math.max(o.alpha,0),1);
+                        ctx.fillStyle = o.color;
+                        ctx.beginPath();
+                        ctx.arc(0,0,o.radius,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.restore();
+                    },
+                    createAppleParticles: function(o) {
+                        var tileSize = game.tileSize;
+                        for(var n=0;n<6;n++) {
+                            var particle = {};
+                            particle.x = o.x*tileSize+tileSize/2;
+                            particle.y = o.y*tileSize+tileSize/2;
+                            particle.radius = 5;
+                            particle.damping = 0.9;
+                            particle.alpha = 1;
+                            var move = distToMove(5,n*60);
+                            particle.xmove = move.x;
+                            particle.ymove = move.y;
+                            particle.color = "red";
+                            this.addParticle(particle);
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                }
+            }
+            game.reset();
+        </script>
+    </body>
+</html>

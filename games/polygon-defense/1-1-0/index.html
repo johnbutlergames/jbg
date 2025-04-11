@@ -1,0 +1,1972 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <style>
+        @font-face {
+            font-family: kdamthmorepro;
+            src: url(kdamthmorepro.ttf);
+        }
+    </style>
+    <canvas id="canvas"></canvas>
+    <script>
+        var title = "Polygon Defense";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+        initialize();
+        window.setInterval(update, 10);
+        Loading.loaded = true;
+        Loading.intro = 0;
+        ctx.roundRect = (x, y, w, h, r) => {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.lineTo(x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.lineTo(x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.lineTo(x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.closePath();
+        }
+        function f(s) {
+            ctx.font = s + "px kdamthmorepro";
+        }
+        function drawPolygon(x, y, s, r, a) {
+            ctx.beginPath();
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(a * Math.PI / 180);
+            ctx.moveTo(0, -r);
+            var n = 1;
+            while (n < s) {
+                ctx.rotate(Math.PI * 2 / s);
+                ctx.lineTo(0, -r);
+                n++;
+            }
+            ctx.closePath();
+            ctx.restore();
+        }
+        function s(n) {
+            if (n > 0) {
+                return 1;
+            } else if (n < 0) {
+                return -1;
+            } else {
+                return 0;
+            }
+        }
+
+        function main() {
+            if (page == "menu") {
+                menu.update();
+            } else {
+                game.tick();
+            }
+            t++;
+        }
+
+        var menu = {
+            page: "home",
+            switchPage: "home",
+            switchPageAnimation: 0,
+            update: function () {
+                this.polygons.update();
+                this.polygons.draw();
+                if (this.switchPage !== this.page) {
+                    if (this.switchPageAnimation == 0) {
+                        this.switchPageAnimation = 1;
+                    }
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation == 100) {
+                        this.page = this.switchPage;
+                    }
+                    this.drawPage(this.page, false);
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    this.drawPage(this.page, true);
+                }
+                ctx.globalAlpha = this.switchPageAnimation / 100;
+                ctx.fillStyle = "black";
+                ctx.fillRect(0, 0, 1000, 1000);
+                ctx.globalAlpha = 1;
+            },
+            drawPage: function (p, canClick) {
+                if (p == "home") {
+                    f(90);
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "rgba(200,200,200,0.5)";
+                    ctx.fillRect(0, 80, 1000, 120);
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Polygon Defense", 500, 150);
+
+                    f(70);
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = "rgb(255,255,255)";
+                    ctx.roundRect(350, 320, 300, 120, 20);
+                    if (Mouse.inBox(350, 320, 300, 120) && canClick) {
+                        ctx.fillStyle = "rgb(230,230,230)";
+                        if (Mouse.click) {
+                            game.reset();
+                            this.switchPage = "game";
+                        }
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Play", 500, 390);
+                    //play button
+
+                    ctx.fillStyle = "rgb(255,255,255)";
+                    ctx.roundRect(300, 520, 400, 120, 20);
+                    if (Mouse.inBox(300, 520, 400, 120) && canClick) {
+                        ctx.fillStyle = "rgb(230,230,230)";
+                        if (Mouse.click) {
+                            this.switchPage = "credits";
+                        }
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Credits", 500, 590);
+                    //credits button
+
+                    ctx.fillStyle = "rgba(200,200,200,0.5)";
+                    ctx.fillRect(0, 740, 1000, 100);
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Highscore: " + highscore, 500, 800);
+                    //highscore
+                } else if (p == "credits") {
+                    f(90);
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "rgba(200,200,200,0.5)";
+                    ctx.fillRect(0, 80, 1000, 120);
+                    ctx.fillRect(0, 240, 1000, 310);
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Credits:", 500, 150);
+                    //title
+
+                    f(60);
+                    ctx.fillText("Game Design: John Butler", 500, 300);
+                    ctx.fillText("Developer: John Butler", 500, 400);
+                    ctx.fillText("Co-Developer: Thomas Butler", 500, 500);
+                    //credits
+
+                    f(70);
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = "rgb(255,255,255)";
+                    if (Mouse.inBox(350, 820, 300, 120) && canClick) {
+                        ctx.fillStyle = "rgb(230,230,230)";
+                        if (Mouse.click) {
+                            this.switchPage = "home";
+                        }
+                    }
+                    ctx.roundRect(350, 820, 300, 120, 20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Return", 500, 890);
+                    //back button
+                } else if (p == "game") {
+                    if (canClick) {
+                        page = "game";
+                        game.startAnimation = 100;
+                        this.page = "home";
+                        this.switchPage = "home";
+                        this.switchPageAnimation = 100;
+                    }
+                }
+            },
+            polygons: {
+                polygons: [],
+                update: function () {
+                    var n = 0;
+                    while (n < this.polygons.length) {
+                        var p = this.polygons[n];
+                        p.x += p.xmove;
+                        p.y += p.ymove;
+                        p.angle += p.rotate;
+                        if (p.x < -100) {
+                            p.x += 1200;
+                        }
+                        if (p.y < -100) {
+                            p.y += 1200;
+                        }
+                        if (p.x > 1100) {
+                            p.x -= 1200;
+                        }
+                        if (p.y > 1100) {
+                            p.y -= 1200;
+                        }
+                        n++;
+                    }
+                },
+                draw: function () {
+                    var n = 0;
+                    while (n < this.polygons.length) {
+                        var p = this.polygons[n];
+                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = p.color;
+                        drawPolygon(p.x, p.y, p.s, p.r, p.angle);
+                        ctx.stroke();
+                        n++;
+                    }
+                },
+                reset: function () {
+                    this.polygons = [];
+                    var n = 0;
+                    var h = localStorage.getItem("polygondefensehighscore");
+                    if (Math.sqrt(h) > 1000) h = 100000;
+                    while (n < Math.sqrt(h)) {
+                        var p = {};
+                        p.color = "hsl(" + (Math.random() * 360) + ",100%,50%)";
+                        p.s = 3 + Math.floor(Math.random() * 4);
+                        p.r = 25 + Math.random() * 30;
+                        p.x = Math.random() * 1000;
+                        p.y = Math.random() * 1000;
+                        var dir = Math.random() * 360;
+                        var move = distToMove(Math.random() / 2 + 0.5, dir);
+                        p.xmove = move.x;
+                        p.ymove = move.y;
+                        p.angle = Math.random() * 360;
+                        p.rotate = Math.random() * 3 - 1.5;
+                        this.polygons.push(p);
+                        n++;
+                    }
+                }
+            }
+        }
+
+        var game = {
+            tick: function () {
+                if (this.startAnimation == 0 && !this.paused) this.update();
+                this.draw();
+                if (this.paused) this.updatePauseMenu();
+
+                if (this.startAnimation > 0) this.startAnimation--;
+            },
+            update: function () {
+                if (this.gameOver) this.ui.objectSelectedId = false;
+                if (!this.gameOver) this.ui.update();
+                this.objects.update(this.speed);
+                this.deletedObjects.update();
+                if (!this.gameOver) {
+                    this.waves.update();
+                    this.cam.update();
+                }
+
+                if (!this.objects.objects.find(e => e.id == "base1") && !this.gameOver) {
+                    this.gameOver = true;
+                    this.gameOverAnimation = 100;
+                    highscore = Math.max(highscore, this.score);
+                    updateHighscore();
+                }
+
+                if (this.gameOver) this.updateGameOverMenu();
+
+
+                this.totalTowerWorth = 0;
+                for (var o of this.objects.objects) {
+                    if (o.type != "tower") continue;
+                    this.totalTowerWorth += this.ui.getTotalTowerCost(o);
+                }
+
+                this.score = Math.max(0, this.waves.wave - 1) * 50;
+                this.score += this.money - 10;
+                this.score += this.totalTowerWorth;
+                this.score += this.enemyDestroyedCount;
+                this.score += this.ui.getTotalTowerCost({ towerType: "base", level: 1 + this.baseUpgradedCount });
+            },
+            draw: function () {
+                this.drawBackground();
+                ctx.save();
+                ctx.translate(500 - this.cam.x, 500 - this.cam.y);
+                this.objects.draw();
+                this.deletedObjects.draw();
+                ctx.restore();
+
+                this.ui.draw();
+                this.waves.draw();
+
+                if (this.gameOver) this.drawGameOverMenu();
+
+                if (this.startAnimation > 0) {
+                    ctx.fillStyle = "rgba(0,0,0," + (this.startAnimation / 100) + ")";
+                    ctx.fillRect(0, 0, 1000, 1000);
+                }
+
+                if (this.paused) this.drawPauseMenu();
+            },
+            drawPauseMenu: function () {
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(0, 0, 1000, 1000);
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.fillStyle = "rgb(200,200,200)";
+                ctx.roundRect(200, 150, 600, 700, 20);
+                ctx.fill();
+                ctx.stroke();
+
+                f(90);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Paused", 500, 250);
+
+                f(70);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "rgb(255,255,255)";
+                ctx.roundRect(365, 350, 270, 120, 20);
+                if (Mouse.inBox(365, 350, 270, 120)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.fillText("Retry", 500, 420);
+                //retry button
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "rgb(255,255,255)";
+                ctx.roundRect(365, 500, 270, 120, 20);
+                if (Mouse.inBox(365, 500, 270, 120)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.fillText("Quit", 500, 570);
+                //quit button
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "rgb(255,255,255)";
+                ctx.roundRect(340, 650, 320, 120, 20);
+                if (Mouse.inBox(340, 650, 320, 120)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.fillText("Continue", 500, 720);
+                //continue button
+            },
+            updatePauseMenu: function () {
+                if (Mouse.inBox(365, 350, 270, 120)) {
+                    if (Mouse.click) {
+                        game.reset();
+                    }
+                }
+                //retry
+
+                if (Mouse.inBox(365, 500, 270, 120)) {
+                    if (Mouse.click) {
+                        page = "menu";
+                    }
+                }
+                //quit
+
+                if (Mouse.inBox(340, 650, 320, 120)) {
+                    if (Mouse.click) {
+                        this.paused = false;
+                    }
+                }
+                //continue
+            },
+            drawGameOverMenu: function () {
+                ctx.save();
+                ctx.translate(-(this.gameOverAnimation ** 3) / 100, 0);
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.fillStyle = "rgb(200,200,200)";
+                ctx.roundRect(200, 150, 600, 700, 20);
+                ctx.fill();
+                ctx.stroke();
+
+                f(90);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Game Over!", 500, 250);
+
+                f(38);
+                ctx.fillText(`You made it to wave ${this.waves.wave}.`, 500, 340);
+                ctx.fillText(`You destroyed ${this.enemyDestroyedCount} enem${this.enemyDestroyedCount == 1 ? "y" : "ies"}.`, 500, 390);
+                ctx.fillText(`You had $${this.money}.`, 500, 440);
+                ctx.fillText(`Your towers were worth $${this.totalTowerWorth}.`, 500, 490);
+                f(60);
+                ctx.fillText(`Final Score: ${this.score}`, 500, 580);
+                ctx.fillText(`Highscore: ${highscore}`, 500, 650);
+
+                f(70);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "rgb(255,255,255)";
+                ctx.roundRect(220, 710, 270, 120, 20);
+                if (Mouse.inBox(220, 710, 270, 120)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.fillText("Retry", 355, 780);
+                //retry button
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.fillStyle = "rgb(255,255,255)";
+                ctx.roundRect(510, 710, 270, 120, 20);
+                if (Mouse.inBox(510, 710, 270, 120)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.fillText("Quit", 645, 780);
+                //quit button
+
+                ctx.restore();
+            },
+            updateGameOverMenu: function () {
+                this.gameOverAnimation--;
+                this.gameOverAnimation = Math.max(0, this.gameOverAnimation);
+
+                if (Mouse.inBox(220, 710, 270, 120)) {
+                    if (Mouse.click) {
+                        game.reset();
+                    }
+                }
+                //retry
+
+                if (Mouse.inBox(510, 710, 270, 120)) {
+                    if (Mouse.click) {
+                        page = "menu";
+                    }
+                }
+                //quit
+            },
+            drawBackground: function () {
+                ctx.fillStyle = "rgb(240,240,240)";
+                ctx.fillRect(0, 0, 1000, 1000);
+                //bakckground
+
+                var xoff = -this.cam.x % 50;
+                if (xoff < 0) {
+                    xoff += 50;
+                }
+                var yoff = -this.cam.y % 50;
+                if (yoff < 0) {
+                    yoff += 50;
+                }
+                ctx.strokeStyle = "rgb(200,200,200)";
+                ctx.lineWidth = 1;
+                for (var n = -1; n < 20; n++) {
+                    ctx.beginPath();
+                    ctx.moveTo(n * 50 + xoff, 0);
+                    ctx.lineTo(n * 50 + xoff, 1000);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, n * 50 + yoff);
+                    ctx.lineTo(1000, n * 50 + yoff);
+                    ctx.stroke();
+                }
+                //grid
+
+                ctx.fillStyle = "rgba(50,50,50,0.2)";
+                ctx.fillRect(-700 - game.cam.x, -2000 - game.cam.y, 500, 4000);
+                ctx.fillRect(1200 - game.cam.x, -2000 - game.cam.y, 500, 4000);
+                ctx.fillRect(-200 - game.cam.x, -700 - game.cam.y, 1400, 500);
+                ctx.fillRect(-200 - game.cam.x, 1200 - game.cam.y, 1400, 500);
+                //out of bounds rectangles
+            },
+            ui: {
+                objectSelectedId: false,
+                uiIncorrect: [],
+                update: function () {
+                    var o = game.objects.getObjectById(this.objectSelectedId);
+                    if (!o) this.objectSelectedId = false;
+                    if (Mouse.inBox(750, 800, 225, 75) && game.waves.nextWavePossible) return;
+                    if (Mouse.y > 900) return;
+                    if (!Mouse.click) return;
+                    var oldObjectSelectedId = this.objectSelectedId;
+                    this.objectSelectedId = false;
+                    var mouseX = Mouse.x + game.cam.x - 500;
+                    var mouseY = Mouse.y + game.cam.y - 500;
+                    for (var o of game.objects.objects) {
+                        var dist = distTo(o.x, o.y, mouseX, mouseY);
+                        if (o.visible === false) continue;
+                        if (dist < o.r) {
+                            if (o.type == "placePosition" && o.towerPlaced) {
+                                this.objectSelectedId = o.towerPlaced;
+                            } else {
+                                this.objectSelectedId = o.id;
+                            }
+                        }
+                        if (o.type == "tower" && game.money >= this.getUpgradeCost(o)) {
+                            var dist = distTo(o.x + 30, o.y - 20, mouseX, mouseY);
+                            if (dist < 20) {
+                                this.objectSelectedId = o.id;
+                                this.UIOption("upgradeTower");
+                                this.objectSelectedId = false;
+                                if (oldObjectSelectedId == o.id) this.objectSelectedId = o.id;
+                            }
+                        }
+                    }
+                },
+                draw: function () {
+                    var o = game.objects.getObjectById(this.objectSelectedId);
+                    if (o) {
+                        ctx.save();
+                        ctx.translate(500 - game.cam.x, 500 - game.cam.y);
+                        if (o.type == "tower") {
+                            ctx.setLineDash([20, 40]);
+                            ctx.strokeStyle = "black";
+                            ctx.fillStyle = "rgb(0,0,0,0.05)";
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, o.range, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
+
+                        ctx.translate(o.x, o.y);
+                        var s = (Math.sin(t / 50) + 1) / 20;
+                        ctx.scale(o.r / 70 + s, o.r / 70 + s);
+                        ctx.lineWidth = 10;
+                        ctx.lineCap = "round";
+                        ctx.lineJoin = "round";
+                        ctx.strokeStyle = "black";
+                        for (var n = 0; n < 4; n++) {
+                            ctx.beginPath();
+                            ctx.moveTo(-100, -50);
+                            ctx.lineTo(-100, -100);
+                            ctx.lineTo(-50, -100);
+                            ctx.stroke();
+                            ctx.rotate(Math.PI / 2);
+                        }
+                        //object select
+
+                        ctx.restore();
+                    }
+
+                    if (o.type == "tower") {
+                        this.drawTowerStats(o);
+                    }
+                    if (o.type == "enemy") {
+                        this.drawEnemyStats(o);
+                    }
+                    if (o.type == "base") {
+                        this.drawBaseStats(o);
+                    }
+
+                    f(50);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "alphabetic";
+                    ctx.fillText("$" + game.money, 990, 50);
+                    ctx.fillText("Score: " + game.score, 990, 100);
+                    //money and score
+
+                    var enemyCount = 0;
+                    for (var o2 of game.objects.objects) {
+                        if (o2.type == "enemy") enemyCount++;
+                    }
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "alphabetic";
+                    ctx.fillText("Wave: " + game.waves.wave, 160, 50);
+                    ctx.fillText("Enemies Left: " + enemyCount, 160, 100);
+                    //wave and enemies left
+
+                    ctx.fillStyle = "rgb(240,240,240)";
+                    ctx.fillRect(0, 0, 150, 150);
+                    ctx.fillStyle = "rgb(50,50,50,0.2)";
+                    ctx.fillRect(0, 0, 150, 150);
+                    ctx.fillStyle = "rgb(240,240,240)";
+                    ctx.fillRect(20, 20, 110, 110);
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(0, 0, 150, 150);
+                    ctx.fillStyle = "rgb(0,0,150)";
+                    drawPolygon(75, 75, 8, 5, 0);
+                    if (!game.gameOver) ctx.fill();
+                    ctx.beginPath();
+                    ctx.rect(0, 0, 150, 150);
+                    ctx.save();
+                    ctx.clip();
+                    for (var o2 of game.objects.objects) {
+                        if (o2.type == "enemy") {
+                            ctx.fillStyle = "red";
+                            ctx.fillRect(o2.x * 0.075 + 74, o2.y * 0.075 + 74, 2, 2);
+                        }
+                        if (o2.type == "tower") {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(o2.x * 0.075 + 74, o2.y * 0.075 + 74, 2, 2);
+                        }
+                    }
+                    ctx.restore();
+                    //map
+
+                    ctx.fillStyle = "rgb(220,220,220)";
+                    ctx.fillRect(0, 900, 1000, 100);
+                    //ui menu bar
+
+                    if (game.gameOver) {
+                        ctx.fillStyle = "black";
+                        f(50);
+                        ctx.textAlign = "left";
+                        ctx.textBaseline = "center";
+                        ctx.fillText("Game Over!", 20, 965);
+                    }
+                    //game over text
+
+                    var options = this.getOptionsForSelectedObject(o);
+                    if (game.gameOver) options = [];
+                    var valid = options.map(this.validateUIOption);
+                    var optionText = "";
+                    for (var n = 0; n < options.length; n++) {
+                        ctx.save();
+                        ctx.translate(n * 90 + 50, 950);
+                        if (this.uiIncorrect[n] !== undefined) {
+                            this.uiIncorrect[n]--;
+                            if (this.uiIncorrect[n] == 0) {
+                                this.uiIncorrect[n] = undefined;
+                            }
+                            ctx.rotate((Math.random() * this.uiIncorrect[n] - this.uiIncorrect[n] / 2) * Math.PI / 180);
+                        }
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 3;
+                        ctx.fillStyle = "rgb(220,220,220)";
+                        if (Mouse.inBox(n * 90 + 15, 915, 70, 70)) {
+                            ctx.fillStyle = "rgb(200,200,200)";
+                            if (Mouse.click) {
+                                if (valid[n]) {
+                                    this.UIOption(options[n]);
+                                } else {
+                                    this.uiIncorrect[n] = 40;
+                                }
+                            }
+                            optionText = this.getNameForUIOption(options[n]);
+                        }
+                        ctx.roundRect(-35, -35, 70, 70, 10);
+                        ctx.fill();
+                        ctx.stroke();
+                        this.drawUIOption(options[n]);
+                        ctx.restore();
+                    }
+                    //ui options
+
+                    f(30);
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "black";
+                    ctx.fillText(optionText, options.length * 90 + 15, 955);
+                    //hover option text
+                },
+                validateUIOption(o, data) {
+                    var selected = game.objects.getObjectById(game.ui.objectSelectedId);
+                    if (o == "placeBasicTower") return game.money >= game.ui.getTowerCapitalCost({ towerType: "basic" });
+                    if (o == "placeShotgunTower") return game.money >= game.ui.getTowerCapitalCost({ towerType: "shotgun" });
+                    if (o == "placeSniperTower") return game.money >= game.ui.getTowerCapitalCost({ towerType: "sniper" });
+                    if (o == "placeMachinegunTower") return game.money >= game.ui.getTowerCapitalCost({ towerType: "machinegun" });
+                    if (o == "placeLaserTower") return game.money >= game.ui.getTowerCapitalCost({ towerType: "laser" });
+                    if (o == "placeIceTower") return game.money >= game.ui.getTowerCapitalCost({ towerType: "ice" });
+                    if (o == "upgradeTower") return game.money >= game.ui.getUpgradeCost(selected);
+                    if (o == "deleteTower") return true;
+                    if (o == "back") return true;
+                    if (o == "quit") return true;
+                    if (o == "pause") return true;
+                    if (o == "buyPlacePosition") return game.money >= selected.cost;
+                },
+                UIOption: function (o) {
+                    if (o == "back") {
+                        this.objectSelectedId = false;
+                    }
+                    if (o == "quit") {
+                        page = "menu";
+                    }
+                    if (o == "pause") {
+                        game.paused = true;
+                    }
+                    if (o == "placeBasicTower") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var tower = { type: "tower", towerType: "basic", x: selected.x, y: selected.y, reload: 0, range: 400, reloadReset: 100, dir: 0, turnSpeed: 5, r: 20, level: 1, stunned: false, stunTimer: 500 };
+                        game.money -= this.getTowerCapitalCost(tower);
+                        game.objects.objects.push(tower);
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "placeSniperTower") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var tower = { type: "tower", towerType: "sniper", x: selected.x, y: selected.y, reload: 0, range: 600, reloadReset: 110, dir: 0, turnSpeed: 6, r: 20, level: 1, stunned: false, stunTimer: 500 };
+                        game.money -= this.getTowerCapitalCost(tower);
+                        game.objects.objects.push(tower);
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "placeShotgunTower") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var tower = { type: "tower", towerType: "shotgun", x: selected.x, y: selected.y, reload: 0, range: 300, reloadReset: 150, dir: 0, turnSpeed: 3, r: 20, level: 1, stunned: false, stunTimer: 500 };
+                        game.money -= this.getTowerCapitalCost(tower);
+                        game.objects.objects.push(tower);
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "placeMachinegunTower") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var tower = { type: "tower", towerType: "machinegun", x: selected.x, y: selected.y, reload: 0, range: 400, reloadReset: 25, dir: 0, turnSpeed: 5, r: 20, level: 1, stunned: false, stunTimer: 500 };
+                        game.money -= this.getTowerCapitalCost(tower);
+                        game.objects.objects.push(tower);
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "placeLaserTower") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var tower = { type: "tower", towerType: "laser", x: selected.x, y: selected.y, reload: 0, range: 400, reloadReset: 25, dir: 0, turnSpeed: 2, r: 20, level: 1, stunned: false, stunTimer: 500 };
+                        game.money -= this.getTowerCapitalCost(tower);
+                        game.objects.objects.push(tower);
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "placeIceTower") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var tower = { type: "tower", towerType: "ice", x: selected.x, y: selected.y, reload: 0, range: 200, reloadReset: 150, dir: 0, turnSpeed: 5, r: 20, level: 1, stunned: false, stunTimer: 500, freeze: 300 };
+                        game.money -= this.getTowerCapitalCost(tower);
+                        game.objects.objects.push(tower);
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "deleteTower") {
+                        var tower = game.objects.getObjectById(this.objectSelectedId);
+                        var cost = this.getTowerSellCost(tower);
+                        game.money += cost;
+                        tower.delete = true;
+                        this.objectSelectedId = false;
+                        game.objects._updatePlacePositions = true;
+                    }
+                    if (o == "upgradeTower") {
+                        var tower = game.objects.getObjectById(this.objectSelectedId);
+                        if (!tower.stunned) {
+                            game.money -= game.ui.getUpgradeCost(game.objects.getObjectById(this.objectSelectedId));
+                            if (tower.towerType == "base") {
+                                game.baseUpgradedCount++;
+                                tower.health += 200;
+                                tower.maxHealth += 200;
+                                tower.health = Math.round(tower.health);
+                                tower.maxHealth = Math.round(tower.maxHealth);
+                                tower.healRate += 0.01;
+                                tower.healRate = Math.round(tower.healRate * 100) / 100;
+                                tower.level++;
+                                return;
+                            }
+                            tower.reloadReset *= 0.95;
+                            tower.reloadReset = Math.round(tower.reloadReset);
+                            tower.range *= 1.03;
+                            tower.level++;
+                            tower.upgraded = 100;
+                        }
+                    }
+                    if (o == "buyPlacePosition") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        game.money -= selected.cost;
+                        selected.bought = true;
+                    }
+                },
+                getUpgradeCost: function (o) {
+                    if (o.towerType == "basic") return 2 + o.level;
+                    if (o.towerType == "sniper") return 3 + o.level * 2;
+                    if (o.towerType == "shotgun") return o.level * 5;
+                    if (o.towerType == "machinegun") return 5 + o.level * 3;
+                    if (o.towerType == "laser") return 5 + o.level * 3;
+                    if (o.towerType == "ice") return o.level * 3;
+                    if (o.towerType == "base") return o.level * 10 + 5;
+                },
+                drawTowerStats: function (o) {
+                    var texts = [];
+                    var towerName = "Basic";
+                    if (o.towerType == "shotgun") towerName = "Shotgun";
+                    if (o.towerType == "sniper") towerName = "Sniper";
+                    if (o.towerType == "machinegun") towerName = "Machine Gun";
+                    if (o.towerType == "ice") towerName = "Ice";
+                    if (o.towerType == "laser") towerName = "LAZAR";
+                    texts.push("Range: " + Math.round(o.range));
+                    texts.push("Damage: " + game.objects.getBulletDamage(o) * game.objects.getBulletNum(o));
+                    texts.push("Reload: " + Math.round(o.reloadReset));
+                    texts.push("");
+                    texts.push("Level " + o.level);
+                    texts.push(towerName + " Turret");
+                    this.drawStats(texts);
+                },
+                drawEnemyStats: function (o) {
+                    var texts = [];
+                    texts.push("Health: " + Math.round(o.health) + "/" + Math.round(o.maxHealth));
+                    texts.push("Frozen: " + o.frozen);
+                    texts.push("FrozenTime: " + o.frozenTime);
+                    this.drawStats(texts);
+                },
+                drawBaseStats: function (o) {
+                    var texts = [];
+                    texts.push("Health: " + Math.round(o.health) + "/" + Math.round(o.maxHealth));
+                    texts.push("Heal Rate: " + Math.round(o.healRate * 100) + "/sec");
+                    texts.push("");
+                    texts.push("Level " + o.level);
+                    texts.push("Base");
+                    this.drawStats(texts);
+                },
+                drawStats: function (stats) {
+                    f(25);
+                    var maxWidth = 0;
+                    for (var stat of stats) {
+                        maxWidth = Math.max(ctx.measureText(stat).width, maxWidth);
+                    }
+                    ctx.fillStyle = "rgb(200,200,200)";
+                    ctx.fillRect(0, 880 - stats.length * 30, maxWidth + 40, stats.length * 30 + 20);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "alphabetic";
+                    for (var n in stats) {
+                        var stat = stats[n];
+                        ctx.fillText(stat, maxWidth / 2 + 20, 885 - n * 30);
+                    }
+                },
+                getNameForUIOption: function (o) {
+                    var id = game.ui.objectSelectedId;
+                    if (o == "quit") return "Quit";
+                    if (o == "pause") return "Pause";
+                    if (o == "back") return "Deselect";
+                    if (o == "placeBasicTower") return "Build Basic Turret";
+                    if (o == "placeSniperTower") return "Build Sniper Turret";
+                    if (o == "placeShotgunTower") return "Build Shotgun Turret";
+                    if (o == "placeMachinegunTower") return "Build Machine Gun Turret";
+                    if (o == "placeLaserTower") return "Build LASWER Turret";
+                    if (o == "placeIceTower") return "Build Ice Turret";
+                    if (o == "upgradeTower" && id != "base1") return "Upgrade Turret";
+                    if (o == "upgradeTower" && id == "base1") return "Upgrade Base";
+                    if (o == "deleteTower") return "Sell Turret";
+                    if (o == "buyPlacePosition") return "Buy Plot";
+                    return "";
+                },
+                drawUIOption: function (type) {
+                    var o = game.objects.getObjectById(game.ui.objectSelectedId); if (type == "placeBasicTower" || type == "placeSniperTower" || type == "placeShotgunTower" || type == "placeMachinegunTower" || type == "placeIceTower" || type == "placeLaserTower") {
+                        var towerType = type.split("place")[1].split("Tower")[0].toLowerCase();
+                        var tower = {};
+                        tower.r = 20;
+                        tower.type = "tower";
+                        tower.towerType = towerType;
+                        tower.x = 0;
+                        tower.y = -7;
+                        tower.dir = 0;
+                        game.objects.drawObject(tower);
+                        ctx.fillStyle = "black";
+                        var cost = game.ui.getTowerCapitalCost(tower);
+                        if (game.money < cost) ctx.fillStyle = "rgb(200,0,0)";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "alphabetic";
+                        f(20);
+                        ctx.fillText("$" + cost, 0, 30);
+                        ctx.fillStyle = "rgba(255,255,255,0.5)";
+                        ctx.fillRect(-33, -14, 66, 24);
+                        ctx.fillStyle = "black";
+                        ctx.textBaseline = "middle";
+                        f(13);
+                        ctx.fillText(towerType.toUpperCase(), 0, 0);
+                    }
+                    if (type == "deleteTower") {
+                        ctx.strokeStyle = "red";
+                        ctx.lineWidth = 5;
+                        ctx.lineCap = "round";
+                        ctx.beginPath();
+                        ctx.moveTo(-15, -20);
+                        ctx.lineTo(15, 10);
+                        ctx.moveTo(15, -20);
+                        ctx.lineTo(-15, 10);
+                        ctx.stroke();
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "alphabetic";
+                        f(20);
+                        var cost = this.getTowerSellCost(o);
+                        ctx.fillText("+$" + cost, 0, 30);
+                    }
+                    if (type == "upgradeTower") {
+                        if (o.stunned) {
+                            ctx.fillStyle = "rgb(255,180,0)";
+                        } else {
+                            ctx.fillStyle = "lime";
+                        }
+                        ctx.fillRect(-7.5, -10, 15, 20);
+                        ctx.beginPath();
+                        ctx.moveTo(0, -20);
+                        ctx.lineTo(20, 0);
+                        ctx.lineTo(-20, 0);
+                        ctx.closePath();
+                        ctx.fill();
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var cost = game.ui.getUpgradeCost(selected);
+                        ctx.fillStyle = "black";
+                        if (game.money < cost) ctx.fillStyle = "rgb(200,0,0)";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "alphabetic";
+                        f(20);
+                        ctx.fillText("$" + cost, 0, 30);
+                    }
+                    if (type == "back" || type == "quit") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-10, -7.5, 30, 15);
+                        ctx.beginPath();
+                        ctx.moveTo(-20, 0);
+                        ctx.lineTo(0, 20);
+                        ctx.lineTo(0, -20);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    if (type == "pause") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-15, -20, 10, 40);
+                        ctx.fillRect(5, -20, 10, 40);
+                    }
+                    if (type == "buyPlacePosition") {
+                        var selected = game.objects.getObjectById(this.objectSelectedId);
+                        var cost = selected.cost;
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        f(30);
+                        ctx.fillText("Buy", 0, 0);
+                        ctx.textBaseline = "alphabetic";
+                        f(20);
+                        if (game.money < cost) ctx.fillStyle = "red";
+                        ctx.fillText("$" + cost, 0, 30);
+                    }
+                },
+                getOptionsForSelectedObject: function (o) {
+                    if (o.type == "enemy") return [
+                        "back"
+                    ];
+                    if (o.type == "base") return [
+                        "back",
+                        "upgradeTower"
+                    ];
+                    if (o.type == "tower") return [
+                        "back", "upgradeTower", "deleteTower"
+                    ];
+                    if (o.type == "placePosition" && o.bought) return [
+                        "back", "placeBasicTower", "placeSniperTower", "placeShotgunTower", "placeMachinegunTower", "placeIceTower", "placeLaserTower"
+                    ];
+                    if (o.type == "placePosition" && !o.bought) return [
+                        "back", "buyPlacePosition"
+                    ];
+                    if (o === false) return [
+                        "quit", "pause"
+                    ];
+                    return [];
+                },
+                getTowerCapitalCost: function (o) {
+                    if (o.towerType == "base") return 0;
+
+                    var capital;
+                    if (o.towerType == "basic") capital = 10;
+                    if (o.towerType == "sniper") capital = 20;
+                    if (o.towerType == "shotgun") capital = 30;
+                    if (o.towerType == "machinegun") capital = 30;
+                    if (o.towerType == "laser") capital = 10;
+                    if (o.towerType == "ice") capital = 20;
+                    var count = 0;
+                    for (var o2 of game.objects.objects) {
+                        if (o2.type == "tower" && o2.towerType == o.towerType) count++;
+                    }
+                    return Math.round(capital * (1 + count * 0.2));
+                },
+                getTowerSellCost: function (o) {
+                    return Math.floor(this.getTotalTowerCost(o) * 0.75);
+                },
+                getTotalTowerCost: function (o) {
+                    var capital = this.getTowerCapitalCost(o);
+                    var upgradeCost = 0;
+                    for (var n = 1; n < o.level; n++) {
+                        if (o.towerType == "basic") upgradeCost += 2 + n;
+                        if (o.towerType == "sniper") upgradeCost += 3 + n * 2;
+                        if (o.towerType == "shotgun") upgradeCost += 5 * n;
+                        if (o.towerType == "machinegun") upgradeCost += 5 + n * 3;
+                        if (o.towerType == "ice") upgradeCost += 5 + n * 5;
+                        if (o.towerType == "base") upgradeCost += 10 * n + 5;
+                    }
+                    return capital + upgradeCost;
+                }
+            },
+            deletedObjects: {
+                objects: [],
+                update: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        o.r++;
+                        o.dir += 3;
+                        o.decay -= 0.03;
+                        if (o.decay <= 0) {
+                            this.objects.splice(n, 1);
+                            n--;
+                        }
+                    }
+                },
+                draw: function () {
+                    var n = 0;
+                    while (n < this.objects.length) {
+                        var o = this.objects[n];
+                        ctx.save();
+                        ctx.globalAlpha = o.decay;
+                        game.objects.drawObject(o);
+                        ctx.restore();
+                        n++;
+                    }
+                },
+                createObject: function (o) {
+                    if (o.type == "bullet") return;
+                    o.health = 1;
+                    o.maxHealth = 1;
+                    o.decay = 1;
+                    this.objects.push(o);
+                }
+            },
+            objects: {
+                objects: [],
+                enemyIds: [],
+                base: false,
+                _updatePlacePositionsNext: false,
+                update: function (speed) {
+                    var types = {};
+                    this.enemyIds = [];
+                    for (var n in this.objects) {
+                        if (this.objects[n].type == "enemy") {
+                            this.enemyIds.push(n);
+                        }
+                        if (this.objects[n].type == "base") {
+                            this.base = this.objects[n];
+                        }
+                    }
+                    for (var n in this.objects) {
+                        var o = this.objects[n];
+                        if (!types[o.type]) types[o.type] = 0;
+                        types[o.type]++;
+                        if (o.type != "enemy") {
+                            o.id = o.type + types[o.type];
+                        }
+                        this.updateObject(o, speed);
+                    }
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        if (o.delete) {
+                            game.deletedObjects.createObject(o);
+                            this.objects.splice(n, 1);
+                            n--;
+                        }
+                    }
+                    this.objects.sort(function (a, b) {
+                        return ["placePosition", "bullet", "enemy", "tower", "base"].indexOf(a.type) - ["placePosition", "bullet", "enemy", "tower", "base"].indexOf(b.type);
+                    });
+                    if (this._updatePlacePositions) {
+                        this._updatePlacePositions = false;
+                        this.updatePlacePositions();
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        if (o.visible !== false) this.drawObject(o);
+                    }
+                },
+                count: function (type) {
+                    var count = 0;
+                    for (var o of this.objects) {
+                        if (o.type !== type) continue;
+                        count++;
+                    }
+                    return count;
+                },
+                updateObject: function (o, speed) {
+                    if (o.type == "bullet") {
+                        this.updateBullet(o, speed);
+                    } else if (o.type == "tower" && !game.gameOver) {
+                        this.updateTower(o, speed);
+                    } else if (o.type == "enemy") {
+                        this.updateEnemy(o, speed);
+                    } else if (o.type == "base") {
+                        o.health += o.healRate;
+                        o.health = Math.min(o.health, o.maxHealth);
+                        if (o.health <= 0) {
+                            o.delete = true;
+                        }
+                    } else if (o.type == "placePosition") {
+                        o.towerPlaced = false;
+                        for (var n = 0; n < this.objects.length; n++) {
+                            var o2 = this.objects[n];
+                            if (o2.type !== "tower") continue;
+                            if (o2.x != o.x || o2.y != o.y) continue;
+                            o.towerPlaced = o2.id;
+                        }
+                    } else if (o.type == "moneyText") {
+                        o.y--;
+                        o.alpha -= 0.02;
+                        if (o.alpha <= 0) o.delete = true;
+                    } else if (o.type == "fadeText") {
+                        o.y--;
+                        o.alpha -= 0.02;
+                        if (o.alpha <= 0) o.delete = true;
+                    }
+                },
+                updatePlacePositions: function () {
+                    var placePositionIds = [];
+                    for (var n in this.objects) {
+                        if (this.objects[n].type == "placePosition") placePositionIds.push(n);
+                    }
+                    for (var id of placePositionIds) {
+                        var o = this.objects[id];
+                        if (o.bought) {
+                            o.visible = true;
+                            continue;
+                        }
+                        o.visible = false;
+                        for (var id2 of placePositionIds) {
+                            if (id === id2) continue;
+                            var o2 = this.objects[id2];
+                            if (o2.towerPlaced === false) continue;
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            if (dist < 200) {
+                                o.visible = true;
+                                break;
+                            }
+                        }
+                    }
+                },
+                updateBullet: function (o, speed) {
+                    o.x += o.xmove * speed;
+                    o.y += o.ymove * speed;
+                    o.decay -= speed;
+                    if (o.decay <= 0) {
+                        o.delete = true;
+                    }
+                    for (var id of this.enemyIds) {
+                        var e = this.objects[id];
+                        var dist = distTo(o.x, o.y, e.x, e.y);
+                        if (dist < e.r) {
+                            e.health -= o.damage;
+                            if (o.towerFrom.towerType == "ice") {
+                                e.frozen = true;
+                                e.frozenTime = o.towerFrom.freeze;
+                            }
+                            if (e.health <= 0 && e.enemyType == "stunner") {
+                                if (o.towerFrom.towerType == "basic") {
+                                    var text = {};
+                                    text.type = "fadeText";
+                                    text.text = "This tower cannot be stunned.";
+                                    text.x = o.towerFrom.x;
+                                    text.y = o.towerFrom.y;
+                                    text.alpha = 1;
+                                    this.objects.push(text);
+                                } else {
+                                    o.towerFrom.stunned = true;
+                                }
+                                //if tower is not basic type, tower gets stunned.
+                            }
+                            o.delete = true;
+                            break;
+                            //delete bullet if it hits enemy
+                        }
+                    }
+                },
+                updateEnemy: function (o, speed) {
+                    o.health = Math.min(o.health, o.maxHealth);
+                    if (o.health <= 0) {
+                        var moneyGained = this.getMoneyFromEnemy(o)
+                        game.money += moneyGained;
+                        var text = {};
+                        text.type = "moneyText";
+                        text.amount = moneyGained;
+                        text.x = o.x;
+                        text.y = o.y;
+                        text.alpha = 1;
+                        this.objects.push(text);
+                        o.delete = true;
+                        game.enemyDestroyedCount++;
+                    }
+                    var o2 = this.base;
+                    if (o2 && !game.gameOver) {
+                        var dist = distTo(o.x, o.y, o2.x, o2.y);
+                        if (dist < o2.r + o.r) {
+                            o2.health -= o.health;
+                            o.delete = true;
+                            o.gainMoneyFromDestroy = false;
+                        }
+                    }
+                    if (o.enemyType == "splitter") {
+                        if (o.split <= 0) {
+                            this.splitEnemy(o);
+                            o.split = 500;
+                        }
+                        o.split--;
+                    }
+                    if (o.poisoned && Math.random < 0.1) o.health--;
+                    if (!o.frozen) {
+                        this.moveEnemy(o, speed);
+                        this.healEnemy(o);
+                    } else {
+                        o.frozenTime--;
+                    }
+                    if (o.frozenTime > 0) {
+                        o.frozen = true;
+                    } else {
+                        o.frozen = false;
+                    }
+                },
+                moveEnemy: function (o, speed) {
+                    var o2 = this.base;
+                    if (o2 && !game.gameOver) {
+                        var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                        o.dir = dir + 70;
+                        //enemy direcetion = degrees relative to the base.
+                        if (o.filled) o.dir = dir;
+                        //if enemy is filled (every 10 levels) go directly at the base
+                    }
+                    var move = distToMove(1, o.dir);
+                    //set speed to move at 1 in the direction its facing
+                    if (o.enemyType == "fast") move = distToMove(1.5, o.dir);
+                    if (o.enemyType == "slow") move = distToMove(0.5, o.dir);
+                    if (o.filled) move = distToMove(0.5, o.dir);
+                    if (o.filled && o.enemyType == "slow") move = distToMove(0.3, o.dir);
+                    // if its filled, then it moves at 0.5 speed
+                    o.x += move.x * speed;
+                    o.y += move.y * speed;
+                    o.xmove = move.x * speed;
+                    o.ymove = move.y * speed;
+                },
+                //Thomas"s code to rewrite cuz it"s bad
+                healEnemy: function (o) {
+                    if (o.enemyType == "healer" && o.health < o.maxHealth && Math.random() < 0.75) o.health++;
+                },
+                splitEnemy: function (o) {
+                    var e = { type: "enemy" };
+                    e.x = o.x + Math.random() * 100 - 50;
+                    e.y = o.y + Math.random() * 100 - 50;
+                    e.dir = o.dir;
+                    e.id = "enemy" + game.objects.objects.filter(e => e.type == "enemy").length;
+                    e.r = o.r;
+                    e.poisoned = o.poisoned;
+                    e.poisonTime = 0;
+                    e.frozen = false;
+                    e.frozenTime = 0;
+                    e.enemyType = "splitling";
+                    e.split = 500;
+                    e.maxHealth = o.maxHealth;
+                    e.health = o.health;
+                    game.objects.objects.push(e);
+                },
+                getMoneyFromEnemy: function (o) {
+                    if (o.enemyType == "normal") return 1;
+                    if (o.enemyType == "fast") return 1;
+                    if (o.enemyType == "slow") return 2;
+                    if (o.enemyType == "healer") return 2;
+                    if (o.enemyType == "stunner") return 3;
+                    if (o.enemyType == "splitter") return 1;
+                    if (o.enemyType == "splitling") return 0;
+                    if (o.enemyType == "money") return 10;
+                },
+                updateTower: function (o, speed) {
+                    if (o.upgraded > 0) {
+                        o.upgraded--;
+                    }
+                    if (o.stunned) {
+                        o.stunTimer--;
+                        if (o.stunTimer <= 0) {
+                            o.stunned = false;
+                            o.stunTimer = 500;
+                        }
+                        //stun timer here
+                    }
+                    if (o.reload > 0) {
+                        o.reload -= speed;
+                    }
+                    o.reload = Math.max(o.reload, 0);
+                    var enemiesInRange = [];
+                    for (var id of this.enemyIds) {
+                        var e = this.objects[id];
+                        var dist = distTo(e.x, e.y, o.x, o.y);
+                        if (dist < o.range || true) {
+                            enemiesInRange.push(e);
+                        }
+                    }
+                    var closestEnemy = false;
+                    var enemyDist = Infinity;
+                    for (var n in enemiesInRange) {
+                        var e = enemiesInRange[n];
+                        var dist = distTo(o.x, o.y, e.x, e.y);
+                        if (dist < enemyDist) {
+                            enemyDist = dist;
+                            closestEnemy = e;
+                        }
+                    }
+                    if (closestEnemy) {
+                        var bulletSpeed = game.objects.getBulletSpeed(o);//get the bullet speed
+                        var dist = distTo(o.x, o.y, closestEnemy.x, closestEnemy.y);
+                        if (o.reload == 0) {
+                            o.targets = [];
+                        }
+                        for (var n = 0; n < 20; n++) {
+                            var e = structuredClone(closestEnemy);
+                            var oldDist = dist;
+                            for (var n2 = 0; n2 < dist / bulletSpeed; n2++) {
+                                this.moveEnemy(e, 1);
+                            }
+                            dist = distTo(o.x, o.y, e.x, e.y);
+                            if (o.reload == 0) {
+                                o.targets.push(e);
+                                if (n == 19) {
+                                    console.log(oldDist, dist);
+                                }
+                            }
+                            o.target = e;
+                        }
+                        var dir = dirTo(o.x, o.y, o.target.x, o.target.y);
+                        var t = turn(o.dir, dir);
+                        if (s(t) * o.turnSpeed < Math.abs(t)) {
+                            o.dir += s(t) * o.turnSpeed * speed;
+                        }
+                        if (Math.abs(t) < 5) {
+                            o.pointedAtTarget = true;
+                            if (o.reload == 0) {
+                                var bullets = this.getTowerBullets(o); //get bullet stats from tower
+                                this.objects = this.objects.concat(bullets);//merge the array of "bullets" into the array of objects
+                                o.reload = o.reloadReset; //reset the reload of the tower
+                                o.reload = 200;
+                                //}
+                            }
+                        } else {
+                            o.pointedAtTarget = false;
+                        }
+                    } else {
+                        o.pointedAtTarget = false;
+                    }
+                },
+                getBulletSpeed: function (o) {
+                    return 3;
+                    var type = o.towerType;
+                    if (type == "ice") return 4;
+                    if (type == "basic" || type == "shotgun") return 6;
+                    if (type == "machinegun") return 8;
+                    if (type == "sniper") return 11;
+                    if (type == "laser") return 100;
+                    /*for(var tower of towers) {
+                        if(o.towerType==tower.towerType) return tower.bullet.speed;
+                    }*/
+                },
+                getBulletDamage: function (o) {
+                    var type = o.towerType;
+                    if (type == "basic") return 50 + (o.level - 1) * 10;
+                    if (type == "shotgun") return 50 + (o.level - 1) * 7;
+                    if (type == "sniper") return 150 + (o.level - 1) * 20;
+                    if (type == "machinegun") return 30 + (o.level - 1) * 10;
+                    if (type == "ice") return o.level * 20
+                    if (type == "laser") return Math.sqrt(o.level);
+                },
+                getBulletSpread: function (o) {
+                    var type = o.towerType;
+                    if (type == "basic" || type == "sniper" || type == "ice" || type == "laser") return 0;
+                    if (type == "shotgun") return 20;
+                    if (type == "machinegun") return 10;
+                },
+                getBulletNum: function (o) {
+                    var type = o.towerType;
+                    if (type == "basic" || type == "sniper" || type == "ice" || type == "machinegun" || type == "laser") return 1;
+                    if (type == "shotgun") return 7;
+                },
+                getBulletRadius: function (o) {
+                    var type = o.towerType;
+                    if (type == "shotgun" || type == "machinegun") return 3;
+                    if (type == "sniper") return 4;
+                    if (type == "basic") return 5;
+                    if (type == "ice") return 7;
+                    if (type == "laser") return 10;
+                },
+                getTowerBullets: function (o) {
+                    var bullets = [];
+                    var damage = this.getBulletDamage(o);
+                    var speed = this.getBulletSpeed(o) - 1;
+                    var num = this.getBulletNum(o);
+                    var spread = this.getBulletSpread(o);
+                    var radius = this.getBulletRadius(o);
+                    for (var n = 0; n < num; n++) {
+                        var bullet = { type: "bullet", from: o.towerType, towerFrom: o };
+                        bullet.x = o.x;
+                        bullet.y = o.y;
+                        var move = distToMove(speed + Math.random() * spread / 15, o.dir + Math.random() * spread - spread / 2);
+                        if (n == 0) move = distToMove(speed, o.dir);
+                        bullet.xmove = move.x;
+                        bullet.ymove = move.y;
+                        bullet.decay = 400;
+                        bullet.damage = damage;
+                        bullet.r = radius;
+                        bullets.push(bullet);
+                    }
+                    return bullets;
+                },
+                drawObject: function (o) {
+                    if (o.type == "tower") {
+                        ctx.save();
+                        ctx.translate(o.x, o.y);
+                        ctx.rotate(o.dir * Math.PI / 180);
+                        ctx.scale(o.r / 20, o.r / 20);
+                        if (o.towerType == "basic") {
+                            ctx.fillStyle = "blue";
+                            drawPolygon(0, 0, 5, 20, 0);
+                            ctx.fill();
+                            ctx.fillStyle = "rgb(0,0,150)";
+                            drawPolygon(0, -10, 5, 10, 0);
+                            ctx.fill();
+                        } else if (o.towerType == "shotgun") {
+                            ctx.fillStyle = "rgb(150,0,200)";
+                            drawPolygon(0, 0, 6, 20, 0);
+                            ctx.fill();
+                            ctx.fillStyle = "rgb(100,0,100)";
+                            drawPolygon(0, -10, 6, 10, 0);
+                            ctx.fill();
+                        } else if (o.towerType == "ice") {
+                            ctx.fillStyle = "rgb(0,200,255)";
+                            drawPolygon(0, 0, 6, 20, 0);
+                            ctx.fill();
+                            ctx.fillStyle = "rgb(0,150,200)";
+                            drawPolygon(0, -10, 6, 10, 0);
+                            ctx.fill();
+                        } else if (o.towerType == "sniper") {
+                            ctx.fillStyle = "rgb(255,0,0)";
+                            drawPolygon(0, 0, 3, 20, 0);
+                            ctx.fill();
+                            ctx.fillStyle = "rgb(150,0,0)";
+                            drawPolygon(0, -14, 3, 10, 180);
+                            ctx.fill();
+                        } else if (o.towerType == "machinegun") {
+                            ctx.fillStyle = "rgb(0,255,0)";
+                            drawPolygon(0, 0, 4, 20, 0);
+                            ctx.fill();
+                            ctx.fillStyle = "rgb(0,150,0)";
+                            drawPolygon(0, -14, 4, 10, 0);
+                            ctx.fill();
+                        } else if (o.towerType == "laser") {
+                            ctx.fillStyle = "rgb(0,255,0)";
+                            drawPolygon(0, 0, 4, 20, 0);
+                            ctx.fill();
+                            ctx.fillStyle = "rgb(0,150,0)";
+                            drawPolygon(0, -14, 4, 10, 45);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                        if (o.targets) {
+                            ctx.fillStyle = "rgb(0,0,0,0.2)";
+                            for (var t of o.targets) {
+                                ctx.fillRect(t.x, t.y, 10, 10);
+                            }
+                        }
+                        if (o.stunned) {
+                            ctx.fillStyle = "rgba(255,180,0,0.5)";
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, 40, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        if (o.upgraded > 0) {
+                            ctx.save();
+                            ctx.translate(o.x, o.y - 50 + o.upgraded / 4);
+                            ctx.scale(o.upgraded / 100, o.upgraded / 100);
+                            ctx.translate(0, 10);
+                            ctx.globalAlpha = o.upgraded / 100;
+                            ctx.fillStyle = "lime";
+                            ctx.fillRect(-7.5, 0, 15, 10);
+                            ctx.beginPath();
+                            ctx.moveTo(0, -20);
+                            ctx.lineTo(20, 0);
+                            ctx.lineTo(-20, 0);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                        ctx.save();
+                        ctx.translate(o.x + 30, o.y - 20);
+                        var s = (Math.sin(t / 30) + 1) / 10;
+                        ctx.scale(0.5 + s, 0.5 + s);
+                        if (game.ui.getUpgradeCost(o) <= game.money) {
+                            ctx.strokeStyle = "black";
+                            ctx.fillStyle = "rgb(255,255,255)";
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(0, -3, 25, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.stroke();
+                            if (o.stunned) {
+                                ctx.fillStyle = "rgb(255,180,0)";
+                            } else {
+                                ctx.fillStyle = "lime";
+                            }
+                            ctx.fillRect(-7.5, -10, 15, 20);
+                            ctx.beginPath();
+                            ctx.moveTo(0, -20);
+                            ctx.lineTo(20, 0);
+                            ctx.lineTo(-20, 0);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    } else if (o.type == "enemy") {
+                        var data = this.getEnemyData(o.enemyType);
+                        ctx.strokeStyle = data.color;
+                        ctx.fillStyle = data.fillColor;
+                        ctx.lineWidth = 5;
+                        drawPolygon(o.x, o.y, data.sides, o.r, o.dir);
+                        if (o.filled || o.enemyType == "money") ctx.fill();
+                        ctx.stroke();
+                        //draw money
+                        if (o.enemyType == "money") {
+                            ctx.strokeStyle = "black";
+                            ctx.stroke();
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            f(o.r * 1.5);
+                            ctx.fillText("$", o.x, o.y + 5);
+                        }
+                        if (o.health != o.maxHealth) {
+                            ctx.lineWidth = 10;
+                            ctx.lineCap = "round";
+                            ctx.strokeStyle = "rgb(50,150,50)";
+                            ctx.beginPath();
+                            ctx.moveTo(o.x - o.r, o.y + o.r + 10);
+                            ctx.lineTo(o.x + o.r, o.y + o.r + 10);
+                            ctx.stroke();
+                            ctx.strokeStyle = "rgb(0,255,0)";
+                            ctx.beginPath();
+                            ctx.moveTo(o.x - o.r, o.y + o.r + 10);
+                            ctx.lineTo(o.x - o.r + o.r * 2 * o.health / o.maxHealth, o.y + o.r + 10);
+                            ctx.stroke();
+                            ctx.lineCap = "square";
+                        }
+                        if (o.frozen) {
+                            ctx.fillStyle = "rgba(200,255,255,0.75)";
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, o.frozenTime / 10 + 10, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                        //health bar
+                        //draw enemy/drawenemy
+                    } else if (o.type == "bullet") {
+                        if (o.towerFrom.towerType == "ice") {
+                            ctx.fillStyle = "rgb(0,200,255)";
+                            ctx.fillRect(o.x - o.r, o.y - o.r, o.r * 2, o.r * 2);
+                        } else if (o.towerFrom.towerType == "laser") {
+                            if (o.towerFrom.pointedAtTarget) {
+                                ctx.strokeStyle = "red";
+                                ctx.lineWidth = 10;
+                                ctx.beginPath();
+                                ctx.moveTo(o.towerFrom.x, o.towerFrom.y);
+                                ctx.lineTo(o.towerFrom.target.x, o.towerFrom.target.y);
+                                ctx.stroke();
+                                ctx.strokeStyle = "white";
+                                ctx.lineWidth = 5;
+                                ctx.beginPath();
+                                ctx.moveTo(o.towerFrom.x, o.towerFrom.y);
+                                ctx.lineTo(o.towerFrom.target.x, o.towerFrom.target.y);
+                                ctx.stroke();
+                            }
+                            //draw laser
+                            /*ctx.fillStyle = "red";
+                            ctx.beginPath();
+                            ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                            ctx.fill();*/
+                        } else {
+                            ctx.fillStyle = "black";
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, o.r, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    } else if (o.type == "base") {
+                        ctx.fillStyle = "rgb(0,0,150)";
+                        drawPolygon(o.x, o.y, 8, o.r, 22.6);
+                        ctx.fill();
+                        ctx.fillStyle = "rgb(0,0,50)";
+                        drawPolygon(o.x, o.y, 4, o.r / 2, 45);
+                        ctx.fill();
+                        if (o.health != o.maxHealth) {
+                            ctx.lineWidth = 10;
+                            ctx.lineCap = "round";
+                            ctx.strokeStyle = "rgb(50,150,50)";
+                            ctx.beginPath();
+                            ctx.moveTo(o.x - o.r, o.y + o.r + 10);
+                            ctx.lineTo(o.x + o.r, o.y + o.r + 10);
+                            ctx.stroke();
+                            ctx.strokeStyle = "rgb(0,255,0)";
+                            ctx.beginPath();
+                            ctx.moveTo(o.x - o.r, o.y + o.r + 10);
+                            ctx.lineTo(o.x - o.r + o.r * 2 * o.health / o.maxHealth, o.y + o.r + 10);
+                            ctx.stroke();
+                            ctx.lineCap = "square";
+                        }
+                        //health bar
+                    } else if (o.type == "placePosition") {
+                        ctx.fillStyle = "rgba(0,0,0,0.2)";
+                        if (!o.bought) ctx.fillStyle = "rgba(0,0,0,0.05)";
+                        ctx.beginPath();
+                        ctx.arc(o.x, o.y, 25, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.save();
+                        ctx.translate(o.x, o.y);
+                        var s = (Math.sin(t / 30) + 1) / 10;
+                        ctx.scale(1 + s, 1 + s);
+                        if (!o.towerPlaced && o.bought) {
+                            ctx.strokeStyle = "black";
+                            ctx.lineCap = "round";
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(0, -10);
+                            ctx.lineTo(0, 10);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(-10, 0);
+                            ctx.lineTo(10, 0);
+                            ctx.stroke();
+                        }
+                        if (!o.bought) {
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBasline = "middle";
+                            f(25);
+                            ctx.fillText("$", 0, 5);
+                        }
+                        ctx.restore();
+                    } else if (o.type == "moneyText") {
+                        f(25);
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = "black";
+                        ctx.fillText("$" + o.amount, o.x, o.y);
+                    } else if (o.type == "fadeText") {
+                        f(25);
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = "black";
+                        ctx.fillText(o.text, o.x, o.y);
+                    }
+                },
+                getEnemyData: function (type) {
+                    if (type == "fast") return { color: "rgb(0,200,255)", fillColor: "rgb(0,175,225)", sides: 3, healthMultiplier: 0.5 };
+                    if (type == "normal") return { color: "red", fillColor: "rgb(200,0,0)", sides: 4, healthMultiplier: 1 };
+                    if (type == "slow") return { color: "rgb(0,200,0)", fillColor: "rgb(0,150,0)", sides: 5, healthMultiplier: 3 };
+                    if (type == "healer") return { color: "rgb(255,150,200)", fillColor: "rgb(220,120,170)", sides: 6, healthMultiplier: 1.5 };
+                    if (type == "stunner") return { color: "rgb(255,180,0)", fillColor: "rgb(220,150,0)", sides: 7, healthMultiplier: 0.5 };
+                    if (type == "splitter") return { color: "rgb(180,0,220)", fillColor: "rgb(125,0,150)", sides: 3, healthMultiplier: 0.5 };
+                    if (type == "splitling") return { color: "rgb(200,0,255)", fillColor: "rgb(150,0,200)", sides: 3, healthMultiplier: 0.5 };
+                    if (type == "money") return { color: "yellow", fillColor: "yellow", sides: 20, healthMultiplier: 1 };
+                    //different enemy types
+                },
+                getObjectById: function (id) {
+                    for (var o of this.objects) {
+                        if (o.id == id) return o;
+                    }
+                    return false;
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                target: { x: 0, y: 0 },
+                update: function () {
+                    this.x = this.x * 0.98 + this.target.x * 0.02;
+                    this.y = this.y * 0.98 + this.target.y * 0.02;
+
+                    if (Keys.keys[37] || Keys.keys[65]) {
+                        this.target.x -= 5;
+                    }
+                    if (Keys.keys[38] || Keys.keys[87]) {
+                        this.target.y -= 5;
+                    }
+                    if (Keys.keys[39] || Keys.keys[68]) {
+                        this.target.x += 5;
+                    }
+                    if (Keys.keys[40] || Keys.keys[83]) {
+                        this.target.y += 5;
+                    }
+
+                    this.target.x = Math.min(Math.max(this.target.x, -500), 500);
+                    this.target.y = Math.min(Math.max(this.target.y, -500), 500);
+                    //don"t move cam out of bounds
+                }
+            },
+            waves: {
+                waveIntro: 0,
+                wave: 0,
+                nextWavePossible: false,
+                waveAutoStartTime: 0,
+                update: function () {
+                    if (game.objects.count("enemy") == 0 && this.waveIntro == 0 && !this.nextWavePossible && this.waveIntro == 0) {
+                        this.nextWavePossible = true;
+                        this.waveAutoStartTime = 1000;
+                    }
+                    if (this.nextWavePossible) {
+                        if (this.wave > 0) this.waveAutoStartTime--;
+                        if (this.waveAutoStartTime == 0) {
+                            this.nextWave();
+                        }
+                        if (Mouse.inBox(750, 800, 225, 75) && Mouse.click) {
+                            var moneyGained = Math.max(Math.round(this.waveAutoStartTime / 1000 * Math.sqrt(this.wave)), 1);
+                            game.money += moneyGained;
+                            var text = {};
+                            text.type = "moneyText";
+                            text.amount = moneyGained;
+                            text.x = game.cam.x + 400;
+                            text.y = game.cam.y + 300;
+                            text.alpha = 1;
+                            game.objects.objects.push(text);
+                            this.nextWave();
+                        }
+                    }
+                    if (this.waveIntro > 0) {
+                        this.waveIntro--;
+                        if (this.waveIntro == 0) {
+                            this.generateWave();
+                        }
+                    }
+                },
+                draw: function () {
+                    if (this.nextWavePossible && !game.gameOver) {
+                        ctx.fillStyle = "rgb(255,255,255)";
+                        if (Mouse.inBox(750, 800, 225, 75)) {
+                            ctx.fillStyle = "rgb(230,230,230)";
+                        }
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 3;
+                        ctx.roundRect(750, 800, 225, 75, 20);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = "red";
+                        ctx.setLineDash([550 * (1 - this.waveAutoStartTime / 1000), 600]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        ctx.fillStyle = "black";
+                        f(35);
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Next Wave", 863, 842);
+                        var moneyGained = Math.max(Math.round(this.waveAutoStartTime / 1000 * Math.sqrt(this.wave)), 1);
+                        ctx.textAlign = "right";
+                        ctx.fillText("+$" + moneyGained, 735, 842);
+                    }
+
+                    if (this.waveIntro == 0) return;
+                    if (this.waveIntro < 50) {
+                        ctx.globalAlpha = this.waveIntro / 50;
+                    }
+                    if (this.waveIntro > 150) {
+                        ctx.globalAlpha = 1 - (this.waveIntro - 150) / 50;
+                    }
+                    ctx.fillStyle = "rgba(180,180,180,0.5)";
+                    ctx.fillRect(0, 400, 1000, 200);
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = "black";
+                    var x = 0;
+                    if (this.waveIntro > 150) {
+                        x = -((this.waveIntro - 150) ** 1.8);
+                    }
+                    if (this.waveIntro < 50) {
+                        x = ((50 - this.waveIntro) ** 1.8);
+                    }
+                    f(100);
+                    ctx.save();
+                    ctx.translate(x, 0);
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Wave " + this.wave, 500, 510);
+                    ctx.restore();
+                },
+                generateWave: function () {
+                    var n = 0;
+                    var enemyCount = this.wave + 1;
+                    while (n <= enemyCount) {
+                        var angle = n % 10;
+                        var enemiesInRing = Math.min(this.wave + 2 - Math.floor(n / 10), 10);
+                        var dist = (enemyCount - n) * 20 + 500;
+                        var cor = rotate(0, 0, 0, -dist, angle * 360 / enemiesInRing);
+                        var e = { type: "enemy" };
+                        e.x = cor.x;
+                        e.y = cor.y;
+                        e.dir = 0;
+                        e.id = "enemy" + n;
+                        e.r = 20;
+                        e.enemyType = "normal";
+                        e.split = 500;
+                        e.poisoned = false;
+                        e.poisonTime = 0;
+                        e.frozen = false;
+                        e.frozenTime = 0;
+                        if (this.wave % 10 == 0) {
+                            e.filled = true;
+                            e.x = cor.x * 1.5;
+                            e.y = cor.y * 1.5;
+                        }
+                        if (n % 3 == 0 && this.wave % 11 == 0) {
+                            e.enemyType = "splitter";
+                        }
+                        if (n > enemyCount / 2 && this.wave % 5 == 0) {
+                            e.enemyType = "slow";
+                        }
+                        if (n % 3 == 0 && this.wave % 3 == 0) {
+                            e.enemyType = "healer";
+                        }
+                        if (n % 4 == 0 && this.wave % 7 == 0) {
+                            e.enemyType = "stunner";
+                        }
+                        if (n % 2 == 0 && this.wave % 2 == 0) {
+                            e.enemyType = "fast";
+                        }
+                        if (n == 0 && this.wave % 5 == 0) {
+                            e.enemyType = "money";
+                        }
+                        if (e.enemyType == "slow") e.r = 25;
+                        //var data = this.getEnemyData(e.enemyType);
+                        e.maxHealth = 150 + (this.wave - 1) ** 2;
+                        if (e.enemyType == "fast") e.maxHealth = (150 + (this.wave - 1) ** 2) / 2;
+                        if (e.enemyType == "slow") e.maxHealth = 150 + ((this.wave - 1) ** 2) * 3;
+                        if (e.enemyType == "healer") e.maxHealth = 150 + ((this.wave - 1) ** 2) * 1.5;
+                        if (e.enemyType == "splitter") e.maxHealth = 150 + (this.wave - 1) ** 2;
+                        //e.maxHealth = (150+(this.wave-1)**2)*data.healthMultiplier;
+                        if (e.enemyType == "money") e.maxHealth = 50;
+                        e.health = e.maxHealth;
+                        game.objects.objects.push(e);
+                        n++;
+                    }
+                },
+                //generate new wave
+                nextWave: function () {
+                    this.nextWavePossible = false;
+                    this.wave++;
+                    this.waveIntro = 200;
+                }
+            },
+            reset: function () {
+                this.paused = false;
+                this.score = 0;
+                this.baseUpgradedCount = 0;
+                this.totalTowerWorth = 0;
+                this.enemyDestroyedCount = 0;
+                this.money = 10;
+                this.speed = 1;
+                this.cam.x = 0;
+                this.cam.y = 0;
+                this.cam.target.x = 0;
+                this.cam.target.y = 0;
+                this.startAnimation = 0;
+                this.waves.wave = 0;
+                this.waves.waveIntro = 0;
+                this.waves.waveAutoStartTime = 0;
+                this.waves.nextWavePossible = false;
+                this.objects.objects = [{ type: "base", towerType: "base", x: 0, y: 0, health: 1000, maxHealth: 1000, r: 50, healRate: 0.01, level: 1 }];
+                for (var n2 = 0; n2 < 4; n2++) {
+                    var num = 4 + Math.floor((n2 + 1) / 2) * 4;
+                    for (var n = 0; n < num; n++) {
+                        var cors = rotate(0, 0, 0, -150 - 100 * n2, n * 360 / num);
+                        this.objects.objects.push({ type: "placePosition", x: cors.x, y: cors.y, r: 25, bought: n2 === 0, cost: 15 + n2 * 15, visible: n2 === 0 });
+                    }
+                }
+                this.ui.objectSelectedId = false;
+                this.ui.uiIncorrect = [];
+                this.gameOver = false;
+                this.gameOverMenuAnimation = 0;
+                this.objects._updatePlacePositions = true;
+            },
+            totalTowerWorth: 0,
+            money: 10,
+            speed: 1,
+            enemyDestroyedCount: 0,
+            gameOver: false,
+            gameOverMenuAnimation: 0,
+            startAnimation: 0,
+            baseUpgradedCount: 0,
+            score: 0
+        }
+
+        var page = "menu";
+        menu.polygons.reset();
+        game.reset();
+        var highscore = 0;
+        if (localStorage.getItem("polygondefensehighscore") !== null) {
+            highscore = localStorage.getItem("polygondefensehighscore");
+        }
+        function updateHighscore() {
+            localStorage.setItem("polygondefensehighscore", highscore);
+        }
+        var t = 0;
+        var towerTypes = [
+            { name: "Basic", type: "tower", towerType: "basic", x: 0, y: 0, reload: 0, range: 400, reloadReset: 100, dir: 0, turnSpeed: 5, r: 20, level: 1, capitalCost: 10 }
+        ];
+        var towers = [
+            { towerType: "basic", level: 1, bullet: { speed: 6, damage: 50 + (this.level - 1) * 10, spread: 0, num: 1, radius: 5 } },
+            //{towerType:"sniper",bullet: {speed:6,damage:50+(o.level-1)*10,spread:0,num:1,radius:5}}
+        ]
+        /*getBulletSpeed: function(o) {
+        var type = o.towerType;
+        if(type=="ice") return 4;
+        if(type=="basic"||type=="shotgun") return 6;
+        if(type=="machinegun") return 8;
+        if(type=="sniper") return 11;
+    },
+    getBulletDamage: function(o) {
+        var type = o.towerType;
+        if(type=="basic") return 50+(o.level-1)*10;
+        if(type=="shotgun") return 50+(o.level-1)*7;
+        if(type=="sniper") return 150+(o.level-1)*20;
+        if(type=="machinegun") return 30+(o.level-1)*10;
+    },
+    getBulletSpread: function(o) {
+        var type = o.towerType;
+        if(type=="basic"||type=="sniper") return 0;
+        if(type=="shotgun") return 20;
+        if(type=="machinegun") return 10;
+    },
+    getBulletNum: function(o) {
+        var type = o.towerType;
+        if(type=="basic"||type=="sniper") return 1;
+        if(type=="shotgun") return 7;
+        if(type=="machinegun"&&o.level<10) return 1;
+        if(type=="machinegun"&&o.level>=10) return 2;
+    },
+    getBulletRadius: function(o) {
+        var type = o.towerType;
+        if(type=="shotgun"||type=="machinegun") return 3;
+        if(type=="sniper") return 4;
+        if(type=="basic") return 5;
+    },*/
+        /*
+            To Do:
+            add new enemy types:
+                strong and slow DONE
+                weak and fast DONE
+                healing DONE
+                stunning DONE
+                splitting DONE
+            add new tower types
+                machine gun DONE
+                wind (pushes enemies away)
+                poison (good against healing)
+                lightning (good against groups)
+            add final tower upgrades (level 10)
+            make menu polygons reflect highscore
+            add playing tutorial
+            fix motion tracking for turrets (especially sniper)
+        */
+    </script>
+</body>
+
+</html>

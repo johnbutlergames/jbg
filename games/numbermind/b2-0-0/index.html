@@ -1,0 +1,776 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Numbermind";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+                t++;
+            }
+
+            var menu = {
+                page: "title screen",
+                switchPage: "title screen",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 100,
+                titleScreenIntro: 0,
+                backgroundNumbers: [],
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        a = easeInOut(a);
+                        if(this.switchPage==this.page) {
+                            ctx.fillStyle = "black";
+                            ctx.save();
+                            ctx.translate(500,500);
+                            ctx.rotate(45*Math.PI/180);
+                            ctx.translate(-500,-500);
+                            ctx.fillRect(1500*(1-a)-200,-500,1500,2000);
+                            ctx.restore();
+                        } else {
+                            ctx.fillStyle = "black";
+                            ctx.save();
+                            ctx.translate(500,500);
+                            ctx.rotate(45*Math.PI/180);
+                            ctx.translate(-500,-500);
+                            ctx.fillRect(-250,-500,1500*a,2000);
+                            ctx.restore();
+                        }
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+                        if(this.titleScreenAnimation>230) {
+                            if(Mouse.clickInBox(500-150,550-70,300,140)) {
+                                this.switchPage = "game";
+                                game.reset();
+                            }
+                        }
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    this.drawBackground();
+                    if(page=="title screen") {
+                        this.titleScreen();
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+                        this.titleScreenAnimation++;
+                        for(var n=0;n<10;n++) {
+                            if(Keys.down[48+n]) {
+                                menu.animateBackgroundNumbers(n);
+                            }
+                        }
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                },
+                resetTitleScreen: function() {
+                    this.page = "title screen";
+                    this.switchPage = "title screen";
+                    this.titleScreenAnimation = 0;
+
+                    for(var n=0;n<100;n++) {
+                        var o = {};
+                        o.x = Math.random()*1200-100;
+                        o.y = Math.random()*1200-100;
+                        o.angle = Math.random()*360;
+                        o.spin = Math.random()*2-1;
+                        o.number = n%10;
+                        var move = distToMove(1,Math.random()*360);
+                        o.xmove = move.x;
+                        o.ymove = move.y;
+                        o.animation = 0;
+                        o.color = `hsl(${Math.random()*360},100%,50%)`;
+                        this.backgroundNumbers.push(o);
+                    }
+                },
+                titleScreen: function() {
+                    var a = this.titleScreenAnimation;
+                    var title = "Numbermind";
+                    ctx.font = "bold 100px Arial";
+                    ctx.textAlign = "center";
+                    var width = ctx.measureText(title).width;
+                    var characters = title.split("");
+                    var x = 500-width/2;
+                    for(var n=0;n<characters.length;n++) {
+                        var o = characters[n];
+                        var predictedPosition = 540-width/2+n/characters.length*width;
+                        var charWidth = ctx.measureText(o).width;
+                        var threshold = n*(10-n/3)+100;
+                        if(a<threshold) {
+                            ctx.fillText(Math.floor(Math.sin(t/30+n*10)*5+5),(x+charWidth/2)/2+predictedPosition/2,250);
+                        } else if((t-n*10)%400<10) {
+                            ctx.fillText(Math.floor(Math.sin(t/30+n*10)*5+5),x+charWidth/2,250);
+                        } else {
+                            ctx.fillText(o,x+charWidth/2,250);
+                        }
+                        x += charWidth;
+                    }
+
+                    var a2 = easeInOut((a-210)/20);
+                    var a3 = easeInOut((a-230)/20);
+
+                    ctx.save();
+                    ctx.translate(500,550);
+                    ctx.scale(a2,a2);
+                    ctx.strokeStyle = "black";
+                    ctx.fillStyle = "white";
+                    if(Mouse.inBox(500-150,550-70,300,140)) {
+                        ctx.fillStyle = "rgb(240,240,240)";
+                    }
+                    ctx.textBaseline = "middle";
+                    ctx.lineWidth = 7;
+                    ctx.roundRect(-150,-70,300,140,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = "70px Arial";
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Play",0,0);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.translate(500,900);
+                    ctx.scale(a3,a3);
+                    ctx.font = "50px Arial";
+                    ctx.fillStyle = "black";
+                    ctx.fillText("By John Butler",0,0);
+                    ctx.restore();
+                },
+                drawBackground: function() {
+                    for(var n=0;n<this.backgroundNumbers.length;n++) {
+                        var o = this.backgroundNumbers[n];
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.angle += o.spin;
+                        if(o.x>1100) o.x -= 1200;
+                        if(o.y>1100) o.y -= 1200;
+                        if(o.x<-100) o.x += 1200;
+                        if(o.y<-100) o.y += 1200;
+                        o.animation -= 0.03;
+                        o.animation = Math.max(0,o.animation);
+
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        ctx.rotate(o.angle*Math.PI/180);
+                        var a = 1+easeInOut(o.animation)*0.5;
+                        if(o.animation>0) ctx.scale(a,a);
+                        ctx.globalAlpha = 0.2+o.animation*0.3;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.font = "50px Arial";
+                        ctx.fillStyle = o.color;
+                        ctx.fillText(o.number,0,0);
+                        ctx.restore();
+                    }
+                },
+                animateBackgroundNumbers: function(number) {
+                    for(var n=0;n<this.backgroundNumbers.length;n++) {
+                        var o = this.backgroundNumbers[n];
+                        if(o.number!=number) continue;
+                        o.animation = 1;
+                    }
+                }
+            }
+
+            var game = {
+                secretNumber: "",
+                won: false,
+                update: function() {
+                    this.guesses.update();
+                    this.topNav.update();
+                    this.marks.update();
+                    this.spotlight.update();
+                },
+                updateEffects: function() {
+                },
+                draw: function() {
+                    this.guesses.draw();
+                    this.topNav.draw();
+                    this.marks.draw();
+                    this.spotlight.draw();
+                },
+                topNav: {
+                    update: function() {
+                        if(Mouse.clickInBox(20,20,90,90)&&!game.spotlight.using) menu.switchPage = "title screen";
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "rgb(240,240,240)";
+                        ctx.fillRect(0,0,1000,130);
+
+                        ctx.fillStyle = "rgb(240,240,240)";
+                        if(Mouse.inBox(20,20,90,90)&&!game.spotlight.using) ctx.fillStyle = "rgb(210,210,210)";
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 5;
+                        ctx.roundRect(20,20,90,90,20);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.save();
+                        ctx.translate(65,65);
+                        ctx.lineCap = "round";
+                        ctx.lineJoin = "round";
+                        ctx.beginPath();
+                        ctx.moveTo(25,0);
+                        ctx.lineTo(-25,0);
+                        ctx.lineTo(-15,-10);
+                        ctx.moveTo(-25,0);
+                        ctx.lineTo(-15,10);
+                        ctx.stroke();
+                        ctx.restore();
+                        
+                        if(game.won) {
+                            ctx.fillStyle = "black";
+                            ctx.font = "60px Arial";
+                            ctx.textAlign = "left";
+                            ctx.textBaseline = "middle";
+                            ctx.fillText("You Win!",150,65);
+                        }
+                    }
+                },
+                spotlight: {
+                    used: false,
+                    using: false,
+                    target: false,
+                    x: 935,
+                    y: 65,
+                    update: function() {
+                        if(this.used) return;
+                        if(this.using) {
+                            this.x = this.x*0.9+Mouse.x*0.1;
+                            this.y = this.y*0.9+Mouse.y*0.1;
+                            this.calculateTarget();
+                            if(this.target!==false) {
+                                this.x = this.x*0.85+this.target.x*0.15;
+                                this.y = this.y*0.85+this.target.y*0.15;
+                            }
+                            if(!Mouse.down) this.use();
+                        } else {
+                            if(Mouse.downStart) {
+                                var dist = distTo(Mouse.x,Mouse.y,935,65);
+                                if(dist<65) {
+                                    this.using = true;
+                                }
+                            }
+                            this.x = this.x*0.9+935*0.1;
+                            this.y = this.y*0.9+65*0.1;
+                        }
+                    },
+                    calculateTarget: function() {
+                        this.target = false;
+                        if(Mouse.y<130) return;
+                        for(var n=1;n<game.guesses.objects.length;n++) {
+                            var o = game.guesses.objects[n];
+                            var y = o.animatedPosition.y-game.guesses.scrollBar.scroll;
+                            for(var n2=0;n2<o.guess.length;n2++) {
+                                var o2 = o.guess[n2];
+                                var x = o.animatedPosition.x+(n2-1.5)*65;
+                                var dist = distTo(this.x,this.y,x,y);
+                                if(dist>30) continue;
+                                this.target = {guessId:n,numberId:n2,x:x,y:y,dist:dist};
+                            }
+                        }
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "rgb(220,220,220)";
+                        ctx.beginPath();
+                        ctx.arc(935,65,50,0,2*Math.PI);
+                        ctx.fill();
+
+                        if(this.used) return;
+
+                        ctx.save();
+                        ctx.translate(this.x,this.y);
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 3;
+                        ctx.fillStyle = "white";
+                        ctx.beginPath();
+                        ctx.rect(-12,-10,24,40);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-9,19,18,2);
+                        ctx.fillRect(-9,23,18,2);
+                        ctx.fillStyle = "yellow";
+                        ctx.save();
+                        ctx.scale(0.95,1);
+                        ctx.beginPath();
+                        ctx.arc(0,-10,25,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.restore();
+                        ctx.restore();
+                    },
+                    use: function() {
+                        this.using = false;
+                        if(this.target===false) return;
+                        this.used = true;
+                        var o = game.guesses.objects[this.target.guessId].guess[this.target.numberId];
+                        var number = game.secretNumber[this.target.numberId];
+                        if(o.content==number) {
+                            o.spotlight = 2;
+                        } else if(game.secretNumber.indexOf(o.content)!=-1) {
+                            o.spotlight = 1;
+                        } else {
+                            o.spotlight = 0;
+                        }
+                        this.target = false;
+                    },
+                    reset: function() {
+                        this.used = false;
+                        this.using = false;
+                        this.x = 935;
+                        this.y = 65;
+                        this.target = false;
+                    }
+                },
+                marks: {
+                    mode: -1,
+                    target: false,
+                    update: function() {
+                        for(var n=0;n<4;n++) {
+                            if(!Mouse.clickInBox(480+110*n-45,65-45,90,90)&&!game.spotlight.using) continue;
+                            this.mode = n-1;
+                            break;
+                        }
+                        this.calculateTarget();
+                        if(Mouse.click) {
+                            if(this.target) {
+                                var o = game.guesses.objects[this.target.guessId].guess[this.target.numberId];
+                                if(this.mode==-1) {
+                                    o.mark = false;
+                                } else {
+                                    o.mark = this.mode;
+                                }
+                            }
+                        }
+                    },
+                    draw: function() {
+                        for(var n=0;n<4;n++) {
+                            ctx.save();
+                            ctx.translate(480+110*n,65);
+                            ctx.strokeStyle = "black";
+                            ctx.fillStyle = "rgb(240,240,240)";
+                            if(this.mode==n-1) ctx.fillStyle = "rgb(210,210,210)";
+                            if(Mouse.inBox(480+110*n-45,65-45,90,90)&&!game.spotlight.using) ctx.fillStyle = "rgb(210,210,210)";
+                            ctx.lineWidth = 5;
+                            if(this.mode==n-1) {
+                                ctx.lineWidth = 7;
+                                ctx.roundRect(-44,-44,88,88,20);
+                            } else {
+                                ctx.roundRect(-45,-45,90,90,20);
+                            }
+                            ctx.fill();
+                            ctx.stroke();
+
+                            this.drawSymbol(n-1);
+
+                            ctx.restore();
+                        }
+                    },
+                    drawSymbol: function(n) {
+                        if(n==-1) {
+                            ctx.strokeStyle = "red";
+                            ctx.lineCap = "round";
+                            ctx.lineWidth = 7;
+                            ctx.beginPath();
+                            ctx.moveTo(-25,-25);
+                            ctx.lineTo(25,25);
+                            ctx.moveTo(-25,25);
+                            ctx.lineTo(25,-25);
+                            ctx.stroke();
+                        } else if(n==0) {
+                            ctx.fillStyle = "rgb(150,150,150)";
+                            ctx.roundRect(-25,-25,50,50,10);
+                            ctx.fill();
+                        } else if(n==1) {
+                            ctx.fillStyle = "yellow";
+                            ctx.roundRect(-25,-25,50,50,10);
+                            ctx.fill();
+                        } else if(n==2) {
+                            ctx.fillStyle = "lime";
+                            ctx.roundRect(-25,-25,50,50,10);
+                            ctx.fill();
+                        }
+                    },
+                    calculateTarget: function() {
+                        this.target = false;
+                        if(Mouse.y<130) return;
+                        for(var n=1;n<game.guesses.objects.length;n++) {
+                            var o = game.guesses.objects[n];
+                            var y = o.animatedPosition.y-game.guesses.scrollBar.scroll;
+                            for(var n2=0;n2<o.guess.length;n2++) {
+                                var o2 = o.guess[n2];
+                                var x = o.animatedPosition.x+(n2-1.5)*65;
+                                var dist = distTo(Mouse.x,Mouse.y,x,y);
+                                if(dist>30) continue;
+                                this.target = {guessId:n,numberId:n2,x:x,y:y,dist:dist};
+                            }
+                        }
+                    },
+                    reset: function() {
+                        this.mode = -1;
+                        this.target = false;
+                    }
+                },
+                guesses: {
+                    objects: [],
+                    createNewGuessTimer: 0,
+                    update: function() {
+                        this.updateObjects();
+                        this.updateCurrentGuess();
+
+                        if(this.createNewGuessTimer>0) {
+                            this.createNewGuessTimer--;
+                            if(this.createNewGuessTimer==0) {
+                                this.createNewGuess();
+                            }
+                        }
+
+                        this.scrollBar.update();
+                    },
+                    updateObjects: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            o.startAnimation += 0.05;
+                            o.startAnimation = Math.min(1,o.startAnimation);
+                            if(n>0) {
+                                o.guessAnimation += 0.05;
+                            }
+
+                            var y = (n+(this.createNewGuessTimer>0?1:0))*100+200;
+                            var x = 500;
+                            if(n>0) {
+                                x = 300;
+                            }
+                            o.animatedPosition.x = o.animatedPosition.x*0.95+x*0.05;
+                            o.animatedPosition.y = o.animatedPosition.y*0.95+y*0.05;
+                        }
+                    },
+                    updateCurrentGuess: function() {
+                        if(this.won) return;
+                        var currentGuess = this.objects[0];
+                        this.updateCurrentGuessAnimations(currentGuess);
+                        this.updateBackspace(currentGuess);
+                        this.updateNumberInput(currentGuess);
+                        this.updateGuessSubmission(currentGuess);
+                    },
+                    updateCurrentGuessAnimations: function(currentGuess) {
+                        for(var n=0;n<currentGuess.guess.length;n++) {
+                            var o = currentGuess.guess[n];
+                            if(o.animation<1) o.animation += 0.05;
+                            o.animation = Math.min(Math.max(o.animation,0),1);
+                            if(o.invalid>0) o.invalid -= 0.05;
+                            o.invalid = Math.min(Math.max(o.invalid,0),1);
+                        }
+                    },
+                    updateNumberInput: function(currentGuess) {
+                        for(var n=0;n<10;n++) {
+                            if(!Keys.down[48+n]) continue;
+                            for(var n2=0;n2<currentGuess.guess.length;n2++) {
+                                var o = currentGuess.guess[n2];
+                                if(o.content!==false) continue;
+                                currentGuess.guess[n2].content = n;
+                                currentGuess.guess[n2].animation = 0;
+                                menu.animateBackgroundNumbers(n);
+                                break;
+                            }
+                        }
+                    },
+                    updateBackspace: function(currentGuess) {
+                        if(!Keys.down[8]) return;
+                        for(var n=currentGuess.guess.length-1;n>=0;n--) {
+                            var o = currentGuess.guess[n];
+                            if(o.content===false) continue;
+                            currentGuess.guess[n].content = false;
+                            currentGuess.guess[n].animation = 0;
+                            return;
+                        }
+                        currentGuess.guess[0].invalid = 1;
+                    },
+                    updateGuessSubmission: function(currentGuess) {
+                        if(!Keys.down[13]) return;
+                        var completeGuess = true;
+                        for(var n=0;n<currentGuess.guess.length;n++) {
+                            var o = currentGuess.guess[n];
+                            if(o.content!==false) continue;
+                            completeGuess = false;
+                            o.invalid = 1;
+                        }
+                        if(!completeGuess) return;
+
+                        this.createNewGuessTimer = 10;
+                        var guess = currentGuess.guess.map(e=>e.content).join("");
+                        currentGuess.guessEvaluation = this.evaluateGuess(guess,game.secretNumber);
+                        if(game.secretNumber==guess) game.won = true;
+                    },
+                    evaluateGuess: function(guess,target) {
+                        guess = guess.split("");
+                        target = target.split("");
+                        var numberCorrect = 0;
+                        var numberPartial = 0;
+                        for(var n=0;n<guess.length;n++) {
+                            if(guess[n]!=target[n]) continue;
+                            numberCorrect++;
+                            guess.splice(n,1);
+                            target.splice(n,1);
+                            n--;
+                        }
+                        for(var n=0;n<guess.length;n++) {
+                            var index = target.indexOf(guess[n]);
+                            if(index==-1) continue;
+                            numberPartial++;
+                            guess.splice(n,1);
+                            target.splice(index,1);
+                            n--;
+                        }
+                        var array = [0,0,0,0];
+                        for(var n=0;n<numberCorrect;n++) {
+                            array[n] = 2;
+                        }
+                        for(var n=n;n<numberPartial+numberCorrect;n++) {
+                            array[n] = 1;
+                        }
+                        return array;
+                    },
+                    draw: function() {
+                        this.drawObjects();
+                        this.scrollBar.draw();
+                    },
+                    drawObjects: function() {
+                        ctx.save();
+                        ctx.translate(0,-this.scrollBar.scroll);
+
+                        var spacing = 65;
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            ctx.save();
+                            ctx.translate(o.animatedPosition.x,o.animatedPosition.y);
+                            for(var n2=0;n2<o.guess.length;n2++) {
+                                var o2 = o.guess[n2];
+                                ctx.save();
+                                ctx.translate(-spacing*1.5+n2*spacing,0);
+                                var a;
+                                if(o2.content===false) {
+                                    var a = 1.5-easeInOut(o2.animation)*0.5;
+                                    a += easeInBack(1-o2.invalid)/2;
+                                } else {
+                                    var a = easeInOut(o2.animation)*0.7+0.3;
+                                }
+                                a *= easeInOut(o.startAnimation);
+                                if(game.won&&n==0&&this.createNewGuessTimer==0) {
+                                    a = 0;
+                                }
+                                ctx.scale(a,a);
+
+                                if(o2.mark!==false&&o2.spotlight===false) {
+                                    if(o2.mark==0) {
+                                        ctx.fillStyle = "rgba(150,150,150,0.3)";
+                                    } else if(o2.mark==1) {
+                                        ctx.fillStyle = "rgba(255,255,0,0.3)";
+                                    } else if(o2.mark==2) {
+                                        ctx.fillStyle = "rgba(0,255,0,0.3)";
+                                    }
+                                    ctx.roundRect(-30,-35,60,60,20);
+                                    ctx.fill();
+                                }
+                                if(o2.spotlight!==false) {
+                                    if(o2.spotlight==0) {
+                                        ctx.fillStyle = "rgb(150,150,150)";
+                                    } else if(o2.spotlight==1) {
+                                        ctx.fillStyle = "rgb(255,255,0)";
+                                    } else if(o2.spotlight==2) {
+                                        ctx.fillStyle = "rgb(0,255,0)";
+                                    }
+                                    ctx.roundRect(-35,-40,70,70,20);
+                                    ctx.fill();
+                                }
+
+                                ctx.fillStyle = "black";
+                                if(o2.invalid>0) {
+                                    ctx.fillStyle = `rgb(${easeInBack(o2.invalid)*255},0,0)`;
+                                }
+                                ctx.font = "bold 100px Arial";
+                                ctx.textAlign = "center";
+                                ctx.textBaseline = "middle";
+                                if(o2.content===false) {
+                                    ctx.beginPath();
+                                    ctx.arc(0,-5,15,0,2*Math.PI);
+                                    ctx.fill();
+                                } else {
+                                    ctx.fillText(o2.content,0,0);
+                                }
+
+                                if(game.spotlight.target&&game.spotlight.target.guessId==n&&game.spotlight.target.numberId==n2) {
+                                    ctx.globalAlpha = 0.3+(1-game.spotlight.target.dist/30)*0.7;
+                                    ctx.fillStyle = "rgba(0,0,0,0.2)";
+                                    ctx.beginPath();
+                                    ctx.arc(0,-5,50,0,2*Math.PI);
+                                    ctx.fill();
+                                }
+                                if(game.marks.target&&game.marks.target.guessId==n&&game.marks.target.numberId==n2) {
+                                    ctx.globalAlpha = 0.3+(1-game.marks.target.dist/30)*0.7;
+                                    ctx.fillStyle = "rgba(0,0,0,0.2)";
+                                    ctx.beginPath();
+                                    ctx.arc(0,-5,40,0,2*Math.PI);
+                                    ctx.fill();
+                                }
+                                ctx.restore();
+                            }
+                            if(n>0) {
+                                for(var n2=0;n2<o.guessEvaluation.length;n2++) {
+                                    var o2 = o.guessEvaluation[n2];
+                                    var a1 = easeInOut(o.guessAnimation-0.5-0.3*n2);
+                                    var a2 = easeInOut(o.guessAnimation-2-0.3*n2);
+                                    ctx.save();
+                                    ctx.translate(spacing*4-50+n2*100,0);
+                                    ctx.strokeStyle = "black";
+                                    ctx.lineWidth = 5;
+                                    ctx.fillStyle = "lime";
+                                    if(o2==1) ctx.fillStyle = "yellow";
+                                    if(a1>1&&a2>1) {
+                                        ctx.roundRect(-35,-40,70,70,15);
+                                        if(o2==1||o2==2) ctx.fill();
+                                        ctx.stroke();
+                                    } else {
+                                        ctx.save();
+                                        ctx.scale(a2,a2);
+                                        ctx.roundRect(-35,-40,70,70,15);
+                                        ctx.restore();
+                                        if(o2==1||o2==2) ctx.fill();
+                                        ctx.save();
+                                        ctx.scale(a1,a1);
+                                        ctx.roundRect(-35,-40,70,70,15);
+                                        ctx.stroke();
+                                        ctx.restore();
+                                    }
+                                    ctx.restore();
+                                }
+                            }
+                            ctx.restore();
+                        }
+
+                        ctx.restore();
+                    },
+                    scrollBar: {
+                        canScroll: false,
+                        scroll: 0,
+                        scrolling: false,
+                        scrollStart: 0,
+                        scrollBarY: 0,
+                        height: 0,
+                        scrollHeight: 0,
+                        update: function() {
+                            this.height = game.guesses.objects.length*100-50;
+                            this.scrollHeight = this.height-750;
+                            var scrollBarY = 670*(this.scroll/this.scrollHeight);
+                            if(this.height<800) {
+                                this.canScroll = false;
+                                return;
+                            }
+                            this.canScroll = true;
+                            if(this.scrolling) {
+                                if(!Mouse.down) this.scrolling = false;
+
+                                var offset = this.scrollMouseStart-this.scrollStart;
+                                var y = Mouse.y-offset;
+                                this.scroll = (y-130)/670*this.scrollHeight;
+                            } else {
+                                this.scroll += Mouse.scrollY;
+
+                                if(Mouse.downStart&&Mouse.inBox(970,scrollBarY+130,30,200)) {
+                                    this.scrolling = true;
+                                    this.scrollMouseStart = Mouse.y;
+                                    this.scrollStart = scrollBarY+130;
+                                }
+                            }
+                            this.scroll = Math.max(0,Math.min(this.scroll,this.height-750));
+                        },
+                        draw: function() {
+                            if(!this.canScroll) return;
+                            ctx.fillStyle = "rgb(220,220,220)";
+                            ctx.fillRect(970,130,30,870);
+                            var scrollBarY = 670*(this.scroll/this.scrollHeight);
+                            ctx.fillStyle = "rgb(180,180,180)";
+                            if(Mouse.inBox(970,scrollBarY+130,30,200)||this.scrolling) ctx.fillStyle = "rgb(150,150,150)";
+                            ctx.roundRect(970,scrollBarY+130,30,200,15);
+                            ctx.fill();
+                        },
+                        reset: function() {
+                            this.canScroll = false;
+                            this.scroll = 0;
+                        }
+                    },
+                    createNewGuess: function() {
+                        var o = {};
+                        o.startAnimation = 0;
+                        o.guessAnimation = 0;
+                        o.guess = [];
+                        o.guessEvaluation = [];
+                        for(var n=0;n<4;n++) o.guess.push({animation:1,content:false,invalid:false,mark:false,spotlight:false});
+                        for(var n=0;n<4;n++) o.guessEvaluation.push(0);
+                        o.animatedPosition = {};
+                        o.animatedPosition.x = 500;
+                        o.animatedPosition.y = 200;
+                        this.objects.unshift(o);
+                    },
+                    reset: function() {
+                        this.objects = [];
+                        this.createNewGuess();
+                        this.scrollBar.reset();
+                    }
+                },
+                reset: function() {
+                    this.guesses.reset();
+                    this.spotlight.reset();
+                    this.won = false;
+                    this.secretNumber = "";
+                    for(var n=0;n<4;n++) {
+                        this.secretNumber += Math.floor(Math.random()*10);
+                    }
+                }
+            }
+
+            menu.resetTitleScreen();
+            game.reset();
+            var t = 0;
+        </script>
+    </body>
+</html>

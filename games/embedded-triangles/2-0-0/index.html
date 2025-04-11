@@ -1,0 +1,288 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Embedded Triangles";
+            var dimensions = {width:2000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                updatePoints();
+                draw();
+                drawInstructions();
+                if(word.endsWith("JOHNBUTLERGAMES")) {
+                    johnbutlergames = !johnbutlergames;
+                    word = "";
+                }
+            }
+
+            function updatePoints() {
+                for(var n=0;n<points.length;n++) {
+                    var o = points[n];
+                    var dist = distTo(Mouse.x,Mouse.y,o.x,o.y);
+                    if((dist<20||pointSelected===n)&&!(pointSelected!==false&&pointSelected!==n)) {
+                        o.r++;
+                        if(Mouse.down) {
+                            if(pointSelected==false) {
+                                pointSelected = n;
+                            }
+                        }
+                    } else {
+                        o.r--;
+                    }
+                    o.r = Math.min(Math.max(o.r,10),20);
+                }
+                if(pointSelected!==false) {
+                    if(!hideInstructionsAnimation) hideInstructionsAnimation = 1;
+                    var o = points[pointSelected];
+                    o.x = Mouse.x;
+                    o.y = Mouse.y;
+                    o.x = Math.min(2000,Math.max(0,o.x));
+                    o.y = Math.min(1000,Math.max(0,o.y));
+                    if(!Mouse.down) pointSelected = false;
+                }
+            }
+
+            function draw() {
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.lineJoin = "round";
+                var circles = [];
+                for(var n=0;n<3;n++) {
+                    var circle = findCircle(points[0+n*3].x,points[0+n*3].y,points[1+n*3].x,points[1+n*3].y,points[2+n*3].x,points[2+n*3].y);
+                    circles.push(circle);
+                    var percent;
+                    if(circle) {
+                        percent = circle.r/10000;
+                    } else {
+                        percent = 1;
+                    }
+                    percent = Math.min(Math.max(percent,0),1);
+                    var a1 = percent/5;
+                    var a2 = (1-percent)/5;
+                    var backgroundColor,circleColor;
+                    if(n==0) {
+                        backgroundColor = `rgba(0,0,255,${a1})`;
+                        circleColor = `rgba(0,0,255,${a2})`;
+                    } else if(n==1) {
+                        backgroundColor = `rgba(0,255,0,${a1})`;
+                        circleColor = `rgba(0,255,0,${a2})`;
+                    } else if(n==2) {
+                        backgroundColor = `rgba(255,0,0,${a1})`;
+                        circleColor = `rgba(255,0,0,${a2})`;
+                    }
+                    if(johnbutlergames) {
+                        backgroundColor = `rgba(0,0,255,${a1})`;
+                        circleColor = `rgba(0,0,255,${a2})`;
+                    }
+                    ctx.fillStyle = backgroundColor;
+                    ctx.fillRect(0,0,2000,1000);
+                    ctx.fillStyle = circleColor;
+                    if(circle) {
+                        ctx.beginPath();
+                        ctx.arc(circle.x,circle.y,circle.r,0,2*Math.PI);
+                        ctx.fill();
+                        if(johnbutlergames) {
+                            ctx.save();
+                            ctx.translate(circle.x,circle.y);
+                            ctx.scale(circle.r/100,circle.r/100);
+                            ctx.fillStyle = "rgba(0,0,0,0.5)";
+                            ctx.beginPath();
+                            ctx.arc(-37,-27,25,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(37,-27,25,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    }
+                }
+                for(var n=0;n<3;n++) {
+                    var circle = circles[n];
+                    if(circle) {
+                        ctx.beginPath();
+                        ctx.arc(circle.x,circle.y,circle.r,0,2*Math.PI);
+                        ctx.stroke();
+                    } else {
+                        var dir = dirTo(points[0+n*3].x,points[0+n*3].y,points[1+n*3].x,points[1+n*3].y);
+                        var point1 = rotate(points[0+n*3].x,points[0+n*3].y,points[0+n*3].x,points[0+n*3].y-2000,dir);
+                        var point2 = rotate(points[0+n*3].x,points[0+n*3].y,points[0+n*3].x,points[0+n*3].y+2000,dir);
+                        ctx.beginPath();
+                        ctx.moveTo(point1.x,point1.y);
+                        ctx.lineTo(point2.x,point2.y);
+                        ctx.stroke();
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(points[0+n*3].x,points[0+n*3].y);
+                    ctx.lineTo(points[1+n*3].x,points[1+n*3].y);
+                    ctx.lineTo(points[2+n*3].x,points[2+n*3].y);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                for(o of points) {
+                    ctx.save();
+                    ctx.translate(o.x,o.y);
+                    ctx.fillStyle = "black";
+                    ctx.beginPath();
+                    ctx.arc(0,0,o.r,0,2*Math.PI);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            function drawInstructions() {
+                if(hideInstructionsAnimation) hideInstructionsAnimation++;
+                var a = hideInstructionsAnimation;
+                if(a>250) return;
+                var a1 = Math.max(0,Math.min(1,1-(a-200)/50));
+                var a2 = Math.max(0,Math.min(1,1-(a-180)/50));
+                var a3 = Math.max(0,Math.min(1,1-(a-160)/50));
+                var a4 = Math.max(0,Math.min(1,1-(a-120)/50));
+                var a5 = Math.max(0,Math.min(1,1-(a-80)/50));
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 85px Comic Sans MS";
+                ctx.save();
+                ctx.globalAlpha = a1;
+                ctx.fillText("- Embedded Triangles -",1050,150);
+                ctx.restore();
+                ctx.font = "60px Comic Sans MS";
+                ctx.textAlign = "center";
+                ctx.save();
+                ctx.globalAlpha = a2;
+                ctx.fillText("Every triangle can be",830,320);
+                ctx.fillText("embedded inside a circle.",830,410);
+                ctx.restore();
+                ctx.save();
+                ctx.globalAlpha = a3;
+                ctx.fillText("Use the",340,580);
+                ctx.fillText("mouse to",340,670);
+                ctx.fillText("move the",340,760);
+                ctx.fillText("points.",340,850);
+                ctx.restore();
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 10;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.save();
+                ctx.globalAlpha = a4;
+                ctx.beginPath();
+                ctx.moveTo(470,850);
+                ctx.quadraticCurveTo(600,900,667,835);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(640,837);
+                ctx.lineTo(667,835);
+                ctx.lineTo(661,858);
+                ctx.stroke();
+                ctx.restore();
+                ctx.save();
+                ctx.globalAlpha = a5;
+                ctx.font = "40px Comic Sans MS";
+                ctx.fillText("By John Butler",1130,900);
+                ctx.restore();
+            }
+
+            function findCircle(x1,y1,x2,y2,x3,y3) {
+                var middle1 = {x:(x1+x2)/2,y:(y1+y2)/2};
+                var middle2 = {x:(x2+x3)/2,y:(y2+y3)/2};
+                var angle1 = dirTo(x1,y1,x2,y2);
+                var angle2 = dirTo(x2,y2,x3,y3);
+                var rotated1 = rotate(middle1.x,middle1.y,middle1.x,middle1.y-100,90-angle1);
+                var rotated2 = rotate(middle2.x,middle2.y,middle2.x,middle2.y-100,90-angle2);
+                var line1 = {x1:middle1.x,y1:middle1.y,x2:rotated1.x,y2:rotated1.y};
+                var line2 = {x1:middle2.x,y1:middle2.y,x2:rotated2.x,y2:rotated2.y};
+                var intersection = findIntersection(line1.x1,line1.y1,line1.x2,line1.y2,line2.x1,line2.y1,line2.x2,line2.y2);
+                if(intersection===true||intersection===false) return false;
+                return {x:intersection.x,y:intersection.y,r:distTo(intersection.x,intersection.y,x1,y1)};
+            }
+            function findIntersection(x1,y1,x2,y2,x3,y3,x4,y4) {
+                var slope1 = (y2-y1)/(x2-x1);
+                var slope2 = (y3-y4)/(x3-x4);
+                var start1 = y1-x1*slope1;
+                var start2 = y3-x3*slope2;
+                if(slope1===slope2) {
+                    if(start1===start2) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                var xCor = (start2-start1)/(slope1-slope2);
+                var yCor = slope1*xCor+start1;
+                if(slope1==Infinity||slope1==-Infinity) {
+                    xCor = x1;
+                    yCor = -slope2*(x3-x1)+y3;
+                }
+                if(slope2==Infinity||slope2==-Infinity) {
+                    xCor = x3;
+                    yCor = -slope1*(x1-x3)+y1;
+                }
+                if(isNaN(xCor)||isNaN(yCor)) {
+                    return false;
+                } else {
+                    return {x:xCor,y:yCor};
+                }
+            }
+
+            var points = [
+                {
+                    x: 100,
+                    y: 100,
+                    r: 10
+                },
+                {
+                    x: 400,
+                    y: 150,
+                    r: 10
+                },
+                {
+                    x: 100,
+                    y: 400,
+                    r: 10
+                },
+                {
+                    x: 1300,
+                    y: 400,
+                    r: 10
+                },
+                {
+                    x: 1850,
+                    y: 700,
+                    r: 10
+                },
+                {
+                    x: 1600,
+                    y: 900,
+                    r: 10
+                },
+                {
+                    x: 700,
+                    y: 810,
+                    r: 10
+                },
+                {
+                    x: 800,
+                    y: 550,
+                    r: 10
+                },
+                {
+                    x: 900,
+                    y: 820,
+                    r: 10
+                }
+            ];
+
+            var pointSelected = false;
+            var hideInstructionsAnimation = 0;
+            var johnbutlergames = false;
+        </script>
+    </body>
+</html>

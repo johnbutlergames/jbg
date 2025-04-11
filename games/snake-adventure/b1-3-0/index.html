@@ -1,0 +1,782 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Snake Adventure";
+            var dimensions = {width:1000,height:1000};
+            var images = {
+                skin1:"images/skin1.png"
+            };
+            var audios = {};
+            initialize();
+            Loading.loaded = true;
+            Loading.intro = 0;
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+            }
+
+            function f(s) {
+                ctx.font = s+"px Arial";
+            }
+
+            var menu = {
+                page: "title screen",
+                switchPage: "game",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 0,//100,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        //switch page animation
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                }
+            }
+
+            var game = {
+                tickDelay: 20,
+                timeUntilTick: 0,
+                apples: 0,
+                gameIsOver: false,
+                snakeCrashed: false,
+                screenShake: 0,
+                update: function() {
+                    if(!this.gameIsOver) {
+                        this.snake.update();
+                        this.chunks.update();
+                        this.objects.update();
+                        this.cam.update();
+                    }
+
+                    if(!this.gameIsOver) {
+                        this.timeUntilTick--;
+                    }
+                    if(this.timeUntilTick<=0) {
+                        this.tick();
+                        this.timeUntilTick = this.tickDelay;
+                    }
+
+                    this.snake.detectCollisions();
+
+                    if(this.gameIsOver) {
+                        this.gameOverMenu.update();
+                    }
+
+                    if(this.screenShake>0) this.screenShake--;
+                    this.screenShake = Math.max(this.screenShake,0);
+                },
+                tick: function() {
+                    this.snake.tick();
+                    this.objects.tick();
+                },
+                updateEffects: function() {
+                    this.particles.update();
+                },
+                gameOver: function() {
+                    this.gameIsOver = true;
+                    this.screenShake = 15;
+                    var lastPosition = this.snake.positionHistory[0];
+                    var nextPosition = {x:this.snake.x,y:this.snake.y};
+                    var position = {x:nextPosition.x/2+lastPosition.x/2,y:nextPosition.y/2+lastPosition.y/2};
+                    this.particles.createSnakeCrashParticles(position.x,position.y);
+                },
+                reset: function() {
+                    this.cam.reset();
+                    this.chunks.reset();
+                    this.objects.reset();
+                    this.chunks.update();
+                    this.snake.reset();
+                    this.particles.reset();
+                    this.apples = 0;
+                    this.timeUntilTick = 0;
+                    this.gameIsOver = false;
+                    this.snakeCrashed = false;
+                    this.gameOverMenu.reset();
+                },
+                draw: function() {
+                    ctx.save();
+                    if(this.screenShake) {
+                        ctx.translate((Math.random()*2-1)*this.screenShake,(Math.random()*2-1)*this.screenShake);
+                    }
+
+                    this.drawBackgroundTiling();
+
+                    ctx.save();
+                    ctx.translate(-this.cam.x*this.tileSize,-this.cam.y*this.tileSize);
+                    ctx.save();
+                    ctx.scale(this.tileSize/100,this.tileSize/100);
+                    this.snake.drawShadow();
+                    this.objects.draw();
+                    this.snake.draw();
+                    ctx.restore();
+                    this.particles.draw();
+                    ctx.restore();
+
+                    this.drawStats();
+
+                    ctx.restore();
+
+                    if(this.gameIsOver) this.gameOverMenu.draw();
+                },
+                drawStats: function() {
+                    ctx.fillStyle = "black";
+                    ctx.font = "bold 50px Arial";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Apples: "+this.apples,975,50);
+                },
+                gameOverMenu: {
+                    animation: 0,
+                    draw: function() {
+                        var a = easeInOut(Math.min(this.animation/50,1));
+                        ctx.fillStyle = "rgba(255,255,255,0.5)";
+                        ctx.fillRect(0,500-a*150,1000,a*300);
+
+                        ctx.save();
+                        ctx.translate(500,500);
+                        ctx.scale(a,a);
+
+                        ctx.fillStyle = "black";
+                        ctx.font = "bold 100px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Game Over!",0,-40);
+                        ctx.font = "bold 50px Arial";
+                        ctx.fillText("Press Space to try again.",0,60);
+
+                        ctx.restore();
+                    },
+                    update: function() {
+                        var collisionDistance = 1;
+                        var o = game.snake.collisionObject;
+                        if(o) collisionDistance = game.objects.paddingDistanceForObject(o);
+                        var extraTick = 0.15+(1-collisionDistance);
+                        if(game.timeUntilTick>game.tickDelay*(1-extraTick)) {
+                            game.timeUntilTick--;
+                            game.snake.update();
+                            game.snakeCrashed = false;
+                        } else {
+                            game.timeUntilTick = game.tickDelay*(1-extraTick);
+                            game.snakeCrashed = true;
+                            this.animation++;
+                        }
+
+                        if(Keys.keys[32]) {
+                            game.reset();
+                        }
+                    },
+                    reset: function() {
+                        this.animation = 0;
+                    }
+                },
+                cam: {
+                    targetX: 0,
+                    targetY: 0,
+                    x: 0,
+                    y: 0,
+                    update: function() {
+                        this.x = this.x*0.99+this.targetX*0.01+(game.snake.animatedPosition.x-this.x)/50;
+                        this.y = this.y*0.99+this.targetY*0.01;
+                        this.targetX += 0.01;
+                        this.targetX = Math.max(this.targetX,game.snake.animatedPosition.x-20);
+                    },
+                    reset: function() {
+                        this.targetX = -20;
+                        this.targetY = 0;
+                        this.x = -6;
+                        this.y = 0;
+                    }
+                },
+                keys: {
+                    left: [37,65],
+                    right: [39,68],
+                    up: [38,87],
+                    down: [40,83]
+                },
+                chunks: {
+                    chunks: [],
+                    chunkId: 0,
+                    currentX: 0,
+                    update: function() {
+                        while(game.cam.x>this.currentX-32) {
+                            this.createNewChunk();
+                        }
+                        this.chunks = this.chunks.filter(function(e){
+                            return e.x>game.cam.x-32;
+                        });
+                    },
+                    reset: function() {
+                        this.chunkId = 0;
+                        this.currentX = 0;
+                        this.chunks = [{chunkId:-1,x:-16,w:16}];
+                    },
+                    createNewChunk: function() {
+                        var chunk = {};
+                        chunk.id = this.chunkId;
+                        chunk.x = this.currentX;
+                        chunk.w = 16;
+                        this.addObjectsToChunk(chunk);
+                        this.chunks.push(chunk);
+                        this.currentX += chunk.w;
+                        this.chunkId++;
+                    },
+                    addObjectsToChunk: function(o) {
+                        var objects = this.createObjectsForChunk(o);
+                        for(var o2 of objects) {
+                            o2.chunkId = o.id;
+                            game.objects.objects.push(o2);
+                        }
+                    },
+                    createObjectsForChunk: function(o) {
+                        var objects = [];
+                        objects.push({type:"apple",x:o.x+8,y:Math.floor(Math.random()*16)});
+                        objects.push({type:"apple",x:o.x+16,y:Math.floor(Math.random()*16)});
+                        var hole = Math.floor(Math.random()*16);
+                        var appleInWall = Math.floor(Math.random()*16);
+                        for(var n=0;n<16;n++) {
+                            if(Math.abs(n-hole)<2) continue;
+                            if(Math.abs(n-hole)>3&&appleInWall==n&&Math.random()>0.25) {
+                                objects.push({type:"apple",x:o.x+5,y:n});
+                                objects.push({type:"wall",x:o.x+7,y:n-1});
+                                objects.push({type:"wall",x:o.x+7,y:n});
+                                objects.push({type:"wall",x:o.x+7,y:n+1});
+                                continue;
+                            }
+                            objects.push({type:"wall",x:o.x+5,y:n});
+                        }
+                        if(Math.random()<0.5) {
+                            var y = Math.floor(Math.random()*14);
+                            if(Math.random()>0.25) objects.push({type:"apple",x:o.x+12,y:y});
+                            if(Math.random()>0.25) objects.push({type:"apple",x:o.x+13,y:y});
+                            if(Math.random()>0.25) objects.push({type:"apple",x:o.x+12,y:y+1});
+                            if(Math.random()>0.25) objects.push({type:"apple",x:o.x+13,y:y+1});
+                            objects.push({type:"wall",x:o.x+11,y:y-1});
+                            objects.push({type:"wall",x:o.x+14,y:y-1});
+                            objects.push({type:"wall",x:o.x+11,y:y+2});
+                            objects.push({type:"wall",x:o.x+14,y:y+2});
+                            if(Math.random()<0.5) {
+                                objects.push({type:"wall",x:o.x+12,y:y-1});
+                                objects.push({type:"wall",x:o.x+13,y:y-1});
+                            }
+                            if(Math.random()<0.5) {
+                                objects.push({type:"wall",x:o.x+12,y:y+2});
+                                objects.push({type:"wall",x:o.x+13,y:y+2});
+                            }
+                            if(Math.random()<0.5) {
+                                objects.push({type:"wall",x:o.x+11,y:y});
+                                objects.push({type:"wall",x:o.x+11,y:y+1});
+                            }
+                            if(Math.random()<0.5) {
+                                objects.push({type:"wall",x:o.x+14,y:y});
+                                objects.push({type:"wall",x:o.x+14,y:y+1});
+                            }
+                        }
+                        return objects;
+                    },
+                    giveObjectChunkId: function(o) {
+                        var chunk = this.chunkContainsCoordinate(o.x,o.y);
+                        if(chunk===undefined) return;
+                        o.chunkId = chunk.id;
+                    },
+                    chunkContainsCoordinate: function(x,y) {
+                        return this.chunks.find(function(o){
+                            if(x<o.x) return false;
+                            if(x>o.x+o.w) return false;
+                            return true;
+                        });
+                    }
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                    },
+                    tick: function() {
+                        for(var o of this.objects) {
+                            this.tickObject(o);
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            if(o.x+1<game.cam.x) continue;
+                            if(o.x-16>game.cam.x) continue;
+                            this.drawObject(o);
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(!game.chunks.chunks.find(e=>e.id==o.chunkId)) o.delete = true;
+                    },
+                    tickObject: function(o) {
+                        if(o.type=="apple") {
+                            var x = game.snake.x;
+                            var y = game.snake.y;
+                            if(o.x==x&&o.y==y) {
+                                o.delete = true;
+                                game.apples++;
+                                game.particles.createAppleParticles(o);
+                            }
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.type=="snake object") {
+                            this.drawSnakeObject(o);
+                        }
+                        if(o.type=="apple") {
+                            this.drawApple(o);
+                        }
+                        if(o.type=="wall") {
+                            this.drawWall(o);
+                        }
+                    },
+                    drawSnakeObject: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x*100+50,o.y*100+50);
+                        if(o.first) {
+                            var animation = 1-game.timeUntilTick/game.tickDelay;
+                            var clipSize = animation*100+50;
+                            var rotate = {left:180,right:0,up:90,down:270}[o.nextDirection];
+                            ctx.rotate(-rotate*Math.PI/180);
+                            ctx.beginPath();
+                            ctx.rect(-50,-50,clipSize,100);
+                            ctx.clip();
+                            ctx.rotate(rotate*Math.PI/180);
+                        }
+                        this.drawSnakeSegment(o);
+                        ctx.restore();
+                    },
+                    drawSnakeSegment: function(o) {
+                        if(!o.lastDirection||!o.nextDirection) return;
+                        var directions = ["left","down","right","up"];
+                        var x = directions.indexOf(o.nextDirection);
+                        var y = directions.indexOf(o.lastDirection);
+                        ctx.drawImage(images.skin1,x*150+15/2,y*150+15/2,135,135,-135/2,-135/2,135,135);
+                    },
+                    drawSnakeHead: function() {
+                        var animation = 1-game.timeUntilTick/game.tickDelay;
+                        var turn = game.snake.directionHistory[0]-game.snake.directionHistory[1];
+                        var lastSegment = {};
+                        var directions = {"0":"up","90":"right","180":"down","270":"left"};
+                        lastSegment.nextDirection = directions[game.snake.directionHistory[0]];
+                        lastSegment.lastDirection = directions[(game.snake.directionHistory[1]+180)%360];
+
+                        if(Math.abs(turn)==90||Math.abs(turn)==270) {
+                            ctx.save();
+                            ctx.rotate(game.snake.direction*Math.PI/180);
+                            ctx.beginPath();
+                            if(turn==90||turn==-270) {
+                                ctx.rect(0,-33.3+100*animation,33.3,33.3);
+                            } else if(turn==-90||turn==270) {
+                                ctx.rect(-33.3,-33.3+100*animation,33.3,33.3);
+                            }
+                            ctx.clip();
+                            ctx.translate(0,100*animation);
+                            ctx.rotate(-game.snake.direction*Math.PI/180);
+                            this.drawSnakeSegment(lastSegment);
+                            ctx.restore();
+                        }
+
+                        var directions = [270,180,90,0];
+                        var direction = directions.indexOf(game.snake.direction);
+                        ctx.save();
+                        if(animation<0.25) {
+                            ctx.rotate(game.snake.direction*Math.PI/180);
+                            ctx.beginPath();
+                            ctx.rect(-50,-45,100,50);
+                            ctx.clip();
+                            ctx.rotate(-game.snake.direction*Math.PI/180);
+                        }
+                        if(game.snakeCrashed) {
+                            ctx.drawImage(images.skin1,direction*150+15/2,4*150+15/2,135,135,-135/2,-135/2,135,135);
+                        } else {
+                            ctx.drawImage(images.skin1,direction*150+15/2,direction*150+15/2,135,135,-135/2,-135/2,135,135);
+                        }
+                        ctx.restore();
+                    },
+                    drawSnakeHeadShadow: function() {
+                        var directions = [270,180,90,0];
+                        var direction = directions.indexOf(game.snake.direction);
+                        ctx.drawImage(images.skin1,direction*150+15/2,5*150+15/2,135,135,-135/2,-135/2,135,135);
+                    },
+                    drawApple: function(o) {
+                        ctx.fillStyle = "red";
+                        ctx.beginPath();
+                        ctx.arc(o.x*100+50,o.y*100+50,33.3,0,2*Math.PI);
+                        ctx.fill();
+                    },
+                    drawWall: function(o) {
+                        ctx.fillStyle = "rgb(50,50,50)";
+                        ctx.fillRect(o.x*100,o.y*100,100,100);
+                    },
+                    createObject: function(o) {
+                        game.chunks.giveObjectChunkId(o);
+                        this.objects.push(o);
+                    },
+                    paddingDistanceForObject: function(o,direction) {
+                        if(o.type=="wall") return 1;
+                        if(o.type=="snake object") return 0.85;
+                    }
+                },
+                tileSize: 62.5,
+                drawBackgroundTiling: function() {
+                    var tileSize = this.tileSize;
+                    var xOffset = -(this.cam.x*this.tileSize)%(tileSize*2);
+                    var yOffset = -(this.cam.y*this.tileSize)%(tileSize*2);
+                    for(var x=-2;x<18;x++) {
+                        for(var y=-2;y<18;y++) {
+                            var color = this.getTileColor(x,y);
+                            ctx.fillStyle = color;
+                            ctx.fillRect(x*tileSize+xOffset,y*tileSize+yOffset,tileSize+1,tileSize+1);
+                        }
+                    }
+                },
+                getTileColor: function(x,y) {
+                    if((x+y)%2==0) {
+                        return "rgb(110,220,110)";
+                    } else {
+                        return "rgb(90,200,90)";
+                    }
+                },
+                snake: {
+                    x: 0,
+                    y: 0,
+                    animatedDirection: 0,
+                    oldDirection: 0,
+                    direction: 0,
+                    newDirection: 0,
+                    directionQueue: [],
+                    move: {x:0,y:0},
+                    animatedPosition: {x:0,y:0},
+                    positionHistory: [],
+                    directionHistory: [],
+                    collisionObject: false,
+                    update: function() {
+                        this.handleInput();
+                        this.updateAnimatedPosition();
+                        this.updateAnimatedHeadRotation();
+                    },
+                    updateAnimatedPosition: function() {
+                        var a = game.timeUntilTick/game.tickDelay;
+                        this.animatedPosition.x = this.x-this.move.x*a;
+                        this.animatedPosition.y = this.y-this.move.y*a;
+                    },
+                    updateAnimatedHeadRotation: function() {
+                        this.animatedDirection += turn(this.animatedDirection,this.direction)/5;
+                        this.animatedDirection = this.direction;
+                    },
+                    tick: function() {
+                        this.finalizeDirection();
+
+                        this.positionHistory.unshift({x:this.x,y:this.y});
+                        this.createSnakeObject(JSON.parse(JSON.stringify(this.positionHistory)));
+                        this.positionHistory.pop();
+
+                        this.moveSpace();
+                    },
+                    finalizeDirection: function() {
+                        this.oldDirection = this.direction;
+                        this.direction = this.newDirection;
+                        while(this.directionQueue.length>2) this.directionQueue.pop();
+                        if(this.directionQueue.length>0) {
+                            this.changeDirection(this.directionQueue[0]);
+                        }
+                        this.directionQueue.shift();
+                        this.directionHistory.pop();
+                        this.directionHistory.unshift(this.direction);
+                        this.move = distToMove(1,this.direction);
+                        this.move.x = Math.round(this.move.x);
+                        this.move.y = Math.round(this.move.y);
+                    },
+                    moveSpace: function() {
+                        this.x += this.move.x;
+                        this.y += this.move.y;
+                        this.x = Math.round(this.x);
+                        this.y = Math.round(this.y);
+                    },
+                    createSnakeObject: function(positionData) {
+                        game.objects.objects.map(function(e){
+                            if(e.type!="snake object") return;
+                            if(!e.first);
+                            e.first = false;
+                        });
+
+                        var o = {};
+                        o.x = this.x;
+                        o.y = this.y;
+                        o.first = true;
+                        o.type = "snake object";
+                        var lastPosition = this.positionHistory[1];
+                        var nextPosition = {x:this.x+this.move.x,y:this.y+this.move.y};
+                        this.calculateSnakeObjectDirections(o,lastPosition,nextPosition);
+                        game.objects.createObject(o);
+                    },
+                    calculateSnakeObjectDirections: function(o,last,next) {
+                        o.lastDirection = false;
+                        o.nextDirection = false;
+                        if(next.x>this.x) {
+                            o.nextDirection = "right";
+                        } else if(next.x<this.x) {
+                            o.nextDirection = "left";
+                        } else if(next.y>this.y) {
+                            o.nextDirection = "down";
+                        } else if(next.y<this.y) {
+                            o.nextDirection = "up";
+                        }
+                        if(last.x>this.x) {
+                            o.lastDirection = "right";
+                        } else if(last.x<this.x) {
+                            o.lastDirection = "left";
+                        } else if(last.y>this.y) {
+                            o.lastDirection = "down";
+                        } else if(last.y<this.y) {
+                            o.lastDirection = "up";
+                        }
+                    },
+                    handleInput: function() {
+                        var left = game.keys.left.some(e=>Keys.down[e]);
+                        var right = game.keys.right.some(e=>Keys.down[e]);
+                        var up = game.keys.up.some(e=>Keys.down[e]);
+                        var down = game.keys.down.some(e=>Keys.down[e]);
+                        if(this.direction==this.newDirection) {
+                            if(left) this.changeDirection(270);
+                            if(right) this.changeDirection(90);
+                            if(up) this.changeDirection(0);
+                            if(down) this.changeDirection(180);
+                        } else {
+                            if(left) this.directionQueue.push(270);
+                            if(right) this.directionQueue.push(90);
+                            if(up) this.directionQueue.push(0);
+                            if(down) this.directionQueue.push(180);
+                        }
+                    },
+                    changeDirection: function(dir) {
+                        var difference = Math.abs(dir-this.direction);
+                        if(!(difference==90||difference==270)) return;
+                        this.newDirection = dir;
+                        var move = distToMove(1,this.newDirection);
+                        this.nextMove = move;
+                    },
+                    drawShadow: function() {
+                        var a = game.timeUntilTick/game.tickDelay;
+                        var xAnimate = -this.move.x*a;
+                        var yAnimate = -this.move.y*a;
+                        ctx.save();
+                        ctx.translate((this.x+xAnimate)*100+50,(this.y+yAnimate)*100+50);
+                        game.objects.drawSnakeHeadShadow();
+                        ctx.restore();
+                    },
+                    draw: function() {
+                        var a = game.timeUntilTick/game.tickDelay;
+                        var xAnimate = -this.move.x*a;
+                        var yAnimate = -this.move.y*a;
+                        ctx.save();
+                        ctx.translate((this.x+xAnimate)*100+50,(this.y+yAnimate)*100+50);
+                        game.objects.drawSnakeHead();
+                        ctx.restore();
+                    },
+                    detectCollisions: function() {
+                        this.detectEdgeCollisions();
+                        this.detectObjectCollisions();
+                    },
+                    detectEdgeCollisions: function() {
+                        if(game.gameIsOver) return;
+                        if(this.y<0) game.gameOver();
+                        if(this.y>15) game.gameOver();
+                    },
+                    detectObjectCollisions: function() {
+                        if(game.gameIsOver) return;
+                        var objects = game.objects.objects.filter(function(e){
+                            return e.x==game.snake.x&&e.y==game.snake.y;
+                        });
+                        objects = objects.filter(function(e){
+                            if(e.type=="wall") return true;
+                            if(e.type=="snake object") return true;
+                            return false;
+                        });
+                        if(objects.length==0) return;
+                        this.collisionObject = objects[0];
+                        game.gameOver();
+                    },
+                    reset: function() {
+                        var yPos = 8;
+                        this.move = {x:1,y:0};
+                        this.x = 0;
+                        this.y = yPos;
+                        this.animatedDirection = 90;
+                        this.oldDirection = 90;
+                        this.direction = 90;
+                        this.newDirection = 90;
+                        this.animatedPosition = {x:1,y:yPos};
+                        this.positionHistory = [{x:-1,y:yPos},{x:-2,y:yPos},{x:-3,y:yPos}];
+                        this.directionHistory = [90,90,90];
+                        this.collisionObject = false;
+                        for(var x=-1;x>-16;x--) {
+                            var o = {};
+                            o.x = x;
+                            o.y = yPos;
+                            if(x==-1) o.first = true;
+                            o.type = "snake object";
+                            o.nextDirection = "right";
+                            o.lastDirection = "left";
+                            game.objects.createObject(o);
+                        }
+                    }
+                },
+                particles: {
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            this.drawObject(o);
+                        }
+                    },
+                    addParticle: function(o) {
+                        if(!o.alpha) o.alpha = 2;
+                        if(!o.decay) o.decay = 0.02;
+                        if(!o.xmove) o.xmove = 0;
+                        if(!o.ymove) o.ymove = 0;
+                        if(!o.damping) o.damping = 1;
+                        if(!o.color) o.color = "red";
+                        if(!o.radius) o.radius = 5;
+                        if(!o.update) o.update = function(){}
+                        this.objects.push(o);
+                    },
+                    updateObject: function(o) {
+                        o.alpha -= o.decay;
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.xmove *= o.damping;
+                        o.ymove *= o.damping;
+                        o.update();
+                        if(o.alpha<=0) o.delete = true;
+                    },
+                    drawObject: function(o) {
+                        if(o.type=="snake crash star") {
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.globalAlpha = Math.min(Math.max(o.alpha,0),1);
+                            ctx.fillStyle = o.color;
+                            ctx.beginPath();
+                            for(var n=0;n<10;n++) {
+                                ctx.rotate(36*n*Math.PI/180);
+                                if(n%2==0) {
+                                    ctx.lineTo(0,5);
+                                } else {
+                                    ctx.lineTo(0,10);
+                                }
+                                ctx.rotate(-36*n*Math.PI/180);
+                            }
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.restore();
+                            return;
+                        }
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        ctx.globalAlpha = Math.min(Math.max(o.alpha,0),1);
+                        ctx.fillStyle = o.color;
+                        ctx.beginPath();
+                        ctx.arc(0,0,o.radius,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.restore();
+                    },
+                    createAppleParticles: function(o) {
+                        var tileSize = game.tileSize;
+                        for(var n=0;n<6;n++) {
+                            var particle = {};
+                            particle.x = o.x*tileSize+tileSize/2;
+                            particle.y = o.y*tileSize+tileSize/2;
+                            particle.radius = 5;
+                            particle.damping = 0.9;
+                            particle.alpha = 1;
+                            var move = distToMove(5,n*60);
+                            particle.xmove = move.x;
+                            particle.ymove = move.y;
+                            particle.color = "red";
+                            particle.type = "apple particle";
+                            this.addParticle(particle);
+                        }
+                    },
+                    createSnakeCrashParticles: function(x,y) {
+                        var tileSize = game.tileSize;
+                        for(var n=0;n<8;n++) {
+                            var particle = {};
+                            particle.x = x*tileSize+tileSize/2;
+                            particle.y = y*tileSize+tileSize/2;
+                            particle.radius = 5;
+                            particle.damping = 0.95;
+                            particle.alpha = 1+Math.random();
+                            var move = distToMove(1+Math.random()*3,n*45);
+                            particle.xmove = move.x;
+                            particle.ymove = move.y;
+                            particle.color = "yellow";
+                            particle.type = "snake crash star";
+                            this.addParticle(particle);
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                }
+            }
+            game.reset();
+        </script>
+    </body>
+</html>

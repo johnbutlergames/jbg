@@ -1,0 +1,523 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Night and Day";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+            
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                var transition = easeInOut(Math.min(1,Math.max(0,(Mouse.x-300)/400)));
+                var r = 160*(1-transition);
+                var g = 220*(1-transition);
+                var b = 255*(1-transition);
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.fillRect(0,0,1000,1000);
+
+                ctx.save();
+                ctx.translate(500,500);
+                draw(transition,`rgb(${r},${g},${b})`);
+                ctx.restore();
+
+                t++;
+
+                for(var o of stars) {
+                    o.time--;
+                    if(o.time<0) o.time += 300;
+                }
+                for(var o of clouds) {
+                    o.x++;
+                    if(o.x>1200) o.x -= 1600;
+                }
+            }
+
+            function draw(p,bgColor) {
+                var r = 160+65*p;
+                var g = 220+35*p;
+                var b = 255;
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.strokeStyle = `rgb(${r},${g},${b})`;
+                ctx.lineWidth = 2;
+                ctx.lineCap = "round";
+                for(var o of stars) {
+                    ctx.save();
+                    ctx.translate(o.x-500,o.y-500);
+                    ctx.beginPath();
+                    ctx.arc(0,0,2,0,2*Math.PI);
+                    ctx.fill();
+
+                    var a = 0;
+                    if(o.time<50) {
+                        a = Math.sin(o.time/50*Math.PI);
+                    }
+                    ctx.rotate(t/20);
+                    ctx.scale(a,a);
+                    ctx.beginPath();
+                    ctx.moveTo(0,10);
+                    ctx.lineTo(0,-10);
+                    ctx.moveTo(10,0);
+                    ctx.lineTo(-10,0);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                for(var o of objects) {
+                    if(o.type!="comet") continue;
+                    drawComet(o);
+                    var move = distToMove(20,o.angle);
+                    o.x += move.x;
+                    o.y += move.y;
+                    if(o.x<-1000||o.x>1000||o.y<-1000||o.y>1000) o.delete = true;
+                }
+
+                if(p<1) {
+                    var w = 145+Math.sin(t/25)*5-p*100;
+                    ctx.save();
+                    ctx.rotate(t/500);
+                    ctx.fillStyle = "orange";
+                    ctx.beginPath();
+                    for(var n=0;n<21;n++) {
+                        var r = rotate(0,0,0,-w,n/20*360);
+                        var r2 = rotate(0,0,0,-w+Math.max(40*(1-p*2.8),0),(n-0.5)/20*360);
+                        ctx.quadraticCurveTo(r2.x,r2.y,r.x,r.y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                var r = 255;
+                var g = 255;
+                var b = 255*p;
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.beginPath();
+                ctx.arc(0,0,100+p*20,0,2*Math.PI);
+                ctx.fill();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(0,0,100+p*20,0,2*Math.PI);
+                ctx.clip();
+                for(var o of moonSpots) {
+                    var r = 255-20*p;
+                    var g = 255-20*p;
+                    var b = 235*p;
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    ctx.beginPath();
+                    ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(0,0,101+p*20,0,2*Math.PI);
+                ctx.clip();
+
+                ctx.fillStyle = bgColor;
+                ctx.beginPath();
+                ctx.arc(-180+p*120,0,p*85,0,2*Math.PI);
+                ctx.fill();
+                ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(-70,-20,200,30);
+                ctx.clip();
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.arc(-35+80*p,-20-p*60,30,0,Math.PI*2);
+                ctx.arc(35+60*p,-20-p*60,30,0,Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+
+                ctx.strokeStyle = "black";
+                ctx.lineJoin = "round";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(-65+100*p,-20);
+                ctx.lineTo(0+60*p,-20);
+                ctx.moveTo(0+80*p,-20);
+                ctx.lineTo(65+40*p,-20);
+                ctx.stroke();
+
+                for(var o of clouds) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.5-p*0.4;
+                    ctx.translate(190+o.x-500,150+o.y-500);
+                    ctx.fillStyle = "white";
+                    ctx.scale(1,1.5);
+                    ctx.beginPath();
+                    ctx.arc(0,0,100,Math.PI,0);
+                    ctx.arc(-120,0,70,Math.PI,0);
+                    ctx.arc(120,0,70,Math.PI,0);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                for(var o of objects) {
+                    if(o.type=="comet") continue;
+                    if(o.type=="plane") {
+                        drawPlane(o);
+                        var move = distToMove(2,o.angle+90);
+                        if(o.flipped) {
+                            o.x -= move.x;
+                        } else {
+                            o.x += move.x;
+                        }
+                        o.y += move.y;
+                        o.time++;
+                        o.angle += Math.sin(o.time/50)/5;
+                    }
+                    if(o.type=="jet") {
+                        drawJet(o);
+                        var move = distToMove(10,o.angle+90);
+                        if(o.flipped) {
+                            o.x -= move.x;
+                        } else {
+                            o.x += move.x;
+                        }
+                        o.y += move.y;
+                        o.time++;
+
+                        if(o.time%1==0) {
+                            var o2 = {};
+                            o2.type = "cloud particle";
+                            o2.x = o.x;
+                            o2.y = o.y+Math.random()*6+2;
+                            o2.alpha = 3;
+                            o2.r = -2;
+                            o2.maxRadius = 6+Math.random()*8;
+                            objects.push(o2);
+                        }
+                    }
+                    if(o.type=="cloud particle") {
+                        drawCloudParticle(o);
+                        o.r += 0.2;
+                        o.r = Math.min(o.maxRadius,o.r);
+                        o.alpha -= 0.01;
+                        o.alpha = Math.max(o.alpha,0);
+                        if(o.alpha==0) o.delete = true;
+                    }
+                    if(o.type=="ufo") {
+                        drawUFO(o);
+                        o.time++;
+                        var move = distToMove(5,o.angle);
+                        o.x += move.x;
+                        o.y += move.y;
+                        if(o.time%5==0) {
+                            var o2 = {};
+                            o2.type = "ufo particle";
+                            o2.x = o.x;
+                            o2.y = o.y;
+                            o2.alpha = 3;
+                            o2.r = -2;
+                            objects.push(o2);
+                        }
+                        if(o.time>100&&o.time<400&&o.time%50==0) {
+                            o.angle += 90*(Math.floor(Math.random()*2)*2-1);
+                        }
+                    }
+                    if(o.type=="ufo particle") {
+                        drawUFOParticle(o);
+                        o.r += 0.4;
+                        o.r = Math.min(10,o.r);
+                        o.alpha -= 0.01;
+                        o.alpha = Math.max(o.alpha,0);
+                        if(o.alpha==0) o.delete = true;
+                    }
+                    if(o.x<-600||o.x>600||o.y<-600||o.y>600) o.delete = true;
+                }
+                objects = objects.filter(e=>!e.delete);
+
+                if(t%700==0) {
+                    if(p<0.5) {
+                        if(t%2100==0) {
+                            var o = {};
+                            o.x = -600;
+                            o.type = "jet";
+                            o.angle = 0;
+                            o.time = 0;
+                            if(Math.random()<0.5) {
+                                o.x = 600;
+                                o.flipped = true;
+                            }
+                            o.y = -400+Math.random()*250+Math.floor(Math.random()*2)*500;
+                            objects.push(o);
+                        } else {
+                            var o = {};
+                            o.x = -600;
+                            o.type = "plane";
+                            o.angle = -10;
+                            o.time = 0;
+                            if(Math.random()<0.5) {
+                                o.x = 600;
+                                o.flipped = true;
+                            }
+                            o.y = -400+Math.random()*250+Math.floor(Math.random()*2)*500;
+                            objects.push(o);
+                        }
+                    } else {
+                        if(t%2100==0) {
+                            var o = {};
+                            o.type = "ufo";
+                            var angle = Math.floor(Math.random()*4);
+                            if(angle==0) {
+                                o.angle = 90;
+                                o.x = -600;
+                                o.y = Math.random()*900-450;
+                            } else if(angle==1) {
+                                o.angle = 180;
+                                o.y = -600;
+                                o.x = Math.random()*900-450;
+                            } else if(angle==2) {
+                                o.angle = 270;
+                                o.x = 600;
+                                o.y = Math.random()*900-450;
+                            } else if(angle==3) {
+                                o.angle = 0;
+                                o.y = 600;
+                                o.x = Math.random()*900-450;
+                            }
+                            o.time = 0;
+                            objects.push(o);
+                        } else {
+                            var o = {};
+                            var angle = Math.random()*360;
+                            var r = rotate(0,0,0,1000,angle);
+                            o.x = r.x;
+                            o.y = r.y;
+                            o.angle = (Math.random()*10+10)*(Math.floor(Math.random()*2)*2-1)-angle;
+                            o.type = "comet";
+                            objects.push(o);
+                        }
+                    }
+                }
+
+                var r = 255*p;
+                var g = 255*p;
+                var b = 255*p;
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.font = "30px Comic Sans MS";
+                ctx.textAlign = "left";
+                ctx.fillText("Day",-450,450);
+                ctx.textAlign = "right";
+                ctx.fillText("Night",450,450);
+            }
+
+            function drawPlane(o) {
+                ctx.save();
+                ctx.translate(o.x,o.y);
+                if(o.flipped) ctx.scale(-1,1);
+                ctx.rotate(o.angle*Math.PI/180);
+
+                ctx.fillStyle = "rgb(150,0,0)";
+                ctx.beginPath();
+                ctx.arc(-20,-3,7,0,2*Math.PI);
+                ctx.fill();
+                //rear rudder
+
+                ctx.strokeStyle = "rgb(150,0,0)";
+                ctx.lineWidth = 10;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(-20,0);
+                ctx.lineTo(20,0);
+                ctx.lineTo(20,10);
+                ctx.quadraticCurveTo(0,7,-20,0);
+                ctx.fill();
+                ctx.stroke();
+                //hull
+
+                ctx.strokeStyle = "rgb(200,200,200)";
+                ctx.beginPath();
+                ctx.moveTo(20,0);
+                ctx.lineTo(20,10);
+                ctx.stroke();
+                //grey plane front
+
+                var w = Math.sin(t/3)*6;
+                ctx.strokeStyle = "rgb(100,100,100)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(30,5-w);
+                ctx.lineTo(30,5+w);
+                ctx.stroke();
+                //propeller
+
+                ctx.fillRect(15,-5,5,20);
+                ctx.strokeStyle = "red";
+                //clip grey
+
+                ctx.lineWidth = 7;
+                ctx.beginPath();
+                ctx.moveTo(0,2);
+                ctx.lineTo(10,2);
+                ctx.stroke();
+                //wing
+
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.arc(7,15,3,0,2*Math.PI);
+                ctx.fill();
+                //wheel
+
+                ctx.restore();
+            }
+
+            function drawJet(o) {
+                ctx.save();
+                ctx.translate(o.x,o.y);
+                if(o.flipped) ctx.scale(-1,1);
+                ctx.rotate(o.angle*Math.PI/180);
+
+                ctx.lineJoin = "round";
+                ctx.lineCap = "round";
+                ctx.lineWidth = 5;
+
+                var w = Math.sin(o.time/5)*4;
+                ctx.fillStyle = "yellow";
+                ctx.strokeStyle = "yellow";
+                ctx.beginPath();
+                ctx.moveTo(-13+w,5);
+                ctx.quadraticCurveTo(-6+w,-2,0,2);
+                ctx.lineTo(0,8);
+                ctx.quadraticCurveTo(-6+w,12,-13+w,5);
+                ctx.fill();
+                ctx.stroke();
+                //fire
+
+                ctx.fillStyle = "blue";
+                ctx.beginPath();
+                ctx.arc(25,9,10,0,Math.PI,1);
+                ctx.fill();
+                //cockpit
+
+                ctx.strokeStyle = "rgb(100,100,100)";
+                ctx.fillStyle = "rgb(100,100,100)";
+                ctx.beginPath();
+                ctx.moveTo(0,0);
+                ctx.lineTo(50,10);
+                ctx.lineTo(0,10);
+                ctx.lineTo(0,0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                //hull
+
+                ctx.strokeStyle = "rgb(50,50,50)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(-2,6);
+                ctx.lineTo(13,6);
+                ctx.stroke();
+                //wing
+
+                ctx.restore();
+            }
+
+            function drawCloudParticle(o) {
+                if(o.r<0) return;
+                ctx.save();
+                ctx.globalAlpha = o.alpha;
+                ctx.fillStyle = "rgba(255,255,255,0.7)";
+                ctx.beginPath();
+                ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function drawComet(o) {
+                ctx.save();
+                ctx.translate(o.x,o.y);
+                ctx.rotate(o.angle*Math.PI/180);
+                ctx.strokeStyle = "white";
+                ctx.lineCap = "round";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0,0);
+                ctx.lineTo(0,200);
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            function drawUFO(o) {
+                ctx.save();
+                ctx.translate(o.x,o.y);
+                
+                ctx.save();
+                ctx.scale(1,0.5);
+                ctx.fillStyle = "rgb(150,150,150)";
+                ctx.beginPath();
+                ctx.arc(0,0,20,0,2*Math.PI);
+                ctx.fill();
+                //hull
+                
+                ctx.fillStyle = "blue";
+                ctx.beginPath();
+                ctx.arc(0,-8,10,0,Math.PI);
+                ctx.fill();
+                //cockpit
+                
+                ctx.restore();
+                ctx.fillStyle = "blue";
+                ctx.beginPath();
+                ctx.arc(0,-4,10,0,Math.PI,1);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            function drawUFOParticle(o) {
+                if(o.r<0) return;
+                ctx.save();
+                ctx.globalAlpha = o.alpha;
+                ctx.strokeStyle = "rgba(0,0,255,0.2)";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            var t = 1;
+
+            var moonSpots = [];
+            var stars = [];
+            var clouds = [];
+            var objects = [];
+            for(var n=0;n<10;n++) {
+                var o = {};
+                o.r = 5+Math.random()*15;
+                var r = rotate(0,0,0,Math.random()*140+20,n/10*220);
+                o.x = r.x;
+                o.y = r.y;
+                moonSpots.push(o);
+            }
+            for(var n=0;n<20;n++) {
+                var o = {};
+                o.x = Math.random()*1000;
+                o.y = Math.random()*1000;
+                while(o.x>300&&o.x<700&&o.y>300&&o.y<700) {
+                    o.x = Math.random()*1000;
+                    o.y = Math.random()*1000;
+                }
+                o.time = Math.random()*500;
+                stars.push(o);
+            }
+            for(var n=0;n<5;n++) {
+                if(n==2||n==3) continue;
+                var o = {};
+                o.x = 200+(n%2==0?600:0)+Math.random()*700-350;
+                o.y = 1000*n/7+50;
+                clouds.push(o);
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'AI Car Driving';
+            var dimensions = {width:1000,height:500};
+            var imgs = ["images/cars.png"];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function distToSeg(x, y, x1, y1, x2, y2) {
+                var A = x - x1;
+                var B = y - y1;
+                var C = x2 - x1;
+                var D = y2 - y1;
+                var dot = A * C + B * D;
+                var len_sq = C * C + D * D;
+                var param = -1;
+                if (len_sq != 0) {
+                    param = dot / len_sq;
+                }
+                var xx, yy;
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+
+                var dx = x - xx;
+                var dy = y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            function sigmoid(t) {
+                return 1/(1+Math.pow(Math.E, -t*6));
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro-=2;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=1;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,20);
+
+            function main() {
+                game.tick();
+            }
+            function network(data) {
+                this.rows = data;
+                this.getOutput = function(input) {
+                    var output = [];
+                    var n = 0;
+                    while(n < this.rows.length) {
+                        var i = input;
+                        if(n!==0) {
+                            i = output[n-1];
+                        }
+                        output.push([]);
+                        var n2 = 0;
+                        while(n2 < this.rows[n].length) {
+                            output[n].push(sigmoid(this.rows[n][n2][0]));
+                            var n3 = 0;
+                            while(n3<this.rows[n][n2].length-1) {
+                                output[n][n2] += sigmoid(i[n3]*this.rows[n][n2][n3+1])*2-1;
+                                n3++;
+                            }
+                            output[n][n2] = Math.max(Math.min(output[n][n2],1),0);
+                            n2++;
+                        }
+                        n++;
+                    }
+                    output.unshift(input);
+                    return output;
+                }
+            }
+            function randomNetworkData(data,range) {
+                var returnData = [];
+                var n = 1;
+                while(n < data.length) {
+                    returnData.push([]);
+                    var n2 = 0;
+                    while(n2 < data[n]) {
+                        returnData[n-1].push([]);
+                        returnData[n-1][n2].push(Math.random()*range-range/2);
+                        var n3 = 0;
+                        while(n3 < data[n-1]) {
+                            returnData[n-1][n2].push(Math.random()*range-range/2);
+                            n3++;
+                        }
+                        n2++;
+                    }
+                    n++;
+                }
+                return returnData;
+            }
+            function randomizeNetwork(network,range) {
+                var newNetwork = JSON.parse(JSON.stringify(network));
+                var n = 0;
+                while(n < network.length) {
+                    var n2 = 0;
+                    while(n2 < network[n].length) {
+                        var n3 = 0;
+                        while(n3 < network[n][n2].length) {
+                            newNetwork[n][n2][n3] += Math.random()*range-range/2;
+                            n3++;
+                        }
+                        n2++;
+                    }
+                    n++;
+                }
+                return newNetwork;
+            }
+
+
+            function generateRandomCars() {
+                game.objects.objects = getObstacles();
+                var n = 0;
+                while(n < 100) {
+                    var c = {}
+                    c.angle = 90;
+                    c.x = 501;
+                    c.y = 200;
+                    c.xmove = 0;
+                    c.ymove = 0;
+                    c.ai = new network(randomNetworkData([5,5,5,5,4],2));
+                    c.output = [];
+                    c.stuck = false;
+                    c.rank = 0;
+                    c.laps = 0;
+                    c.checkPoint = 0;
+                    c.type = 'car';
+                    game.objects.objects.push(c);
+                    n++;
+                }
+            }
+            function newCars(car) {
+                var ai = JSON.parse(JSON.stringify(car.ai.rows));
+                game.objects.objects = getObstacles();
+                var n = 0;
+                while(n < 100) {
+                    var c = {}
+                    c.angle = startDir;
+                    c.x = 501;
+                    c.y = 200;
+                    c.xmove = 0;
+                    c.ymove = 0;
+                    if(n==0) {
+                        c.ai = new network(ai);;
+                    } else if(n<10) {
+                        c.ai = new network(randomizeNetwork(ai,0.5));
+                    } else if(n<20) {
+                        c.ai = new network(randomizeNetwork(ai,0.02));
+                    } else {
+                        c.ai = new network(randomizeNetwork(ai,0.1));
+                    }
+                    c.output = [];
+                    c.stuck = false;
+                    c.rank = 0;
+                    c.laps = 0;
+                    c.checkPoint = 0;
+                    c.type = 'car';
+                    game.objects.objects.push(c);
+                    n++;
+                }
+            }
+            function getObstacles() {
+                return [{type:'line',x1:300,y1:250,x2:700,y2:250},{type:'line',x1:700,y1:250,x2:770,y2:150},{type:'circle',x:810,y:180,r:50},{type:'line',x1:850,y1:210,x2:800,y2:280},{type:'line',x1:800,y1:280,x2:800,y2:350},{type:'circle',x:770,y:350,r:30},{type:'line',x1:750,y1:372,x2:700,y2:322},{type:'line',x1:700,y1:322,x2:300,y2:322},{type:'line',x1:700,y1:322,x2:300,y2:322},{type:'circle',x:500,y:450,r:600},{type:'circle',x:500,y:100,r:600},{type:'circle',x:450,y:500,r:100},{type:'circle',x:550,y:500,r:100},{type:'line',x1:550,y1:400,x2:450,y2:400},{type:'line',x1:250,y1:372,x2:300,y2:322},{type:'circle',x:230,y:350,r:30},{type:'line',x1:200,y1:280,x2:200,y2:350},{type:'circle',x:500,y:0,r:150},{type:'circle',x:190,y:180,r:50},{type:'line',x1:150,y1:210,x2:200,y2:280},{type:'line',x1:300,y1:250,x2:230,y2:150}];
+            }
+            function getMaxDistanceAway(x,y) {
+                var d = Infinity;
+                d = Math.min(d,distToSeg(x,y,0,0,1000,0),distToSeg(x,y,0,0,0,500),distToSeg(x,y,0,500,1000,500),distToSeg(x,y,1000,0,1000,500));
+                var n = 0;
+                while(n < game.objects.objects.length) {
+                    var o = game.objects.objects[n]
+                    if(o.type=='rectangle') {
+                        d = Math.min(d,distToSeg(x,y,o.x,o.y,o.x+o.w,o.y));
+                        d = Math.min(d,distToSeg(x,y,o.x,o.y,o.x,o.y+o.h));
+                        d = Math.min(d,distToSeg(x,y,o.x,o.y+o.h,o.x+o.w,o.y+o.h));
+                        d = Math.min(d,distToSeg(x,y,o.x+o.w,o.y,o.x+o.w,o.y+o.h));
+                    }
+                    if(o.type=='line') {
+                        d = Math.min(d,distToSeg(x,y,o.x1,o.y1,o.x2,o.y2));
+                    }
+                    if(o.type=='circle') {
+                        d = Math.min(d,Math.abs(distTo(x,y,o.x,o.y)-o.r));
+                    }
+                    n++;
+                }
+                return d;
+            }
+            var game = {
+                paused: false,
+                reset: function() {
+                    generateRandomCars();
+                },
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(Keys.down[32]) {
+                        this.paused = !this.paused;
+                    }
+                    if(Keys.keys[82]) {
+                        this.reset();
+                    }
+                    this.objects.update();
+                },
+                draw: function() {
+                    this.objects.draw();
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            object.id = n;
+                            this.updateObject(object);
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var object = this.objects[n];
+                            this.drawObject(object,n);
+                            n++;
+                        }
+                        this.drawLabels();
+                    },
+                    updateObject: function(obj) {
+                        if(obj.type=='car') {
+                            if(!obj.stuck&&!game.paused) {
+                                var oldPos = [obj.x,obj.y];
+                                //find old position
+
+                                var move = distToMove(2,obj.angle);
+                                obj.x += move[0];
+                                obj.y += move[1];
+                                //move car
+
+                                var input = [];
+                                var n2 = 0;
+                                while(n2 < 5) {
+                                    var rayAngle = obj.angle-180-45*n2;
+                                    var rayCors = [obj.x,obj.y];
+                                    var distanceTraveled = 0;
+                                    var distanceCanTravel = Infinity;
+                                    while(distanceTraveled<1&&distanceCanTravel>0.1) {
+                                        distanceCanTravel = getMaxDistanceAway(rayCors[0],rayCors[1])
+                                        var move = rotate(0,0,0,-Math.min(distanceCanTravel,500-distanceTraveled*500),90-rayAngle);
+                                        rayCors[0] += move[0];
+                                        rayCors[1] += move[1];
+                                        distanceTraveled += distanceCanTravel/500;
+                                    }
+                                    input[n2] = distanceTraveled-0.03;
+                                    /*ctx.strokeStyle = 'blue';
+                                    ctx.beginPath();
+                                    ctx.moveTo(obj.x,obj.y);
+                                    ctx.lineTo(rayCors[0],rayCors[1]);
+                                    ctx.stroke();*/
+                                    //draw sight lines
+                                    n2++;
+                                }
+                                //ray tracing
+
+                                var output = obj.ai.getOutput(input);
+                                obj.output = output;
+                                //get ai output
+
+                                obj.angle += output[output.length-1][0]*5;
+                                obj.angle -= output[output.length-1][1]*5;
+                                obj.angle += output[output.length-1][2];
+                                obj.angle -= output[output.length-1][3];
+                                //turn car based on output
+
+                                if(obj.y<250&&obj.x!=oldPos[0]) {
+                                    if(oldPos[0]<=500&&obj.x>=500) {
+                                        obj.laps++;
+                                    }
+                                    if(oldPos[0]>=500&&obj.x<=500) {
+                                        obj.laps--;
+                                    }
+                                }
+                                //calculate laps
+
+                                if(obj.x<0) {
+                                    obj.stuck = true;
+                                }
+                                if(obj.y<0) {
+                                    obj.stuck = true;
+                                }
+                                if(obj.x>1000) {
+                                    obj.stuck = true;
+                                }
+                                if(obj.y>500) {
+                                    obj.stuck = true;
+                                }
+                                if(getMaxDistanceAway(obj.x,obj.y)<10) {
+                                    obj.stuck = true;
+                                }
+                                //find if car is stuck
+                            }
+                        }
+                    },
+                    drawLabels: function() {
+                        ctx.font = '10px Arial';
+                        ctx.textBaseline = 'middle';
+                        ctx.textAlign = 'center';
+                        var clickedOnCar = false;
+                        var carNum = 0;
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            if(obj.type=='car') {
+                                if(distTo(Mouse.x,Mouse.y,obj.x,obj.y)<10) {
+                                    var text = '#'+(n-17)+', Laps: '+obj.laps;
+                                    ctx.font = '15px Arial';
+                                    var width = ctx.measureText(text).width;
+                                    ctx.fillStyle = 'white';
+                                    ctx.fillRect(obj.x-width/2-5,obj.y-10,width+10,20);
+                                    ctx.strokeStyle = 'black';
+                                    ctx.strokeRect(obj.x-width/2-5,obj.y-10,width+10,20);
+                                    ctx.fillStyle = 'black';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(text,obj.x,obj.y);
+                                    if(Mouse.click) {
+                                        clickedOnCar = n;
+                                    }
+                                }
+                                carNum++;
+                            }
+                            n++;
+                        }
+                        if(clickedOnCar!==false) {
+                            newCars(this.objects[clickedOnCar]);
+                        }
+                    },
+                    drawObject: function(object) {
+                        if(object.type=='rectangle') {
+                            ctx.strokeStyle = 'black';
+                            ctx.strokeRect(object.x,object.y,object.w,object.h);
+                        }
+                        if(object.type=='line') {
+                            ctx.strokeStyle = 'black';
+                            ctx.beginPath();
+                            ctx.moveTo(object.x1,object.y1);
+                            ctx.lineTo(object.x2,object.y2);
+                            ctx.stroke();
+                        }
+                        if(object.type=='circle') {
+                            ctx.strokeStyle = 'black';
+                            ctx.beginPath();
+                            ctx.arc(object.x,object.y,object.r,0,2*Math.PI);
+                            ctx.stroke();
+                        }
+                        if(object.type=='car') {
+                            var id = object.id;
+                            ctx.save();
+                            ctx.translate(object.x,object.y);
+                            ctx.rotate(object.angle*Math.PI/180);
+                            if(object.stuck) {
+                                ctx.globalAlpha = 0.2;
+                            }
+                            ctx.drawImage(imgs[0],2+id%10*31,Math.floor(id%20/10)*42,29,41,-15,-20,29,40);
+                            ctx.restore();
+                        }
+                    }
+                }
+            }
+            game.reset();
+
+            var startDir = 90;
+        </script>
+    </body>
+</html>

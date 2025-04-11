@@ -1,0 +1,687 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "2048";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+            var word = "";
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=="menu") {
+                    menu.update();
+                } else if(page=="game") {
+                    game.tick();
+                }
+            }
+
+            var menu = {
+                update: function() {
+                    ctx.fillStyle = "black";
+                    ctx.font = "bold 200px Arial";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("2048",500,200);
+
+                    ctx.font = "bold 50px Arial";
+                    ctx.fillText("Highscore: "+highscore,500,930);
+                    if(speedrun) ctx.fillText("Fastest 2048: "+speedrun,500,850);
+
+                    var dist = distTo(Mouse.x,Mouse.y,500,560);
+                    ctx.fillStyle = "rgb(230,0,0)";
+                    if(dist<150) {
+                        ctx.fillStyle = "rgb(255,50,50)";
+                        if(Mouse.click) {
+                            game.reset();
+                            page = "game";
+                        }
+                    }
+                    ctx.strokeStyle = "rgb(100,0,0)";
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.arc(500,560,150,0,2*Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.lineJoin = "round";
+                    ctx.beginPath();
+                    ctx.moveTo(460,500);
+                    ctx.lineTo(560,560);
+                    ctx.lineTo(460,620);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+
+            var game = {
+                score: 0,
+                scoreAddTime: 0,
+                gameOverAnimation: 0,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.board.update();
+                    this.particles.update();
+
+                    if(this.scoreAddTime>0) {
+                        this.scoreAddTime--;
+                    }
+
+                    if(this.board.checkGameOver()&&this.gameOverAnimation==0&&this.board.animation==0&&this.board.specialAnimation==0) {
+                        this.gameOverAnimation = 1;
+                        highscore = Math.max(highscore,this.score);
+                        localStorage.setItem("2048highscore",highscore)
+                    }
+                    if(this.gameOverAnimation) {
+                        this.gameOverAnimation++;
+                    }
+                    if(this.gameOverAnimation>100) {
+                        var dist = distTo(250,700,Mouse.x,Mouse.y);
+                        if(dist<75&&Mouse.click) {
+                            page = "menu";
+                        }
+                        
+                        var dist = distTo(750,700,Mouse.x,Mouse.y);
+                        if(dist<75&&Mouse.click) {
+                            this.reset();
+                        }
+                    }
+                    if(word.endsWith("NICE")) {
+                        word = "";
+                        this.board.addCell(69);
+                    }
+                    if(word.endsWith("NOICE")) {
+                        word = "";
+                        this.board.addCell(42069);
+                    }
+                    if(word.endsWith("JOHNBUTLERGAMES")) {
+                        word = "";
+                        this.board.addCell("jbg");
+                    }
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(150,150);
+                    ctx.scale(1.75,1.75);
+                    this.board.draw();
+                    ctx.restore();
+
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "black";
+                    ctx.font = "bold 50px Arial";
+                    ctx.fillText("Score: ",140,75);
+                    ctx.save();
+                    var w = ctx.measureText(this.score).width;
+                    ctx.translate(230+w/2,75);
+                    ctx.scale(1+this.scoreAddTime/50,1+this.scoreAddTime/50);
+                    ctx.fillText(this.score,0,0);
+                    ctx.restore();
+
+                    if(this.gameOverAnimation) {
+                        ctx.fillStyle = "rgba(0,0,0,"+(Math.min(this.gameOverAnimation/100,1)*0.3)+")";
+                        ctx.fillRect(0,0,1000,1000);
+
+                        ctx.save();
+                        ctx.translate(0,-1000*easeInOut(Math.max(1-this.gameOverAnimation/100,0)));
+
+                        ctx.fillStyle = "white";
+                        ctx.roundRect(100,100,800,800,40);
+                        ctx.fill();
+                        ctx.fillStyle = "black";
+                        ctx.font = "bold 120px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Game Over!",500,250);
+
+                        ctx.font = "bold 70px Arial";
+                        ctx.fillText("Score: "+this.score,500,400);
+                        ctx.fillText("Highscore: "+highscore,500,500);
+
+                        ctx.save();
+                        ctx.translate(400,600);
+                        ctx.scale(0.5,0.5);
+                        this.board.draw();
+                        ctx.restore();
+
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 10;
+                        ctx.beginPath();
+                        ctx.arc(250,700,75,0,2*Math.PI);
+                        var dist = distTo(250,700,Mouse.x,Mouse.y);
+                        ctx.fillStyle = "rgb(230,230,230)";
+                        if(dist<75) {
+                            ctx.fillStyle = "rgb(210,210,210)";
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.arc(750,700,75,0,2*Math.PI);
+                        var dist = distTo(750,700,Mouse.x,Mouse.y);
+                        ctx.fillStyle = "rgb(230,230,230)";
+                        if(dist<75) {
+                            ctx.fillStyle = "rgb(210,210,210)";
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        ctx.lineCap = "round";
+                        ctx.beginPath();
+                        ctx.moveTo(300,700);
+                        ctx.lineTo(200,700);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(200,700);
+                        ctx.lineTo(225,675);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(200,700);
+                        ctx.lineTo(225,725);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.arc(750,700,40,-Math.PI*0.5,Math.PI);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(750,660);
+                        ctx.lineTo(770,650);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(750,660);
+                        ctx.lineTo(765,680);
+                        ctx.stroke();
+
+                        ctx.restore();
+                    }
+                },
+                reset: function() {
+                    this.score = 0;
+                    this.board.cells = [
+                        {x:0,y:0,value:4},
+                        {x:1,y:0,value:4},
+                        {x:2,y:0,value:8},
+                        {x:3,y:0,value:16},
+                        {x:0,y:1,value:256},
+                        {x:1,y:1,value:128},
+                        {x:2,y:1,value:64},
+                        {x:3,y:1,value:32},
+                        {x:0,y:2,value:512},
+                        {x:1,y:2,value:1024},
+                        {x:2,y:2,value:2048},
+                        {x:3,y:2,value:4096},
+                        {x:0,y:3,value:65536},
+                        {x:1,y:3,value:32768},
+                        {x:2,y:3,value:16384},
+                        {x:3,y:3,value:8192},
+                    ];
+                    this.board.cells = [];
+                    this.board.update();
+                    this.board.addCell();
+                    this.gameOverAnimation = 0;
+                    this.board.cells[0].new = false;
+                },
+                addScore: function(score) {
+                    this.score += score;
+                    this.scoreAddTime = 10;
+                },
+                board: {
+                    cells: [],
+                    drawCells: [],
+                    animation: 0,
+                    specialAnimation: 0,
+                    specialAnimationTime: 0,
+                    animationLength: 10,
+                    cellColors: {
+                        "2": "rgb(210,210,230)",
+                        "4": "rgb(160,160,200)",
+                        "8": "rgb(110,110,200)",
+                        "16": "rgb(60,60,200)",
+                        "32": "rgb(0,0,220)",
+                        "64": "rgb(0,0,150)",
+                        "128": "rgb(70,0,140)",
+                        "256": "rgb(130,0,150)",
+                        "512": "rgb(150,0,100)",
+                        "1024": "rgb(150,0,0)",
+                        "2048": "rgb(200,50,0)",
+                        "4096": "rgb(220,120,0)",
+                        "8192": "rgb(255,200,0)",
+                        "16384": "rgb(200,220,0)",
+                        "32768": "rgb(0,200,0)",
+                        "65536": "rgb(0,150,150)",
+                        "131072": "rgb(0,100,100)",
+                        "jbg": "blue"
+                    },
+                    textColors: {
+                        "2": "black",
+                        "4": "black",
+                        "8": "white",
+                        "16": "white",
+                        "32": "white",
+                        "64": "white",
+                        "128": "white",
+                        "256": "white",
+                        "512": "white",
+                        "1024": "white",
+                        "2048": "white",
+                        "4096": "white",
+                        "8192": "white",
+                        "16384": "white",
+                        "32768": "white",
+                        "65536": "white",
+                        "131072": "white",
+                        "jbg": "blue"
+                    },
+                    fontSizes: {
+                        "2": "50",
+                        "4": "50",
+                        "8": "50",
+                        "16": "45",
+                        "32": "45",
+                        "64": "45",
+                        "128": "40",
+                        "256": "40",
+                        "512": "40",
+                        "1024": "30",
+                        "2048": "30",
+                        "4096": "30",
+                        "8192": "30",
+                        "16384": "25",
+                        "32768": "25",
+                        "65536": "25",
+                        "131072": "20",
+                        "42069": "25",
+                        "jbg": "40"
+                    },
+                    specialAnimationTimes: {
+                        "64": 0,
+                        "128": 25,
+                        "256": 35,
+                        "512": 50,
+                        "1024": 75,
+                        "2048": 200,
+                        "4096": 250,
+                        "8192": 300,
+                        "16384": 350,
+                        "32768": 400,
+                        "65536": 500
+                    },
+                    specialAnimationSizes: {
+                        "64": 0.2,
+                        "128": 0.3,
+                        "256": 0.4,
+                        "512": 0.5,
+                        "1024": 0.6,
+                        "2048": 0.7,
+                        "4096": 0.8,
+                        "8192": 0.9,
+                        "16384": 1,
+                        "32768": 1.1,
+                        "65536": 1.2
+                    },
+                    update: function() {
+                        this.drawCells = JSON.parse(JSON.stringify(this.cells));
+                        for(var o of this.drawCells) {
+                            o.size = 1;
+                            if(o.xmove) o.x += o.xmove*easeInOut(1-this.animation/this.animationLength);
+                            if(o.ymove) o.y += o.ymove*easeInOut(1-this.animation/this.animationLength);
+                            if(o.new) o.size = easeInOut(1-this.animation/this.animationLength);
+                            if(o.combine) {
+                                o.size = 0.5+easeInBack(this.animation/this.animationLength)/2;
+                            }
+                            if(o.multiply) {
+                                var m = 0.2;
+                                if(o.value==128) m=0.3;
+                                if(o.value==256) m=0.4;
+                                if(o.value==512) m=0.5;
+                                if(o.value==1024) m=0.6;
+                                if(o.value==2048) m=0.7;
+                                o.size = 1+easeInOut(this.animation/this.animationLength)*m;
+                                if(o.value>128) {
+                                    o.size = 1+easeInBack(Math.min(1,this.specialAnimationTime/this.specialAnimationTimes[o.value]))*this.specialAnimationSizes[o.value];
+                                }
+                                o.value *= 2;
+                            }
+                        }
+                        this.drawCells = this.drawCells.sort((a,b)=>a.size-b.size);
+
+                        if(this.specialAnimation>0) {
+                            if(this.animation>0) this.animation--;
+                            this.specialAnimation--;
+                            this.specialAnimationTime++;
+                            if(this.specialAnimation===0) {
+                                this.updateCells();
+                            }
+                            return;
+                        } else {
+                            this.specialAnimationTime = 0;
+                        }
+
+                        if(this.animation>0) {
+                            this.animation--;
+                            if(this.animation===0) {
+                                this.updateCells();
+                            }
+                        }
+
+                        if(Keys.down[37]||Keys.down[65]) {
+                            this.move(-1,0);
+                        } else if(Keys.down[38]||Keys.down[87]) {
+                            this.move(0,-1);
+                        } else if(Keys.down[39]||Keys.down[68]) {
+                            this.move(1,0);
+                        } else if(Keys.down[40]||Keys.down[83]) {
+                            this.move(0,1);
+                        }
+                    },
+                    updateCells: function() {
+                        for(var o of this.cells) {
+                            this.updateCell(o);
+                        }
+                        this.cells = this.cells.filter(e=>e.combine!==true);
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "rgb(230,230,230)";
+                        ctx.roundRect(-3,-3,406,406,20);
+                        ctx.fill();
+
+                        for(var x=0;x<4;x++) {
+                            for(var y=0;y<4;y++) {
+                                ctx.fillStyle = "rgb(220,220,220)";
+                                ctx.roundRect(x*100+20,y*100+20,60,60,10);
+                                ctx.fill();
+                            }
+                        }
+
+                        game.particles.draw();
+
+                        for(var cell of this.drawCells) {
+                            this.drawCell(cell);
+                        }
+                    },
+                    updateCell: function(o) {
+                        if(o.xmove) {
+                            o.x += o.xmove;
+                            o.xmove = 0;
+                        }
+                        if(o.ymove) {
+                            o.y += o.ymove;
+                            o.ymove = 0;
+                        }
+                        if(o.multiply) {
+                            o.value *= 2;
+                            o.multiply = false;
+                            game.addScore(o.value);
+                        }
+                        o.new = false;
+                    },
+                    drawCell: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x*100+50,o.y*100+50);
+                        
+                        var a;
+                        if(o.multiply&&o.value>128) {
+                            a = Math.min(1,this.specialAnimationTime/this.specialAnimationTimes[o.value]);
+                        }
+                        if(o.size) ctx.scale(o.size,o.size);
+                        if(o.multiply&&o.value>1024) {
+                            ctx.save();
+                            ctx.rotate(-this.specialAnimationTime*Math.PI/180);
+                            ctx.globalAlpha = easeInBack(a);
+                            for(var n=0;n<10;n++) {
+                                ctx.rotate(36*Math.PI/180);
+                                ctx.fillStyle = this.cellColors[o.value];
+                                ctx.fillRect(-25,0,50,1000);
+                            }
+                            ctx.rotate(this.specialAnimationTime*2*Math.PI/180);
+                            for(var n=0;n<10;n++) {
+                                ctx.rotate(36*Math.PI/180);
+                                ctx.fillStyle = "white";
+                                ctx.fillRect(-25,0,50,1000);
+                            }
+                            if(o.value>4096) {
+                                ctx.rotate(-this.specialAnimationTime*2.5*Math.PI/180);
+                                for(var n=0;n<20;n++) {
+                                    ctx.rotate(18*Math.PI/180);
+                                    ctx.fillStyle = this.cellColors[o.value];
+                                    ctx.fillRect(-1,0,2,1000);
+                                }
+                            }
+                            ctx.restore();
+                        }
+                        if(o.multiply&&o.value>2048) {
+                            ctx.rotate(easeInBack(a)*(8+(Math.log(o.value)/Math.log(2)-11)*4));
+                        }
+
+                        ctx.shadowColor = this.cellColors[o.value]||"black";
+                        if(o.value>256) {
+                            ctx.shadowBlur = Math.log(o.value)/Math.log(2)*4-34;
+                        }
+                        ctx.fillStyle = this.cellColors[o.value]||"black";
+                        ctx.roundRect(-47,-47,94,94,20);
+                        ctx.fill();
+                        if(o.value=="jbg") {
+                            ctx.fillStyle = "black";
+                            ctx.beginPath();
+                            ctx.arc(-17,-17,10,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(17,-17,10,0,2*Math.PI);
+                            ctx.fill();
+                        }
+                        ctx.shadowBlur = 0;
+                        if(o.value>64) {
+                            ctx.strokeStyle = "rgba(0,0,0,0.2)";
+                            var w = Math.log(o.value)/Math.log(2)/2;
+                            ctx.lineWidth = w;
+                            ctx.roundRect(-47+w/2,-47+w/2,94-w,94-w,20);
+                            ctx.stroke();
+                        }
+                        if(o.multiply&&o.value>128) {
+                            ctx.fillStyle = "rgba(255,255,255,"+easeInOut(1-a)+")";
+                            ctx.roundRect(-48,-48,96,96,20);
+                            ctx.fill();
+                        }
+                        ctx.fillStyle = this.textColors[o.value]||"white";
+                        ctx.textAlign = "center";
+                        ctx.font = "bold "+(this.fontSizes[o.value]||"50")+"px Arial";
+                        ctx.textBaseline = "middle";
+                        if(o.value!="jbg") ctx.fillText(o.value,0,2);
+
+                        ctx.restore();
+                    },
+                    move: function(xmove,ymove) {
+                        if(this.animation>0) {
+                            for(var o of this.cells) {
+                                this.updateCell(o);
+                            }
+                            this.cells = this.cells.filter(e=>e.combine!==true);
+                        }
+                        this.animation = this.animationLength;
+                        this.executeMove(xmove,ymove);
+                        for(var cell of this.cells) {
+                            if(!cell.multiply) continue;
+                            if(!this.specialAnimationTimes[cell.value*2]) continue;
+                            this.specialAnimation = Math.max(this.specialAnimation,this.specialAnimationTimes[cell.value*2]);
+                            if(cell.value>128) {
+                                for(var n=0;n<(Math.log(cell.value)/Math.log(2))*5;n++) {
+                                    var o = {};
+                                    o.color = this.cellColors[cell.value*2];
+                                    o.alpha = 2+Math.random()*2;
+                                    o.xmove = Math.random()*8-4;
+                                    o.ymove = Math.random()*8-6;
+                                    o.x = cell.x*100+5+Math.random()*90;
+                                    o.y = cell.y*100+5+Math.random()*90;
+                                    o.decay = 0.02;
+                                    o.r = 5;
+                                    o.shrink = 0;
+                                    o.damping = 0.98;
+                                    game.particles.particles.push(o);
+                                }
+                            }
+                        }
+                    },
+                    executeMove: function(xmove,ymove) {
+                        var rows = [];
+                        var cellIds = [];
+                        for(var x=0;x<4;x++) {
+                            var row = [];
+                            var cellIdRow = [];
+                            for(var y=0;y<4;y++) {
+                                var found = false;
+                                for(var n=0;n<this.cells.length;n++) {
+                                    var cell = this.cells[n];
+                                    if(xmove==-1&&(cell.x!=y||cell.y!=x)) continue;
+                                    if(xmove==1&&(cell.x!=(3-y)||cell.y!=x)) continue;
+                                    if(ymove==-1&&(cell.x!=x||cell.y!=y)) continue;
+                                    if(ymove==1&&(cell.x!=x||cell.y!=(3-y))) continue;
+                                    row.push(cell.value);
+                                    cellIdRow.push(n);
+                                    found = true;
+                                }
+                                if(!found) {
+                                    row.push(false);
+                                    cellIdRow.push(false);
+                                }
+                            }
+                            rows.push(row);
+                            cellIds.push(cellIdRow);
+                        }
+                        var moved = false;
+                        for(var n in rows) {
+                            var row = rows[n];
+                            var cellIdRow = cellIds[n];
+                            var actions = this.executeMoveOnRow(row);
+                            for(var n2 in cellIdRow) {
+                                if(cellIdRow[n2]===false) continue;
+                                var action = actions[n2];
+                                var id = cellIdRow[n2];
+                                var cell = this.cells[id];
+                                if(action.move) moved = true;
+                                cell.xmove = xmove*action.move;
+                                cell.ymove = ymove*action.move;
+                                cell.multiply = action.multiply;
+                                cell.combine = action.combine;
+                            }
+                        }
+                        if(moved) {
+                            this.addCell();
+                        }
+                    },
+                    executeMoveOnRow: function(cells) {
+                        var actions = [];
+                        for(var n=0;n<cells.length;n++) {
+                            actions.push({move:0,multiply:false,combine:false});
+                            if(cells[n]===false) continue;
+                            for(var n2=n-1;n2>=0;n2--) {
+                                if(cells[n2]!==false) continue;
+                                actions[actions.length-1].move++;
+                            }
+                        }
+                        cells = cells.map((e,i)=>({id:i,v:e}));
+                        cells = cells.filter(e=>e.v!==false);
+                        for(var n=0;n<cells.length-1;n++) {
+                            if(cells[n].v!=cells[n+1].v) continue;
+                            if(cells[n].v==69||cells[n+1].v==69) continue;
+                            if(cells[n].v==42069||cells[n+1].v==42069) continue;
+                            if(cells[n].v=="jbg"||cells[n+1].v=="jbg") continue;
+                            actions[cells[n].id].multiply = true;
+                            actions[cells[n+1].id].combine = true;
+                            for(var n2=cells[n].id+1;n2<actions.length;n2++) {
+                                actions[n2].move++;
+                            }
+                            n++;
+                        }
+                        return actions;
+                    },
+                    addCell: function(value) {
+                        for(var cell of this.cells) {
+                            if(!cell.xmove) cell.xmove = 0;
+                            if(!cell.ymove) cell.ymove = 0;
+                        }
+                        var empty = [];
+                        for(var x=0;x<4;x++) {
+                            for(var y=0;y<4;y++) {
+                                var cellIn = this.cells.some(e=>e.x+e.xmove==x&&e.y+e.ymove==y);
+                                if(cellIn) continue;
+                                empty.push({x:x,y:y});
+                            }
+                        }
+                        if(empty.length==0) return false;
+                        var cellSpot = empty[Math.floor(Math.random()*empty.length)];
+                        var cell = {};
+                        cell.x = cellSpot.x;
+                        cell.y = cellSpot.y;
+                        cell.value = 2;
+                        cell.new = true;
+                        if(Math.random()<0.25) cell.value *= 2;
+                        if(value) cell.value = value;
+                        this.cells.push(cell);
+                        return true;
+                    },
+                    checkGameOver: function() {
+                        if(this.cells.length!=16) return false;
+                        for(var n=0;n<this.cells.length;n++) {
+                            var cell = this.cells[n];
+                            for(var n2=n+1;n2<this.cells.length;n2++) {
+                                var cell2 = this.cells[n2];
+                                if(cell.value!=cell2.value) continue;
+                                if(cell.value==69) continue;
+                                if(cell.value==42069) continue;
+                                if(cell.value=="jbg") continue;
+                                if(distTo(cell.x,cell.y,cell2.x,cell2.y)!==1) continue;
+                                if(Keys.keys[65]) console.log(cell,cell2);
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                },
+                particles: {
+                    particles: [],
+                    update: function() {
+                        for(var p of this.particles) {
+                            p.alpha -= p.decay;
+                            p.r -= p.shrink;
+                            p.x += p.xmove;
+                            p.y += p.ymove;
+                            p.xmove *= p.damping;
+                            p.ymove *= p.damping;
+                            p.ymove += 0.03;
+                        }
+                        this.particles = this.particles.filter(e=>e.alpha>0&&e.r>0);
+                    },
+                    draw: function() {
+                        for(var p of this.particles) {
+                            ctx.save();
+                            ctx.globalAlpha = p.alpha;
+                            ctx.fillStyle = p.color;
+                            ctx.beginPath();
+                            ctx.arc(p.x,p.y,p.r,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+
+                    }
+                }
+            }
+
+            var page = "menu";
+            game.reset();
+
+            var highscore = 0;
+            var speedrun = false;
+            if(localStorage.getItem("2048highscore")!==null) {
+                highscore = localStorage.getItem("2048highscore");
+            }
+        </script>
+    </body>
+</html>

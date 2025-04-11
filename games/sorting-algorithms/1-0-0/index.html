@@ -1,0 +1,527 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Sorting Algorithm Visualizer";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        var attackTime = 0.01;
+        var sustainLevel = 0.8;
+        var releaseTime = 0.01;
+        var vibratoSpeed = 10;
+        var vibratoAmount = 0;
+
+        var context = new AudioContext();
+        var masterVolume = context.createGain();
+        masterVolume.connect(context.destination);
+        masterVolume.gain.value = 0.2;
+        var delay = context.createDelay();
+        var feedback = context.createGain();
+        var delayAmountGain = context.createGain();
+        delayAmountGain.connect(delay)
+        delay.connect(feedback)
+        feedback.connect(delay)
+        delay.connect(masterVolume)
+
+        delay.delayTime.value = 0;
+        delayAmountGain.gain.value = 0;
+        feedback.gain.value = 0;
+        function playNote(frequency, length) {
+            var sustain = 1000 / frequency ** 1.2;
+            const osc = context.createOscillator();
+            const noteGain = context.createGain();
+            noteGain.gain.setValueAtTime(0, 0);
+            noteGain.gain.linearRampToValueAtTime(sustain, context.currentTime + length * attackTime);
+            noteGain.gain.setValueAtTime(sustain, context.currentTime + length - length * releaseTime);
+            noteGain.gain.linearRampToValueAtTime(0, context.currentTime + length);
+
+            lfoGain = context.createGain();
+            lfoGain.gain.setValueAtTime(vibratoAmount, 0);
+            lfoGain.connect(osc.frequency);
+
+            lfo = context.createOscillator();
+            lfo.frequency.setValueAtTime(vibratoSpeed, 0);
+            lfo.start(0);
+            lfo.stop(context.currentTime + length);
+            lfo.connect(lfoGain);
+
+            osc.type = "square";
+            osc.frequency.setValueAtTime(frequency, 0);
+            osc.start(0);
+            osc.stop(context.currentTime + length);
+            osc.connect(noteGain);
+
+            noteGain.connect(masterVolume);
+            noteGain.connect(delay);
+        }
+
+        function main() {
+            ctx.fillStyle = "black";
+            ctx.font = "bold 50px Trebuchet MS";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Sorting Algorithm Visualizer", 500, 70);
+
+            ctx.save();
+            ctx.translate(50, 500);
+            ctx.scale(900 / 1000, -1);
+            drawList();
+            ctx.restore();
+
+            ctx.fillStyle = "black";
+            ctx.font = "bold 40px Trebuchet MS";
+            ctx.textAlign = "left";
+            ctx.fillText("Time: " + sortingTime, 50, 550);
+
+            if (t % tickRate === 0) {
+                if (sorting) {
+                    tickSort();
+                } else if (reading) {
+                    tickRead();
+                }
+            }
+            lastNotePlay++;
+            t++;
+
+            drawUI();
+        }
+
+        function drawUI() {
+            ctx.font = "bold 30px Trebuchet MS";
+            ctx.textAlign = "center";
+            var algorithms = ["bubble sort", "insertion sort", "quick sort", "merge sort"];
+            var names = ["Bubble Sort", "Insertion Sort", "Quick Sort", "Merge Sort"];
+            for (var n = 0; n < algorithms.length; n++) {
+                ctx.fillStyle = "black";
+                ctx.fillText(names[n], n * 230 + 150, 650);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                if (Mouse.clickInBox(n * 230 + 150 - 105, 610, 210, 80)) {
+                    if (sortingAlgorithm == algorithms[n]) {
+                        sorting = !sorting;
+                    } else {
+                        sorting = true;
+                    }
+                    sortingAlgorithm = algorithms[n];
+                    if (sorting) initSort();
+                }
+                ctx.strokeRect(n * 230 + 150 - 105, 610, 210, 80);
+                if (sortingAlgorithm == algorithms[n] && sorting) {
+                    ctx.fillStyle = "rgba(0,0,0,0.15)";
+                    ctx.fillRect(n * 230 + 150 - 105, 610, 210, 80);
+                }
+            }
+
+            var sizes = [5, 10, 20, 50, 100, 500, 1000];
+            for (var n = 0; n < sizes.length; n++) {
+                ctx.fillStyle = "black";
+                ctx.fillText(sizes[n], n * 130 + 100, 750);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                if (Mouse.clickInBox(n * 130 + 100 - 50, 712, 100, 70)) {
+                    generateList(sizes[n]);
+                    oldList = list;
+                    reading = false;
+                    elementsRead = [];
+                    sorting = false;
+                }
+                ctx.strokeRect(n * 130 + 100 - 50, 712, 100, 70);
+                if (list.length == sizes[n]) {
+                    ctx.fillStyle = "rgba(0,0,0,0.15)";
+                    ctx.fillRect(n * 130 + 100 - 50, 712, 100, 70);
+                }
+            }
+
+            var speeds = [1, 2, 5, 10, 50];
+            var names = ["Fastest", "Fast", "Medium", "Slow", "Slowest"];
+            for (var n = 0; n < speeds.length; n++) {
+                ctx.fillStyle = "black";
+                ctx.fillText(names[n], n * 180 + 140, 850);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                if (Mouse.clickInBox(n * 180 + 140 - 80, 812, 160, 70)) {
+                    tickRate = speeds[n];
+                }
+                ctx.strokeRect(n * 180 + 140 - 80, 812, 160, 70);
+                if (tickRate == speeds[n]) {
+                    ctx.fillStyle = "rgba(0,0,0,0.15)";
+                    ctx.fillRect(n * 180 + 140 - 80, 812, 160, 70);
+                }
+            }
+
+            var actions = ["Reverse", "Shuffle"];
+            for (var n = 0; n < actions.length; n++) {
+                ctx.fillStyle = "black";
+                ctx.fillText(actions[n], n * 180 + 140, 950);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                if (Mouse.clickInBox(n * 180 + 140 - 80, 912, 160, 70)) {
+                    if (actions[n] == "Reverse") {
+                        list = list.reverse();
+                        if(sorting) initSort();
+                    } else if (actions[n] == "Shuffle") {
+                        shuffleList();
+                        if(sorting) initSort();
+                    }
+                    reading = false;
+                    elementsRead = [];
+                    oldList = list;
+                }
+                ctx.strokeRect(n * 180 + 140 - 80, 912, 160, 70);
+            }
+        }
+
+        function drawList() {
+            var margin = 0;
+            var step = 1000 / oldList.length;
+            var height = 300 / (oldList.length + 1);
+            for (var n = 0; n < oldList.length; n++) {
+                ctx.fillStyle = `hsl(${oldList[n] / oldList.length * 360},15%,50%)`;
+                if (elementsRead[n]) ctx.fillStyle = "red";
+                ctx.fillRect(n * step + margin, 0, step - margin * 2, height * (oldList[n] + 1));
+                if (step < 4) continue;
+                ctx.strokeStyle = "rgba(0,0,0,0.4)";
+                ctx.lineWidth = 1;
+                if (!elementsRead[n]) ctx.strokeRect(n * step + margin + 1, 1, step - margin * 2 - 2, height * (oldList[n] + 1) - 2);
+            }
+        }
+
+        function initSort() {
+            sortingTime = 0;
+            if (sortingAlgorithm == "bubble sort") initBubbleSort();
+            if (sortingAlgorithm == "insertion sort") initInsertionSort();
+            if (sortingAlgorithm == "merge sort") initMergeSort();
+            if (sortingAlgorithm == "quick sort") initQuickSort();
+        }
+
+        function tickRead() {
+            lastNotePlay++;
+            elementsRead = [];
+            readElement(sortData.index);
+            sortData.index++;
+        }
+
+        function tickSort() {
+            oldList = structuredClone(list);
+            elementsRead = [];
+            sortingTime++;
+            var end = false;
+            if (sortingAlgorithm == "bubble sort") end = tickBubbleSort();
+            if (sortingAlgorithm == "insertion sort") end = tickInsertionSort();
+            if (sortingAlgorithm == "merge sort") end = tickMergeSort();
+            if (sortingAlgorithm == "quick sort") end = tickQuickSort();
+            if (end) {
+                oldList = list;
+                sorting = false;
+                sortData.index = 0;
+                reading = true;
+            }
+        }
+
+        function readElement(i) {
+            if (i < 0 || i >= list.length) return;
+            elementsRead[i] = true;
+            if (lastNotePlay >= noteSpacing + Math.floor(Math.random() * 2)) {
+                lastNotePlay = 0;
+                playNote(150 ** (1 + (list[i] / list.length) ** 2 * 0.5), 0.02);
+            }
+            return list[i];
+        }
+
+        function swapElements(i1, i2) {
+            if (i1 < 0 || i2 < 0 || i1 >= list.length || i2 >= list.length) return;
+            [list[i1], list[i2]] = [list[i2], list[i1]];
+        }
+
+        function changePlace(i1, i2) {
+            var element = list.splice(i1, 1)[0];
+            list.splice(i2, 0, element);
+        }
+
+        var list = [];
+        var oldList = [];
+        var elementsRead = [];
+        var sortData = {};
+        var sortingTime = 0;
+        var sorting = false;
+        var reading = false;
+        var lastNotePlay = Infinity;
+        var noteSpacing = 2;
+
+        function generateList(size) {
+            list = [];
+            for (var n = 0; n < size; n++) {
+                list.push(n);
+            }
+        }
+
+        function shuffleList() {
+            var newList = [];
+            while (list.length > 0) {
+                var index = Math.floor(Math.random() * list.length);
+                newList.push(list.splice(index, 1)[0]);
+            }
+            list = newList;
+        }
+
+        function initBubbleSort() {
+            sortData.index = 0;
+            sortData.iteration = 0;
+            sortData.swapped = false;
+        }
+
+        function tickBubbleSort() {
+            var o1 = readElement(sortData.index);
+            var o2 = readElement(sortData.index + 1);
+            if (o2 < o1) {
+                swapElements(sortData.index, sortData.index + 1);
+                sortData.swapped = true;
+            }
+            sortData.index++;
+            if (sortData.index === list.length - 1 - sortData.iteration) {
+                sortData.index = 0;
+                sortData.iteration++;
+                if (!sortData.swapped) {
+                    return true;
+                }
+                sortData.swapped = false;
+            }
+            return false;
+        }
+
+        function initInsertionSort() {
+            sortData.iteration = 0;
+            sortData.index = 0;
+        }
+
+        function tickInsertionSort() {
+            sortData.index--;
+            if (sortData.index === -1) {
+                changePlace(sortData.iteration, 0);
+                sortData.iteration++;
+                sortData.index = sortData.iteration;
+            } else {
+                var o1 = readElement(sortData.iteration);
+                var o2 = readElement(sortData.index);
+                if (o1 > o2) {
+                    changePlace(sortData.iteration, sortData.index + 1);
+                    sortData.iteration++;
+                    sortData.index = sortData.iteration;
+                }
+            }
+            if (sortData.iteration == list.length) return true;
+            return false;
+        }
+
+        function initMergeSort() {
+            var maxLevel = 0;
+            sortData.subLists = [{ level: 0, id: 0, i1: 0, i2: list.length - 1, base: true, parent: -1, length: list.length - 1, children: [] }];
+            while (sortData.subLists.some(e => e.i2 - e.i1 > 0 && e.base)) {
+                var o = sortData.subLists.find(e => e.i2 - e.i1 > 0 && e.base);
+                o.base = false;
+                var length = o.i2 - o.i1;
+                var left = {};
+                left.level = o.level + 1;
+                left.id = sortData.subLists.length;
+                left.i1 = o.i1;
+                left.i2 = Math.floor(length / 2) + o.i1;
+                left.length = left.i2 - left.i1;
+                left.parent = o.id;
+                left.base = true;
+                left.children = [];
+                o.children.push(left.id);
+                sortData.subLists.push(left);
+                var right = {};
+                right.level = o.level + 1;
+                right.id = sortData.subLists.length;
+                right.i1 = Math.floor(length / 2) + o.i1 + 1;
+                right.i2 = o.i2;
+                right.length = right.i2 - right.i1;
+                right.parent = o.id;
+                right.base = true;
+                right.children = [];
+                o.children.push(right.id);
+                sortData.subLists.push(right);
+                maxLevel = Math.max(maxLevel, o.level + 1);
+            }
+            sortData.level = maxLevel - 1;
+            sortData.subListIndex = 0;
+            sortData.listAddCount = 0;
+        }
+
+        function tickMergeSort() {
+            var currentSubLists = sortData.subLists.filter(e => e.level == sortData.level);
+            var subList = currentSubLists[sortData.subListIndex];
+            while (subList.children.length == 0) {
+                sortData.subListIndex++;
+                sortData.listAddCount = 0;
+                if (sortData.subListIndex == currentSubLists.length) {
+                    sortData.subListIndex = 0;
+                    sortData.level--;
+                    if (sortData.level === -1) return true;
+                    currentSubLists = sortData.subLists.filter(e => e.level == sortData.level);
+                }
+                subList = currentSubLists[sortData.subListIndex];
+            }
+            var left = sortData.subLists[subList.children[0]];
+            var right = sortData.subLists[subList.children[1]];
+            var o1 = readElement(left.i1);
+            var o2 = readElement(right.i1);
+            if (o1 < o2) {
+                changePlace(left.i1, subList.i1 + sortData.listAddCount);
+                left.i1++;
+                left.length--;
+                sortData.listAddCount++;
+                if (left.length == -1) {
+                    while (right.length > -1) {
+                        changePlace(right.i1, subList.i1 + sortData.listAddCount);
+                        right.i1++;
+                        right.length--;
+                        sortData.listAddCount++;
+                    }
+                }
+            } else if (o2 < o1) {
+                changePlace(right.i1, subList.i1 + sortData.listAddCount);
+                right.i1++;
+                right.length--;
+                left.i1++;
+                left.i2++;
+                sortData.listAddCount++;
+                if (right.length == -1) {
+                    while (left.length > -1) {
+                        changePlace(left.i1, subList.i1 + sortData.listAddCount);
+                        left.i1++;
+                        left.length--;
+                        sortData.listAddCount++;
+                    }
+                }
+            }
+            if (left.length == -1 && right.length == -1) {
+                sortData.subListIndex++;
+                sortData.listAddCount = 0;
+                if (sortData.subListIndex == currentSubLists.length) {
+                    sortData.subListIndex = 0;
+                    sortData.level--;
+                    if (sortData.level === -1) return true;
+                }
+            }
+            return false;
+        }
+
+        function initQuickSort() {
+            sortData.pivot = Math.floor(list.length / 2);
+            sortData.subLists = [{ i1: 0, i2: list.length - 1, addedToRight: 0 }];
+            sortData.subListIndex = 0;
+            if (list.length > 20) {
+                sortData.findPivot = true;
+                sortData.findPivotSamples = [];
+            }
+            sortData.index = 0;
+        }
+
+        function tickQuickSort() {
+            var subList = sortData.subLists[sortData.subListIndex];
+            if (sortData.findPivot) {
+                var index = subList.i1 + Math.floor(Math.random() * (subList.i2 - subList.i1));
+                while (sortData.findPivotSamples.some(e => e.index === index)) {
+                    index = subList.i1 + Math.floor(Math.random() * (subList.i2 - subList.i1));
+                }
+                var o1 = readElement(index);
+                sortData.findPivotSamples.push({ value: o1, index: index });
+                var index = subList.i1 + Math.floor(Math.random() * (subList.i2 - subList.i1));
+                while (sortData.findPivotSamples.some(e => e.index === index)) {
+                    index = subList.i1 + Math.floor(Math.random() * (subList.i2 - subList.i1));
+                }
+                var o2 = readElement(index);
+                sortData.findPivotSamples.push({ value: o2, index: index });
+                if (sortData.findPivotSamples.length == 4) {
+                    var max = Math.max(...sortData.findPivotSamples.map(e => e.value));
+                    var min = Math.min(...sortData.findPivotSamples.map(e => e.value));
+                    sortData.findPivotSamples = sortData.findPivotSamples.filter(function (e) {
+                        if (e.value === max) return false;
+                        if (e.value === min) return false;
+                        return true;
+                    });
+                    if (sortData.findPivotSamples.length == 0) {
+                        sortData.pivot = subList.i1;
+                    } else {
+                        sortData.pivot = sortData.findPivotSamples[0].index;
+                    }
+                    sortData.findPivot = false;
+                }
+                return false;
+            }
+            if (sortData.index == sortData.pivot) {
+                sortData.index++;
+                sortData.index += subList.addedToRight;
+            }
+            var o1 = readElement(sortData.index);
+            var o2 = readElement(sortData.pivot);
+            if (o1 < o2) {
+                if (sortData.index > sortData.pivot) {
+                    changePlace(sortData.index, sortData.pivot);
+                    sortData.pivot++;
+                }
+            } else {
+                if (sortData.index < sortData.pivot) {
+                    subList.addedToRight++;
+                    changePlace(sortData.index, sortData.pivot);
+                    sortData.pivot--;
+                    sortData.index--;
+                }
+            }
+            if (sortData.index >= subList.i2) {
+                subList.used = true;
+                subList.pivot = sortData.pivot;
+                var next = sortData.subLists.findIndex(e => !e.used);
+                while (next === -1) {
+                    if (!sortData.subLists.length) return true;
+                    var toBreak = sortData.subLists.shift();
+                    while (toBreak.i2 - toBreak.i1 < 2) {
+                        if (!sortData.subLists.length) return true;
+                        toBreak = sortData.subLists.shift();
+                    }
+                    var left = { i1: toBreak.i1, i2: toBreak.pivot - 1, addedToRight: 0 };
+                    var right = { i1: toBreak.pivot + 1, i2: toBreak.i2, addedToRight: 0 };
+                    var add = [];
+                    if (toBreak.i1 < toBreak.pivot && left.i2 - left.i1 > 0) add.push(left);
+                    if (toBreak.i2 > toBreak.pivot && right.i2 - right.i1 > 0) add.push(right);
+                    sortData.subLists.push(...add);
+                    next = sortData.subLists.findIndex(e => !e.used);
+                }
+                sortData.subListIndex = next;
+                subList = sortData.subLists[sortData.subListIndex];
+                sortData.index = subList.i1;
+                if (subList.i2 - subList.i1 > 20) {
+                    sortData.findPivot = true;
+                    sortData.findPivotSamples = [];
+                } else {
+                    sortData.pivot = subList.i1 + Math.floor((subList.i2 - subList.i1) / 2);
+                }
+            } else {
+                sortData.index++;
+            }
+        }
+
+        var sortingAlgorithm = "bubble sort";
+        var tickRate = 2;
+        var t = 0;
+        generateList(100);
+        shuffleList();
+        initSort();
+        console.log(structuredClone(list));
+        sorting = true;
+    </script>
+</body>
+
+</html>

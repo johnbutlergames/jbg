@@ -1,0 +1,549 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans" rel="stylesheet">
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Unscramble";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=="menu") {
+                    menu.update();
+                } else if(page=="game") {
+                    game.tick();
+                }
+            }
+
+            function f(s) {
+                ctx.font = s+"px Balsamiq Sans"
+            }
+            function randomize(arr) {
+                var result = [];
+                while(arr.length>0) {
+                    var i = Math.floor(Math.random()*arr.length);
+                    result.push(arr[i]);
+                    arr.splice(i,1);
+                }
+                return result;
+            }
+            function random(arr) {
+                return arr[Math.floor(Math.random()*arr.length)];
+            }
+            function resolveCollision(c1,c2,e) {
+                var dist = distTo(c1.x,c1.y,c2.x,c2.y);
+                var dx = c2.x-c1.x;
+                var dy = c2.y-c1.y;
+                var nx = dx/dist;
+                var ny = dy/dist;
+                var s = c1.r+c2.r-dist;
+                var k = -2 * ((c2.xmove - c1.xmove) * nx + (c2.ymove - c1.ymove) * ny) / (1/c1.mass + 1/c2.mass);
+                c1.xmove -= k * nx / c1.mass*e;
+                c1.ymove -= k * ny / c1.mass*e;
+                c2.xmove += k * nx / c2.mass*e;
+                c2.ymove += k * ny / c2.mass*e;
+                var xmove = nx*s;
+                var ymove = ny*s;
+                c1.x -= xmove * (1-(c1.mass)/(c1.mass+c2.mass));
+                c1.y -= ymove * (1-(c1.mass)/(c1.mass+c2.mass));
+                c2.x += xmove * (1-(c2.mass)/(c1.mass+c2.mass));
+                c2.y += ymove * (1-(c2.mass)/(c1.mass+c2.mass));
+            }
+            function sameLetters(s1,s2) {
+                s1 = s1.split('');
+                s2 = s2.split('');
+                while(s1.length>0) {
+                    if(s2.indexOf(s1[0])===-1) {
+                        return false;
+                    } else {
+                        s2.splice(s2.indexOf(s1[0]),1);
+                    }
+                    s1.shift();
+                }
+                if(s2.length>0) {
+                    return false;
+                }
+                return true;
+            }
+
+            var menu = {
+                animation: 0,
+                update: function() {
+                    this.letters.update();
+                    if(this.animation) {
+                        this.animation++;
+                        this.animation = Math.min(this.animation,100);
+                        ctx.globalAlpha = this.animation/100;
+
+                        ctx.fillStyle = 'black';
+                        f(50);
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText("By John Butler",500,950);
+                        //credits
+
+                        ctx.fillText("Highscore: "+highscore,500,800);
+                        //highscore
+
+                        ctx.beginPath();
+                        ctx.lineWidth = 10;
+                        ctx.strokeStyle = 'black';
+                        ctx.roundRect(380,400,240,120,30);
+                        ctx.stroke();
+                        ctx.fillText("Play",500,460);
+                        if(Mouse.inBox(380,400,240,120)) {
+                            ctx.fillStyle = "rgba(0,0,0,0.2)";
+                            ctx.beginPath();
+                            ctx.roundRect(380,400,240,120,30);
+                            ctx.fill();
+                            if(Mouse.click) {
+                                page = "game";
+                            }
+                        }
+                        //play button
+
+                        ctx.globalAlpha = 1;
+                    }
+                },
+                letters: {
+                    timeToUnscramble: 0,
+                    objects: [],
+                    reset: function() {
+                        this.objects = [];
+                        var text = "UNSCRAMBLE";
+                        var n = 0;
+                        while(n < text.length) {
+                            var letter = {};
+                            letter.x = Math.random()*930+35;
+                            letter.y = Math.random()*100-200;
+                            letter.l = text[n];
+                            letter.a = Math.random()*360;
+                            letter.xmove = Math.random()*20-10;
+                            letter.ymove = Math.random()*20;
+                            letter.turn = Math.random()*100-50;
+                            letter.mass = 1;
+                            letter.r = 40;
+                            this.objects.push(letter);
+                            n++;
+                        }
+                        this.timeToScramble = 300;
+                    },
+                    update: function() {
+                        this.timeToScramble--;
+                        if(this.timeToScramble<=0) {
+                            this.timeToScramble = 0;
+                            if(menu.animation==0) {
+                                menu.animation = 1;
+                            }
+                        }
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        f(100);
+                        var titleWidth = ctx.measureText("UNSCRAMBLE").width;
+                        var x = 0;
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            x += ctx.measureText(o.l).width/2;
+                            if(this.timeToScramble<=(10-n)*10) {
+                                o.a += turn(o.a,0)/50;
+                                var target = {};
+                                target.x = x+500-titleWidth/2;
+                                target.y = 150;
+                                var dist = distTo(o.x,o.y,target.x,target.y);
+                                var percent = Math.max(1000-dist,100)/20000;
+                                o.x = o.x*(1-percent)+target.x*percent;
+                                o.y = o.y*(1-percent)+target.y*percent;
+                            } else {
+                                o.x += o.xmove;
+                                o.y += o.ymove;
+                                o.a += o.turn;
+                                o.ymove += 0.2;
+                                o.xmove *= 0.995;
+                                o.ymove *= 0.995;
+                                if(o.x<35) {
+                                    o.xmove *= -0.8;
+                                    o.x = 35;
+                                    o.turn = Math.random()*10-5;
+                                }
+                                if(o.x>965) {
+                                    o.xmove *= -0.8;
+                                    o.x = 965;
+                                    o.turn = Math.random()*10-5;
+                                }
+                                if(o.y>965) {
+                                    o.ymove *= -0.8;
+                                    o.y = 965;
+                                    o.turn = Math.random()*10-5;
+                                }
+                                for(var n2=n+1;n2<this.objects.length;n2++) {
+                                    var o2 = this.objects[n2];
+                                    if(distTo(o.x,o.y,o2.x,o2.y)>80) continue;
+                                    resolveCollision(o,o2,1);
+                                    o.turn = Math.random()*10-5;
+                                    o2.turn = Math.random()*10-5;
+                                }
+                            }
+                            //update letter
+
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.rotate(o.a*Math.PI/180);
+                            ctx.fillText(o.l,0,0);
+                            ctx.restore();
+                            //draw letter
+
+                            x += ctx.measureText(o.l).width/2;
+                        }
+                    }
+                }
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+
+                    if(word.endsWith("JOHNBUTLERGAMES")) {
+                        word = '';
+                        for(var o of this.letters.objects) {
+                            o.l = 'j';
+                        }
+                    }
+                },
+                update: function() {
+                    this.letters.update();
+
+                    if(this.started) {
+                        this.wrongWord-=1;
+                        this.wrongWord = Math.max(Math.min(this.wrongWord,50),0);
+                        var correctWord = this.wordsAccepted.indexOf(this.letters.wordTyped)!=-1;
+                        if(correctWord&&this.correctWordAnimation==0) {
+                            this.score++;
+                            this.correctWordAnimation = 1;
+                        }
+                        if(!correctWord&&this.letters.wordTyped.length==this.currentWord.length) {
+                            this.wrongWord += 2;
+                        }
+                        if(this.time<0&&!this.loseAnimation) {
+                            this.loseAnimation = 1;
+                        }
+                        if(this.loseAnimation>0) {
+                            this.loseAnimation++;
+                        } else {
+                            if(this.correctWordAnimation==0) {
+                                this.time--;
+                            } else {
+                                this.correctWordAnimation++;
+                                if(this.correctWordAnimation==100) {
+                                    this.newWord();
+                                }
+                            }
+                        }
+                    }
+                },
+                draw: function() {
+                    if(this.loseAnimation>0) {
+                        ctx.globalAlpha = Math.min(this.loseAnimation,50)/200;
+                        ctx.fillStyle = "rgb(255,0,0)";
+                        ctx.fillRect(0,0,1000,1000);
+                        ctx.globalAlpha = 1;
+                    } else {
+                        if(this.correctWordAnimation>0) {
+                            ctx.globalAlpha = Math.min(this.correctWordAnimation,50)/200;
+                            ctx.fillStyle = "rgb(0,255,0)";
+                            ctx.fillRect(0,0,1000,1000);
+                            ctx.globalAlpha = 1;
+                        }
+                        if(this.wrongWord>0) {
+                            ctx.globalAlpha = Math.min(this.wrongWord,50)/200;
+                            ctx.fillStyle = "rgb(255,0,0)";
+                            ctx.fillRect(0,0,1000,1000);
+                            ctx.globalAlpha = ctx.globalAlpha*4;
+                            ctx.fillStyle = "black";
+                            f(70);
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.fillText("Backspace!",500,500);
+                            ctx.globalAlpha = 1;
+                        }
+                    }
+
+                    ctx.fillStyle = "black";
+                    f(70);
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Unscramble the Word:",500,150);
+                    if(!this.started) {
+                        f(50);
+                        ctx.fillText("Type or click a letter to start...",500,900);
+                    }
+
+                    this.letters.draw();
+
+                    ctx.fillStyle = 'rgb(0,255,0)';
+                    if(this.time<this.maxTime/2) {
+                        ctx.fillStyle = 'rgb(255,255,0)';
+                    }
+                    if(this.time<this.maxTime/5) {
+                        ctx.fillStyle = 'rgb(255,0,0)';
+                    }
+                    ctx.fillRect(0,0,this.time/this.maxTime*1000,50);
+
+                    f(50);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "right";
+                    ctx.fillText("Score: "+this.score,990,30);
+
+                    if(this.loseAnimation>=50) {
+                        if(this.loseAnimation==50) {
+                            highscore = Math.max(this.score,highscore);
+                            localStorage.setItem("unscramblehighscore",highscore);
+                        }
+                        var a = easeInOut(1-Math.min(this.loseAnimation-50,50)/50);
+                        ctx.save();
+                        ctx.translate(0,a*-1000);
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(0,0,1000,1000);
+                        ctx.fillStyle = "white";
+                        ctx.textAlign = "center";
+                        f(100);
+                        ctx.fillText("Time's Up!",500,200);
+                        f(70);
+                        ctx.fillText("Your Score: "+this.score,500,350);
+                        ctx.fillText("Highscore: "+highscore,500,450);
+                        ctx.fillText("Word Was: "+this.currentWord,500,550);
+                        ctx.strokeStyle = "white";
+                        ctx.lineWidth = 10;
+                        ctx.beginPath();
+                        ctx.roundRect(350,630,300,120,40);
+                        if(Mouse.inBox(350,630,300,120)) {
+                            ctx.fillStyle = "rgba(255,255,255,0.2)";
+                            ctx.fill();
+                            if(Mouse.click) {
+                                this.reset();
+                            }
+                        }
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.roundRect(350,830,300,120,40);
+                        if(Mouse.inBox(350,830,300,120)) {
+                            ctx.fillStyle = "rgba(255,255,255,0.2)";
+                            ctx.fill();
+                            if(Mouse.click) {
+                                page = "menu";
+                                this.reset();
+                            }
+                        }
+                        ctx.stroke();
+                        ctx.fillStyle = 'white';
+                        ctx.fillText("Retry",500,690);
+                        ctx.fillText("Quit",500,890);
+                        ctx.restore();
+                    }
+                },
+                letters: {
+                    spin: 0,
+                    objects: [],
+                    wordTyped: "",
+                    circleSize: 0,
+                    circleSizeAnimation: 0,
+                    typedSize: 0,
+                    typedSizeAnimation: 0,
+                    update: function() {
+                        if(!game.correctWordAnimation&&!game.loseAnimation) {
+                            for(var n=0;n<this.objects.length;n++) {
+                                var o = this.objects[n];
+                                if(Keys.down[8]) {
+                                    o.typed = false;
+                                    this.wordTyped = "";
+                                }
+                                if(Keys.down[o.l.charCodeAt(0)]&&!o.typed) {
+                                    this.wordTyped += o.l;
+                                    o.typed = true;
+                                    this.objects.push(o);
+                                    this.objects.splice(n,1);
+                                    game.started = true;
+                                    break;
+                                }
+                                var distToMouse = distTo(Mouse.x,Mouse.y,o.x,o.y);
+                                if(distToMouse<75&&Mouse.click&&!o.typed) {
+                                    this.wordTyped += o.l;
+                                    o.typed = true;
+                                    this.objects.push(o);
+                                    this.objects.splice(n,1);
+                                    game.started = true;
+                                    break;
+                                }
+                            }
+                        }
+                        var remain = (this.objects.length-this.wordTyped.length);
+                        var radius = remain*100/Math.PI;
+                        if(remain==2) {
+                            radius = 70;
+                        }
+                        if(remain==1) {
+                            radius = 0;
+                        }
+                        if(remain==0) {
+                            radius = -100;
+                        }
+                        this.circleSize = radius+100;
+                        this.circleSizeAnimation = this.circleSizeAnimation*0.95+this.circleSize*0.05;
+                        this.typedSize = this.wordTyped.length*150;
+                        this.typedSizeAnimation = this.typedSizeAnimation*0.9+this.typedSize*0.1;
+                        if(!game.loseAnimation) {
+                            this.spin += 60/Math.max(radius,1);
+                        }
+                        var positions = [];
+                        for(var n=0;n<remain;n++) {
+                            var angle = 360/remain*n;
+                            var r = rotate(500,600,500,600-radius,angle+this.spin);
+                            positions.push({x:r.x,y:r.y});
+                        }
+                        var typed = 0;
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            if(!o.typed) {
+                                o.target.x = positions[0].x;
+                                o.target.y = positions[0].y;
+                                positions.shift();
+                            } else {
+                                o.target.x = 500-(this.wordTyped.length-1)*75+150*typed;
+                                o.target.y = 300;
+                                typed++;
+                            }
+                        }
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            o.x = o.x*0.93+o.target.x*0.07;
+                            o.y = o.y*0.93+o.target.y*0.07;
+                        }
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "rgba(0,0,0,0.1)";
+                        ctx.beginPath();
+                        ctx.arc(500,600,this.circleSizeAnimation,0,2*Math.PI);
+                        ctx.fill();
+                        if(this.typedSizeAnimation>3) {
+                            ctx.globalAlpha = Math.min((this.typedSizeAnimation-3)/20,1);
+                            ctx.strokeStyle = "black";
+                            ctx.lineWidth = 10;
+                            ctx.lineCap = "round";
+                            ctx.beginPath();
+                            ctx.moveTo(500-this.typedSizeAnimation/2,210);
+                            ctx.lineTo(500+this.typedSizeAnimation/2,210);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(500-this.typedSizeAnimation/2,370);
+                            ctx.lineTo(500+this.typedSizeAnimation/2,370);
+                            ctx.stroke();
+                            ctx.globalAlpha = 1;
+                        }
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            if(o.l=="j") {
+                                ctx.fillStyle = "blue";
+                                ctx.beginPath();
+                                ctx.arc(o.x,o.y-10,60,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.fillStyle = "black";
+                                ctx.beginPath();
+                                ctx.arc(o.x-20,o.y-20,12,0,2*Math.PI);
+                                ctx.arc(o.x+20,o.y-20,12,0,2*Math.PI);
+                                ctx.fill();
+                            } else {
+                                ctx.lineWidth = 10;
+                                ctx.strokeStyle = "black";
+                                ctx.beginPath();
+                                ctx.arc(o.x,o.y-10,60,0,2*Math.PI);
+                                var distToMouse = distTo(Mouse.x,Mouse.y,o.x,o.y);
+                                if(distToMouse<75&&!o.typed) {
+                                    ctx.fillStyle = "rgba(0,0,0,0.2)";
+                                    ctx.fill();
+                                }
+                                ctx.stroke();
+                                f(100);
+                                ctx.fillStyle = "black";
+                                ctx.fillText(o.l,o.x,o.y);
+                            }
+                        }
+                    }
+                },
+                loseAnimation: 0,
+                time: 0,
+                maxTime: 0,
+                currentWord: "",
+                wordsAccepted: [],
+                correctWordAnimation: 0,
+                wrongWord: 0,
+                newWord: function() {
+                    this.wordsAccepted = [];
+                    var wordList;
+                    if(Math.random()<0.33&&this.score>20) {
+                        wordList = words.five;
+                    } else if(Math.random()<0.5&&this.score>10) {
+                        wordList = words.four;
+                    } else {
+                        wordList = words.three;
+                    }
+                    this.currentWord = random(wordList).toUpperCase();
+                    var n = 0;
+                    while(n < wordList.length) {
+                        var w = wordList[n];
+                        if(sameLetters(w,this.currentWord)) {
+                            this.wordsAccepted.push(w);
+                        }
+                        n++;
+                    }
+                    this.letters.objects = [];
+                    for(var n=0;n<this.currentWord.length;n++) {
+                        var o = {};
+                        o.l = this.currentWord[n];
+                        o.x = 500;
+                        o.y = 600;
+                        o.target = {x:0,y:0};
+                        o.typed = false;
+                        this.letters.objects.push(o);
+                    }
+                    this.letters.objects = randomize(this.letters.objects);
+                    this.letters.wordTyped = "";
+                    this.maxTime *= 0.99;
+                    this.time = this.maxTime;
+                    this.correctWordAnimation = 0;
+                },
+                reset: function() {
+                    this.maxTime = 1000;
+                    this.score = 0;
+                    this.loseAnimation = 0;
+                    this.correctWordAnimation = 0;
+                    this.wrongWord = 0;
+                    this.started = false;
+                    this.newWord();
+                }
+            }
+
+            var page = "menu";
+            var highscore = 0;
+            if(localStorage.getItem("unscramblehighscore")!==null) {
+                highscore = localStorage.getItem("unscramblehighscore");
+            }
+            var words = {
+                three: ["ACE","ACT","ADD","AGE","AID","AIM","AIR","ALL","ANT","ANY","APE","APP","ARC","ARE","ARM","ART","ASH","ASK","ATE","AXE","BAD","BAG","BAN","BAR","BAT","BAY","BED","BEE","BEG","BET","BID","BIG","BIN","BIT","BOG","BOW","BOX","BOY","BUG","BUS","BUY","CAB","CAN","CAP","CAR","CAT","COD","COP","COW","CRY","CUB","CUE","CUP","CUT","DAD","DAY","DEN","DEW","DIE","DIG","DIM","DIP","DOG","DOT","DRY","DUE","DUG","DYE","EAR","EAT","EGG","ELF","END","EYE","FAN","FAR","FAT","FED","FEE","FEW","FIG","FIN","FIT","FIX","FLY","FOG","FOX","FRY","FUN","FUR","GAS","GEL","GEM","GET","GUM","GUN","GUT","GUY","GYM","HAD","HAM","HAS","HAT","HAY","HEN","HID","HIP","HIT","HOG","HOP","HOT","HUG","HUM","HUT","ICE","ICY","INK","IVY","JAM","JAR","JAW","JET","JOB","JOG","JOY","JUG","KEY","KID","KIT","LAB","LAG","LAP","LAW","LAY","LED","LEG","LET","LID","LIE","LIP","LIT","LOG","LOW","MAD","MAN","MAP","MAT","MAX","MEN","MID","MIX","MOM","MOP","MUD","MUG","NAB","NAP","NET","NEW","NIP","NOD","NOT","NOW","NUT","OAK","ODD","OFF","OIL","OLD","ONE","ORB","ORE","OUT","OWE","OWL","OWN","PAD","PAN","PAT","PAW","PAY","PEA","PEG","PEN","PET","PIE","PIG","PIN","PIT","POD","POP","POT","PUP","PUT","RAG","RAM","RAN","RAP","RAT","RAW","RAY","RED","RIB","RID","RIM","RIP","ROB","ROD","ROT","ROW","RUB","RUG","RUN","SAD","SAG","SAP","SAT","SAW","SAY","SEA","SEE","SET","SEW","SHY","SIP","SIT","SIX","SKI","SKY","SLY","SON","SOW","SOY","SPY","SUE","SUM","SUN","TAB","TAD","TAG","TAN","TAP","TAR","TAX","TEA","TEN","TIE","TIN","TIP","TOE","TON","TOO","TOP","TOW","TOY","TRY","TUB","TUG","TWO","USE","VAN","VAT","VET","VOW","WAR","WAS","WAX","WAY","WEB","WED","WET","WIG","WIN","WON","YET","ZIP","ZOO"],
+                four: ["ABLE","ACES","ACHE","ACID","ACNE","ACRE","ACTS","ADDS","AFAR","AFRO","AGED","AGES","AHED","AIDE","AIDS","AILS","AIMS","AJAR","ALFA","ALOE","ALSO","ALTO","AMID","AMMO","ANEW","ANTS","APES","APEX","APPS","AQUA","ARCH","ARCS","AREA","ARID","ARMS","ARMY","ARTS","ASKS","ATOM","ATOP","AUNT","AUTO","AWAY","AWRY","AXEL","AXES","AXIS","BABY","BACK","BADE","BAGS","BAIL","BAIT","BAKE","BALD","BALE","BALL","BAND","BANE","BANG","BANK","BANS","BARE","BARF","BARK","BARN","BARS","BASE","BASK","BASS","BATH","BATS","BAWL","BEAD","BEAK","BEAM","BEAN","BEAR","BEAT","BEDS","BEEF","BEEN","BEEP","BEES","BEET","BEGS","BELL","BELT","BEND","BENT","BEST","BETA","BETS","BIAS","BIKE","BILE","BILL","BIND","BINS","BIRD","BITE","BITS","BLED","BLEW","BLOB","BLOG","BLOW","BLUR","BOAR","BOAT","BODY","BOGS","BOIL","BOLD","BOLT","BOMB","BOND","BONE","BONK","BONY","BOOK","BOOM","BOOT","BORN","BOSS","BOTH","BOTS","BOWL","BOWS","BOXY","BOYS","BRAG","BRED","BREW","BRIM","BROW","BUDS","BUGS","BULB","BULK","BULL","BUMP","BUNK","BUOY","BURN","BURP","BURS","BURY","BUSH","BUSY","BYTE","CABS","CAFE","CAGE","CAIN","CAKE","CALF","CALL","CALM","CAME","CAMO","CAMP","CANE","CANT","CAPE","CAPS","CARB","CARD","CARE","CARS","CART","CASE","CASH","CAST","CATS","CAVE","CELL","CHAR","CHAT","CHEF","CHEW","CHIN","CHIP","CHOP","CHOW","CITY","CLAM","CLAN","CLAP","CLAW","CLAY","CLIP","CLOG","CLOP","CLOT","CLUB","CLUE","COAL","COAT","COCO","CODE","COIL","COIN","COLD","COMA","COMB","COME","CONE","COOK","COOL","COOP","COPE","COPS","COPY","CORD","CORE","CORK","CORN","COST","COSY","COTS","COUP","COVE","COWS","COZY","CRAB","CRAM","CREW","CRIB","CROP","CROW","CRUD","CUBE","CUBS","CUED","CUES","CUFF","CULT","CUPS","CURB","CURE","CURL","CUTE","CUTS","CYAN","DADS","DAMP","DARK","DART","DASH","DATA","DATE","DAWN","DAYS","DAZE","DEAD","DEAF","DEAL","DEAR","DEBT","DECK","DEED","DEEM","DEEP","DEER","DEFY","DEMO","DENS","DENT","DENY","DESK","DEWY","DIAL","DICE","DIED","DIES","DIGS","DIME","DINE","DING","DINO","DIPS","DIRE","DIRT","DISC","DISH","DISK","DIVE","DOCK","DOES","DOGS","DOLL","DOME","DONE","DOOM","DOOR","DORM","DOSE","DOTS","DOVE","DOWN","DOZE","DRAG","DRAW","DREW","DRIP","DROP","DRUG","DRUM","DUAL","DUCK","DUCT","DUEL","DUES","DUET","DUKE","DULL","DUMB","DUMP","DUNE","DUNK","DUOS","DUSK","DUST","DUTY","DYED","DYES","EACH","EARN","EARS","EASE","EAST","EASY","EATS","EAVE","ECHO","EDGE","EDIT","EELS","EERY","EGGS","EGGY","ELKS","ELSE","EMIT","EMUS","ENDS","ENVY","EONS","EPIC","ETCH","EVEN","EVER","EVIL","EXAM","EXIT","EYES","FACE","FACT","FADE","FAIL","FAIR","FAKE","FALL","FAME","FANG","FANS","FARM","FART","FAST","FATE","FEAL","FEAR","FEAT","FEED","FEEL","FEES","FEET","FELL","FELT","FERN","FILE","FILL","FILM","FIND","FINE","FINS","FIRE","FIRM","FISH","FIST","FITS","FIVE","FIZZ","FLAB","FLAG","FLAP","FLAT","FLAW","FLEA","FLED","FLEE","FLEW","FLEX","FLIP","FLOP","FLOW","FOAL","FOAM","FOES","FOIL","FOLD","FOLK","FOND","FONT","FOOD","FOOL","FOOT","FORK","FORM","FORT","FOUL","FOUR","FOWL","FREE","FROG","FROM","FUEL","FULL","FUME","FUND","FURS","FURY","FUSE","FUSS","GAIN","GAIT","GALE","GAME","GANG","GAPE","GAPS","GASH","GASP","GATE","GAVE","GAWK","GAWP","GAZE","GEAR","GEMS","GENE","GERM","GETS","GIFT","GILL","GIRL","GIVE","GLAD","GLEE","GLOB","GLOW","GLUE","GLUM","GNAT","GNAW","GOAD","GOAL","GOAT","GOBS","GODS","GOES","GOLD","GOLF","GONE","GONG","GOOD","GOOP","GORE","GORY","GOWN","GRAB","GRAY","GREW","GREY","GRID","GRIM","GRIN","GRIP","GROW","GRUB","GULF","GULL","GULP","GUMS","GUNK","GUNS","GUSH","GUST","GUTS","GUYS","HACK","HAGS","HAIL","HAIR","HALF","HALL","HALO","HALT","HAMS","HAND","HANG","HARD","HARM","HARP","HATE","HATS","HAUL","HAVE","HAWK","HAYS","HAZE","HAZY","HEAD","HEAL","HEAP","HEAR","HEAT","HEEL","HEIR","HELD","HELM","HELP","HENS","HERB","HERD","HERE","HERO","HERS","HEWN","HIDE","HIGH","HIKE","HILL","HILT","HINT","HIPS","HIRE","HISS","HITS","HIVE","HOAX","HOGS","HOLD","HOLE","HOLY","HOME","HOOD","HOOF","HOOP","HOPE","HOPS","HORN","HOSE","HOST","HOUR","HOWL","HUES","HUGE","HUGS","HULK","HULL","HUMP","HUNG","HUNT","HURL","HURT","HUSH","HUSK","HUTS","HYMN","ICED","IDEA","IDLE","IDLY","IDOL","INFO","INTO","IONS","IRON","ISLE","ITCH","ITEM","JABS","JADE","JAIL","JAMB","JARS","JAWS","JEAN","JEEP","JEST","JOBS","JOGS","JOIN","JOKE","JOLT","JOYS","JUMP","JUNK","JURY","JUST","KALE","KELP","KEYS","KICK","KIDS","KILL","KILN","KILO","KILT","KIND","KING","KISS","KITE","KIWI","KNEE","KNEW","KNIT","KNOT","KNOW","LABS","LACE","LACK","LADY","LAGS","LAID","LAIR","LAKE","LAMB","LAME","LAMP","LAMS","LAND","LANE","LAPS","LAST","LATE","LAVA","LAWN","LAWS","LAZY","LEAD","LEAF","LEAK","LEAN","LEAP","LEGS","LENT","LESS","LETS","LIAR","LICE","LICK","LIDS","LIED","LIES","LIFE","LIFT","LIKE","LIMB","LIME","LINE","LINK","LINT","LION","LIPS","LIST","LIVE","LOAD","LOAF","LOAN","LOCK","LOGO","LOGS","LONE","LONG","LOOK","LOOP","LOOT","LORD","LOSE","LOSS","LOST","LOTS","LOUD","LOVE","LUCK","LUMP","LUNG","LURE","LURK","LUSH","LYCH","MACE","MADE","MAGE","MAID","MAIL","MAIM","MAKE","MALE","MALL","MANE","MANY","MAPS","MARK","MARS","MASH","MASK","MASS","MAST","MATE","MATH","MATS","MAUL","MAZE","MEAL","MEAN","MEAT","MEET","MELT","MENU","MEOW","MESH","MESS","MICE","MILD","MILE","MILK","MILL","MIME","MIND","MINE","MINI","MINT","MISS","MIST","MITT","MOAT","MOCK","MODE","MOLD","MOLE","MOMS","MONK","MOOD","MOON","MOPE","MOPS","MORE","MORN","MOSS","MOST","MOTH","MOVE","MOWN","MUCH","MUCK","MUGS","MULE","MULL","MUSH","MUSK","MUST","MUTE","MUTT","MYTH","NAIL","NAME","NAVY","NEAR","NEAT","NECK","NEED","NEON","NEST","NETS","NEWS","NEWT","NEXT","NINE","NODS","NONE","NOON","NORM","NOSE","NOSY","NOTE","NOUN","NUKE","NUMB","NUTS","OAKS","OARS","OATH","OATS","OBEY","OBOE","ODDS","ODOR","OGRE","OILS","OILY","OMEN","OMIT","ONCE","ONES","ONLY","ONTO","OOZE","OPAL","OPEN","ORAL","ORBS","ORCA","ORES","OURS","OVAL","OVEN","OVER","OWED","OWES","OWLS","OWNS","OXEN","PACE","PACK","PACT","PADS","PAGE","PAID","PAIL","PAIN","PAIR","PALE","PALM","PANE","PANS","PANT","PARK","PART","PASS","PAST","PATH","PATS","PAVE","PAWS","PAYS","PEAK","PEAR","PEAS","PECK","PEEL","PEER","PEGS","PELT","PENS","PEST","PETS","PICK","PIER","PIES","PIGS","PINK","PINS","PINT","PIPE","PITS","PLAN","PLAY","PLEA","PLED","PLOD","PLOP","PLOT","PLOW","PLOY","PLUG","PLUM","PLUS","PODS","POEM","POET","POKE","POKY","POLE","POLL","POND","POOL","POOR","PORK","PORT","POSE","POST","POTS","POUR","PRAY","PREY","PROP","PUFF","PULP","PUMP","PUSH","PUTS","QUAD","QUIT","QUIZ","RACE","RACK","RAFT","RAGE","RAGS","RAID","RAIL","RAIN","RAKE","RAMP","RAMS","RANG","RANK","RANT","RAPS","RARE","RASH","RASP","RATE","RATS","RAVE","RAYS","READ","REAL","REAP","REAR","REED","REEF","REEK","REEL","REST","RICE","RICH","RIDE","RILE","RIMS","RIND","RING","RINK","RIOT","RIPE","RIPS","RISE","RISK","ROAD","ROAM","ROAR","ROBE","ROBS","ROCK","RODE","RODS","ROLE","ROLL","ROOF","ROOK","ROOM","ROOT","ROPE","ROSE","ROSY","ROWS","RUBS","RUBY","RUDE","RUGS","RUIN","RULE","RUNE","RUNG","RUNS","RUSE","RUSH","RUST","SACK","SAFE","SAGE","SAGS","SAID","SAIL","SAKE","SALT","SAME","SAND","SANE","SANG","SANK","SAVE","SAWS","SAYS","SCAB","SCAM","SCAN","SCAR","SEAL","SEAT","SEED","SEEK","SEEM","SEEN","SEES","SELF","SELL","SEND","SENT","SEWN","SEWS","SHED","SHIP","SHOE","SHOP","SHOT","SHOW","SHUT","SICK","SIDE","SIFT","SIGH","SIGN","SILK","SILL","SINK","SINS","SIPS","SIZE","SKEW","SKIN","SKIP","SLAM","SLAP","SLAY","SLED","SLEW","SLID","SLIM","SLIP","SLIT","SLOB","SLOT","SLOW","SMIT","SNAP","SNOT","SNOW","SOAK","SOAP","SOAR","SOBS","SOCK","SODA","SOFT","SOIL","SOLD","SOME","SONG","SORT","SOUP","SOUR","SOWN","SPAM","SPAN","SPAT","SPEW","SPIN","SPIT","SPOT","SPUN","SPUR","STAB","STAG","STAR","STAY","STEM","STEP","STEW","STIR","STOP","STOW","STUB","STUD","STUN","SUCH","SUED","SUER","SUES","SUIT","SULK","SUMS","SUNG","SUNK","SUNS","SURF","SWAM","SWAN","SWAP","SWAT","SWIM","SYNC","TABS","TACK","TACO","TAGS","TAIL","TAKE","TALK","TALL","TAME","TANG","TANK","TAPE","TAPS","TARP","TART","TASK","TAXI","TEAL","TEAM","TEAR","TELL","TEND","TENS","TENT","TERM","TEST","TEXT","THAN","THAT","THAW","THEM","THEN","THEY","THIN","THIS","TICK","TIDE","TIDY","TIED","TIER","TIES","TILE","TILT","TIME","TINT","TINY","TIPS","TIRE","TOAD","TOES","TOIL","TOLD","TOMB","TONE","TONS","TOOK","TOOL","TORN","TOUR","TOWN","TOWS","TOYS","TRAM","TRAP","TRAY","TREE","TRIM","TRIO","TRIP","TROD","TROP","TRUE","TUBA","TUBE","TUBS","TUNA","TUNE","TURF","TURN","TUSK","TWIG","TWIN","TWOS","TYPE","UNDO","UNIT","UNTO","UPON","URGE","USED","USER","USES","VAIN","VASE","VAST","VATS","VEER","VEIL","VEIN","VENT","VERB","VERY","VEST","VETS","VIAL","VIBE","VICE","VIEW","VILE","VINE","VOID","VOTE","VOWS","WADE","WAFT","WAGE","WAIL","WAIT","WAKE","WALK","WALL","WAND","WANE","WANT","WARD","WARM","WARN","WARS","WART","WARY","WASH","WASP","WAVE","WAVY","WAXY","WAYS","WEAK","WEAR","WEBS","WEEK","WEEP","WELD","WELL","WELT","WENT","WEPT","WERE","WEST","WETS","WHAT","WHEN","WHIP","WHIR","WIDE","WIFE","WIGS","WILD","WILL","WINE","WING","WINK","WINS","WIPE","WIRE","WIRY","WISE","WISH","WITH","WOKE","WOLF","WOMB","WONK","WONT","WOOD","WOOL","WORD","WORE","WORK","WORM","WORN","WOVE","WRAP","YAKS","YAMS","YANK","YARD","YARN","YAWN","YEAR","YELL","YETI","YOGA","YOUR","ZAPS","ZERO","ZEST","ZINC","ZIPS","ZOOM"],
+                five: ["ABOVE","ABUSE","ACUTE","ADMIT","ADOPT","ADULT","AGENT","AGREE","ALIVE","ALLOW","ALONE","ALTER","ANGER","ANGRY","APPLE","APPLY","ARGUE","ARISE","AVOID","AWARD","AWARE","AWFUL","BASIC","BASIS","BEACH","BEGIN","BIRTH","BLACK","BLAME","BLIND","BLOCK","BLOOD","BOARD","BRAIN","BRAKE","BRAVE","BREAD","BREAK","BREAK","BRIEF","BRING","BROAD","BROTH","BROWN","BROWN","BUILD","BURST","BUYER","CARRY","CATCH","CAUSE","CAUSE","CHAIN","CHAIR","CHEAP","CHECK","CHEST","CHIEF","CHIEF","CHILD","CHINA","CIVIL","CLAIM","CLAIM","CLASS","CLEAN","CLEAN","CLEAR","CLEAR","CLIMB","CLOCK","CLOSE","CLOSE","COACH","COAST","COPES","COUNT","COURT","COVER","COVER","CRAZY","CREAM","CRIME","CROSS","CROSS","CROWD","CROWN","CYCLE","DAILY","DANCE","DANCE","DEATH","DEPTH","DIRTY","DOUBT","DOUBT","DRAFT","DRAMA","DREAM","DRESS","DRINK","DRINK","DRIVE","DRIVE","EARLY","EARTH","EMPTY","ENEMY","ENJOY","ENTER","ENTRY","EQUAL","ERROR","EVENT","EXACT","EXIST","EXTRA","FAINT","FAITH","FALSE","FAULT","FIELD","FIFTH","FIGHT","FIGHT","FINAL","FINAL","FIRST","FLOOR","FOCUS","FOCUS","FORCE","FORCE","FRAME","FRESH","FRONT","FRONT","FRUIT","FUNNY","GIANT","GLASS","GRAND","GRANT","GRASS","GREAT","GREEN","GREEN","GROSS","GROUP","GUESS","GUIDE","HAPPY","HARSH","HEART","HEAVY","HORSE","HOTEL","HOUSE","HUMAN","IDEAL","IMAGE","IMPLY","INDEX","INNER","INPUT","ISSUE","ISSUE","JAPAN","JOINT","JUDGE","JUDGE","KNIFE","LARGE","LAUGH","LAYER","LEARN","LEAVE","LEGAL","LEVEL","LEVEL","LIGHT","LIGHT","LIMIT","LIMIT","LOCAL","LOOSE","LUCKY","LUNCH","MAGIC","MAJOR","MAJOR","MARCH","MARRY","MATCH","MATCH","MATES","METAL","MINOR","MODEL","MONEY","MONTH","MORAL","MOTOR","MOUTH","MUSIC","NAKED","NASTY","NAVAL","NIGHT","NOISE","NORTH","NOVEL","NURSE","OCCUR","OFFER","OFFER","ORDER","ORDER","OTHER","OTHER","OUTER","OWNER","PANEL","PAPER","PARTY","PEACE","PHASE","PHONE","PHONE","PIECE","PILOT","PITCH","PLACE","PLACE","PLAIN","PLANE","PLANT","PLATE","POINT","POINT","POUND","POWER","PRESS","PRESS","PRICE","PRIDE","PRIME","PRIOR","PRIZE","PROOF","PROUD","PROVE","QUEEN","QUICK","QUIET","QUITE","RADIO","RAISE","RANGE","RAPID","RATIO","REACH","READY","REFER","RELAX","REPLY","RIGHT","RIGHT","RIVER","ROMAN","ROUGH","ROUND","ROUND","ROUTE","ROYAL","RUGBY","RURAL","SCALE","SCENE","SCOPE","SCORE","SENSE","SERVE","SHALL","SHAPE","SHARE","SHARE","SHARP","SHEEP","SHEER","SHEET","SHIFT","SHIFT","SHIRT","SHOCK","SHOOT","SHORT","SHOUT","SIGHT","SILLY","SIXTH","SKILL","SLEEP","SLEET","SMALL","SMART","SMILE","SMOKE","SOLID","SOLVE","SORRY","SOUND","SOUND","SOUTH","SPACE","SPARE","SPEAK","SPEED","SPEND","SPITE","SPLIT","SPORT","SQUAD","STAFF","STAGE","STAND","START","START","STATE","STATE","STEAM","STEEL","STEEP","STICK","STILL","STOCK","STONE","STORE","STUDY","STUDY","STUFF","STYLE","SUGAR","SUPER","SWEET","TABLE","TASTE","TEACH","TEAMS","THANK","THEME","THERE","THICK","THING","THINK","THIRD","THORN","THROW","TIGHT","TITLE","TOTAL","TOTAL","TOUCH","TOUCH","TOUGH","TOWER","TRACK","TRADE","TRAIN","TRAIN","TREAT","TREND","TRIAL","TRUST","TRUST","TRUTH","UNCLE","UNION","UNITY","UPPER","UPSET","URBAN","USUAL","VAGUE","VALID","VALUE","VERSE","VIDEO","VISIT","VISIT","VITAL","VOICE","VOICE","WASTE","WASTE","WATCH","WATCH","WATER","WHERE","WHICH","WHILE","WHITE","WHITE","WHOLE","WHOLE","WHOSE","WOMAN","WORLD","WORRY","WOULD","WRITE","WRONG","YOUNG","YOURS","YOUTH"]
+            }
+
+            menu.letters.reset();
+            game.reset();
+        </script>
+    </body>
+</html>

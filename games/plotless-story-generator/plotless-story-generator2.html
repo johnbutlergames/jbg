@@ -1,0 +1,70 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Plotless Story Generator</title>
+    </head>
+    <body style='background-color:white'>
+        <button onclick='generate()'>Click To Generate Story</button>
+        <p id='p'></p>
+        <script>
+            var starters = ['once upon a time','one day','one time','once','a long time ago'];
+            
+            var characterNouns = ['bird','dog','cat','child','boy','girl','snake','dragon'];
+            //random nouns for characters
+            
+            var names = {
+                boy: [],
+                girl: []
+            };
+            //names for boys and girls
+            
+            var objectNouns = [];
+            //random nouns for objects
+            
+            var pluralNouns = {child:'children'};
+            //plural nouns
+            
+            var biomes = ['city','forest','rainforest','ocean','village','cave','desert'];
+            var livesIn = {bird:['forest','rainforest','city','village']};
+            //biomes and where characters live
+            
+            function getBiome(noun) {
+                var possibilities;
+                if(livesIn[noun]!==undefined) {
+                    possibilities = livesIn[noun];
+                } else {
+                    possibilities = biomes;
+                }
+                return pick(possibilities);
+            }
+            //finds a biome that a character might live in
+            
+            function getPluralNoun(noun) {
+                if(pluralNouns[noun]!==undefined) {
+                    return pluralNouns[noun];
+                }
+                return noun+'s';
+            }
+            //finds the plural noun for a noun
+            
+            function generate() {
+                var story = '';
+                story = story + ' The End.';
+                document.getElementById('p').innerHTML = story;
+            }
+            //generates story
+            
+            function pick(a) {
+                return a[rnd(a.length)];
+            }
+            //picks a random item from an array
+            
+            function rnd(n) {
+                return Math.floor(Math.random()*n);
+            }
+            //gets a random number from 0 to 1
+            
+            function 
+        </script>
+    </body>
+</html>

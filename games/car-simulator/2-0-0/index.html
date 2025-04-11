@@ -1,0 +1,917 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Car Simulator';
+            var dimensions = {width:1000,height:1000};
+            var imgs = ["images/car.png"];
+            var audios = [];
+            var fps = 0;
+            var lastTime = new Date().getTime();
+
+            document.title = title;
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            canvas.oncontextmenu = function(event) {
+                event.preventDefault();
+                Mouse.right = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI);
+            }
+            function distToMove(dis,dir) {
+                return [dis*Math.sin(dir*Math.PI/180),-dis*Math.cos(dir*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function inside(point, polygon) {
+                let odd = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; i++) {
+                    if (((polygon[i].y > point.y) !== (polygon[j].y > point.y))
+                        && (point.x < ((polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x))) {
+                        odd = !odd;
+                    }
+                    j = i;
+
+                }
+                return odd;
+            }
+            function blocksColliding(b1,b2) {
+                return r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h);
+            }
+            function blocksCollidingEdge(b1,b2) {
+                return r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h);
+            }
+            function r(n) {
+                return Math.round(n*10000)/10000;
+            }
+            function generateMaze(data={}) {
+                if(!data.width) {
+                    data.width = 10;
+                }
+                if(!data.height) {
+                    data.height = 10;
+                }
+                var blocks = [];
+                for(var y=0;y<data.height*2-1;y++) {
+                    blocks.push([]);
+                    for(var x=0;x<data.width*2-1;x++) {
+                        blocks[y].push(0);
+                    }
+                }
+                var pos = [1,1];
+                while(true) {
+                    blocks[pos[0]][pos[1]]++;
+                    var cors = [[-2,0],[2,0],[0,-2],[0,2]];
+                    var n = 0;
+                    while(n < cors.length) {
+                        var x = cors[n][0]+pos[0];
+                        var y = cors[n][1]+pos[1];
+                        if(x<1||x>(data.width-1)*2||y<1||y>(data.height-1)*2) {
+                            cors.splice(n,1);
+                        } else {
+                            cors[n] = [x,y];
+                            n++;
+                        }
+                    }
+                    var needToBacktrack = true;
+                    var n = 0;
+                    while(n < cors.length) {
+                        if(blocks[cors[n][0]][cors[n][1]]==0) {
+                            needToBacktrack = false;
+                            break;
+                        }
+                        n++;
+                    }
+                    var cor = false;
+                    var n = 0;
+                    while(n < cors.length) {
+                        var b = blocks[cors[n][0]][cors[n][1]];
+                        if(b>1) {
+                            cors.splice(n,1);
+                            n--;
+                        } else if(needToBacktrack==true) {
+                            var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                            var n2 = 0;
+                            while(n2 < cors2.length) {
+                                var x = cors2[n2][0]+pos[0];
+                                var y = cors2[n2][1]+pos[1];
+                                if(blocks[x][y]===1) {
+                                    cor = [cors2[n2][0]*2+pos[0],cors2[n2][1]*2+pos[1]];
+                                    break;
+                                }
+                                n2++;
+                            }
+                            break;
+                        } else if(needToBacktrack==false&&b==1) {
+                            cors.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    var justBacktracked = false;
+                    var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                    var n2 = 0;
+                    while(n2 < cors2.length) {
+                        var x = cors2[n2][0]+pos[0];
+                        var y = cors2[n2][1]+pos[1];
+                        var x2 = cors2[n2][0]*2+pos[0];
+                        var y2 = cors2[n2][1]*2+pos[1];
+                        if(x2>0&&x2<blocks.length&&y2>0&&y2<blocks.length&&blocks[x][y]!==1) {
+                            if(blocks[x2][y2]==2) {
+                                justBacktracked = true;
+                            }
+                        }
+                        n2++;
+                    }
+                    if(needToBacktrack&&!justBacktracked) {
+                        blocks[pos[0]][pos[1]]++;
+                    }
+                    if(justBacktracked&&!needToBacktrack) {
+                        blocks[pos[0]][pos[1]]--;
+                    }
+                    if(!needToBacktrack) {
+                        if(cors.length===0) {
+                            break;
+                        }
+                        cor = cors[Math.floor(Math.random()*cors.length)];
+                    } else if(cor===false) {
+                        break;
+                    }
+                    blocks[(pos[0]+cor[0])/2][(pos[1]+cor[1])/2]++;
+                    pos = cor;
+                }
+                var y = 0;
+                while(y < blocks.length) {
+                    var x = 0;
+                    while(x < blocks[y].length) {
+                        if(blocks[x][y]==0) {
+                            blocks[x][y] = 1;
+                        } else {
+                            blocks[x][y] = 0;
+                        }
+                        x++;
+                    }
+                    y++;
+                }
+                return blocks;
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function updateBlock(block,staticBlocks) {
+                var collideX = false;
+                var collideY = false;
+                block.x += block.xmove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide&&blocksColliding(block,b)) {
+                        collideX = true;
+                        if(block.x+block.w/2<b.x+b.w/2) {
+                            block.x = b.x-block.w;
+                        } else {
+                            block.x = b.x+b.w;
+                        }
+                    }
+                    n++;
+                }
+                block.y += block.ymove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide&&blocksColliding(block,b)) {
+                        collideY = true;
+                        if(block.y+block.h/2<b.y+b.h/2) {
+                            block.y = b.y-block.h;
+                        } else {
+                            block.y = b.y+b.h;
+                        }
+                    }
+                    n++;
+                }
+                return [collideX,collideY];
+            }
+            function update() {
+                var newTime = new Date().getTime();
+                fps = Math.round(600/(newTime-lastTime));
+                lastTime = newTime;
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/500,s/500);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,500,500);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/500,s/500);
+                    ctx.translate(x-500,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '30px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(47.5,272.5,405*percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%40;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',250,250);
+                    ctx.restore();
+                    loadAnimation += 0.5;
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.objects.update();
+                    this.car.update();
+                    this.tireMarks.update();
+                },
+                draw: function() {
+                    ctx.fillStyle = 'rgb(150,255,150)';
+                    ctx.fillRect(0,0,1000,1000);
+
+                    ctx.save();
+                    ctx.translate(500,500);
+                    ctx.translate(-this.cam.x,-this.cam.y);
+
+                    this.objects.draw();
+                    this.tireMarks.draw();
+                    this.car.draw();
+                    this.planes.draw();
+
+                    ctx.restore();
+                    
+                    if(Keys.keys[37]||Keys.keys[38]||Keys.keys[39]||Keys.keys[40]||Keys.keys[32]) {
+                        instructions = false;
+                    }
+                    if(instructions) {
+                        ctx.fillStyle = 'white';
+                        ctx.lineWidth = 5;
+                        ctx.fillRect(200,200,600,600);
+                        ctx.strokeRect(200,200,600,600);
+                        ctx.fillStyle = 'black';
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('INSTRUCTIONS:',500,300);
+                        ctx.font = '50px Trebuchet MS';
+                        ctx.fillText('Use the arrow keys to',500,400);
+                        ctx.fillText('move. Press Space to',500,470);
+                        ctx.fillText('drift. Combine controls',500,540);
+                        ctx.fillText('to do cool moves!',500,600);
+                        ctx.fillText('Have Fun!',500,740);
+                    }
+                    ctx.fillStyle = 'black';
+                    ctx.font = '25px Trebuchet MS';
+                    ctx.fillText("FPS: "+fps,50,30);
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var screen = {x:game.cam.x-500,y:game.cam.y-500,w:1000,h:1000};
+                        for(o of this.objects) {
+                            if(o.type=='road') {
+                                if(!blocksColliding(screen,o)) continue;
+                                ctx.fillStyle = 'rgb(100,100,100)';
+                                ctx.fillRect(o.x+30,o.y+30,o.w-60,o.h-60);
+                                if(o.left) {
+                                    ctx.fillRect(o.x-1,o.y+30,32,o.h-60);
+                                }
+                                if(o.right) {
+                                    ctx.fillRect(o.x+o.w-31,o.y+30,32,o.h-60);
+                                }
+                                if(o.up) {
+                                    ctx.fillRect(o.x+30,o.y-1,o.w-60,32);
+                                }
+                                if(o.down) {
+                                    ctx.fillRect(o.x+30,o.y+o.h-31,o.w-60,32);
+                                }
+                                ctx.strokeStyle = 'yellow';
+                                ctx.lineWidth = 2;
+                                ctx.setLineDash([20]);
+                                if(o.up&&!(o.left&&o.right)) {
+                                    ctx.lineDashOffset = 0;
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x+o.w/2,o.y);
+                                    ctx.lineTo(o.x+o.w/2,o.y+o.h/2);
+                                    ctx.stroke();
+                                }
+                                if(o.down&&!(o.left&&o.right)) {
+                                    ctx.lineDashOffset = 20;
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x+o.w/2,o.y+o.h/2);
+                                    ctx.lineTo(o.x+o.w/2,o.y+o.h);
+                                    ctx.stroke();
+                                }
+                                if(o.left&&!(o.up&&o.down)) {
+                                    ctx.lineDashOffset = 0;
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x,o.y+o.h/2);
+                                    ctx.lineTo(o.x+o.w/2,o.y+o.h/2);
+                                    ctx.stroke();
+                                }
+                                if(o.right&&!(o.up&&o.down)) {
+                                    ctx.lineDashOffset = 20;
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x+o.w/2,o.y+o.h/2);
+                                    ctx.lineTo(o.x+o.w,o.y+o.h/2);
+                                    ctx.stroke();
+                                }
+                                ctx.setLineDash([]);
+                            }
+                        }
+                    }
+                },
+                planes: {
+                    planes: [],
+                    update: function() {
+                        this.planes = [];
+                        for(var n = 0;n < game.objects.objects.length;n++) {
+                            var o = game.objects.objects[n];
+                            if(o.type!='building'&&o.type!='tree stem'&&o.type!='tree top') continue;
+                            var planes = this.getPlanesForCube(o);
+                            var n2 = 0;
+                            while(n2 < planes.length) {
+                                var p = planes[n2];
+                                p.color = ['rgb(140,140,140)','rgb(160,160,160)','rgb(120,120,120)','rgb(150,150,150)','rgb(130,130,130)'][n2];
+                                if(o.b==1) {
+                                    p.color = ['rgb(120,120,120)','rgb(140,140,140)','rgb(100,100,100)','rgb(130,130,130)','rgb(110,110,110)'][n2];
+                                }
+                                if(o.type=='tree stem') {
+                                    p.color = ['rgb(170,80,80)','rgb(190,100,100)','rgb(150,60,60)','rgb(170,90,90)','rgb(160,70,70)'][n2];
+                                }
+                                if(o.type=='tree top') {
+                                    p.color = ['rgb(100,190,100)','rgb(120,210,120)','rgb(80,170,80)','rgb(110,200,110)','rgb(90,180,90)'][n2];
+                                }
+                                p.parent = {};
+                                p.parent.x = o.x;
+                                p.parent.y = o.y;
+                                p.parent.w = o.w;
+                                p.parent.h = o.h;
+                                n2++;
+                            }
+                            this.planes = this.planes.concat(planes);
+                        }
+                        var n = 0;
+                        while(n < this.planes.length) {
+                            var p = this.planes[n];
+                            p.ax = 0;
+                            p.ay = 0;
+                            p.az = 0;
+                            var n2 = 0;
+                            while(n2 < p.points.length) {
+                                p.ax += (p.points[n2].x-game.cam.x);
+                                p.ay += (p.points[n2].y-game.cam.y);
+                                p.az += p.points[n2].z;
+                                n2++;
+                            }
+                            p.ax /= p.points.length;
+                            p.ay /= p.points.length;
+                            p.az /= p.points.length;
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.planes.length) {
+                            var plane = this.planes[n];
+                            var deletedPlane = false;
+                            var n2 = n+1;
+                            while(n2 < this.planes.length) {
+                                var plane2 = this.planes[n2];
+                                var samePlane = true;
+                                var n3 = 0;
+                                while(n3 < plane.points.length) {
+                                    var p = plane.points[n3];
+                                    var samePoints = false;
+                                    var n4 = 0;
+                                    while(n4 < plane2.points.length) {
+                                        var p2 = plane2.points[n4];
+                                        if(p2.x==p.x&&p2.y==p.y&&p2.z==p.z) {
+                                            samePoints = true;
+                                            break;
+                                        }
+                                        n4++;
+                                    }
+                                    if(!samePoints) {
+                                        samePlane = false;
+                                        break;
+                                    }
+                                    n3++;
+                                }
+                                if(samePlane) {
+                                    deletedPlane = true;
+                                    this.planes.splice(n2,1);
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if(deletedPlane) {
+                                this.planes.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var screen = {x:game.cam.x-500,y:game.cam.y-500,w:1000,h:1000};
+                        var newPlanes = {};
+                        var n = 0;
+                        while(n < this.planes.length) {
+                            var p = this.planes[n];
+                            if(newPlanes[p.az]===undefined) {
+                                newPlanes[p.az] = [];
+                            }
+                            newPlanes[p.az].push(p);
+                            n++;
+                        }
+                        var keys = Object.keys(newPlanes);
+                        keys.sort(function(a,b){return Number(a)-Number(b);});
+                        var n = 0;
+                        while(n < keys.length) {
+                            var p = newPlanes[keys[n]];
+                            p.sort(function(a,b){return distTo(b.ax,b.ay,game.cam.x,game.cam.y)-distTo(a.ax,a.ay,game.cam.x,game.cam.y)});
+                            n++;
+                        }
+                        this.planes = [];
+                        var n = 0;
+                        while(n < keys.length) {
+                            this.planes = this.planes.concat(newPlanes[keys[n]]);
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.planes.length) {
+                            var plane = this.planes[n];
+                            if(blocksColliding(plane.parent,screen)) {
+                                this.drawPlane(plane);
+                            }
+                            n++;
+                        }
+                    },
+                    drawPlane: function(plane) {
+                        ctx.fillStyle = plane.color;
+                        ctx.beginPath();
+                        var n = 0;
+                        while(n < plane.points.length) {
+                            var p = plane.points[n];
+                            var cors = this.getCors(p.x,p.y,p.z);
+                            if(n==0) {
+                                ctx.moveTo(cors.x,cors.y);
+                            } else {
+                                ctx.lineTo(cors.x,cors.y);
+                            }
+                            n++;
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                    },
+                    getCors: function(x,y,z) {
+                        return {x:(x-game.cam.x)*(1+z*0.1)+game.cam.x,y:(y-game.cam.y)*(1+z*0.1)+game.cam.y};
+                    },
+                    getPlanesForCube: function(o) {
+                        var planes = [];
+                        //planes.push({points:[{x:o.x,y:o.y,z:o.z},{x:o.x+o.w,y:o.y,z:o.z},{x:o.x+o.w,y:o.y+o.h,z:o.z},{x:o.x,y:o.y+o.h,z:o.z}]});
+                        planes.push({points:[{x:o.x,y:o.y,z:o.z+o.b},{x:o.x+o.w,y:o.y,z:o.z+o.b},{x:o.x+o.w,y:o.y+o.h,z:o.z+o.b},{x:o.x,y:o.y+o.h,z:o.z+o.b}]});
+                        planes.push({points:[{x:o.x,y:o.y,z:o.z},{x:o.x+o.w,y:o.y,z:o.z},{x:o.x+o.w,y:o.y,z:o.z+o.b},{x:o.x,y:o.y,z:o.z+o.b}]});
+                        planes.push({points:[{x:o.x,y:o.y,z:o.z},{x:o.x,y:o.y+o.h,z:o.z},{x:o.x,y:o.y+o.h,z:o.z+o.b},{x:o.x,y:o.y,z:o.z+o.b}]});
+                        planes.push({points:[{x:o.x+o.w,y:o.y,z:o.z},{x:o.x+o.w,y:o.y+o.h,z:o.z},{x:o.x+o.w,y:o.y+o.h,z:o.z+o.b},{x:o.x+o.w,y:o.y,z:o.z+o.b}]});
+                        planes.push({points:[{x:o.x,y:o.y+o.h,z:o.z},{x:o.x+o.w,y:o.y+o.h,z:o.z},{x:o.x+o.w,y:o.y+o.h,z:o.z+o.b},{x:o.x,y:o.y+o.h,z:o.z+o.b}]});
+                        return planes;
+                    }
+                },
+                car: {
+                    x: 850,
+                    y: 850,
+                    w: 50,
+                    h:50,
+                    xmove: 0,
+                    ymove: 0,
+                    dir: 0,
+                    friction: 0.01,
+                    speed: 0,
+                    traction: 0.5,
+                    update: function() {
+                        var move = distToMove(20,this.dir);
+                        var changeX = move[0]-25;
+                        var changeY = move[1]-25;
+                        this.x += changeX;
+                        this.y += changeY;
+                        var collide = updateBlock(this,game.objects.objects);
+                        this.x -= changeX;
+                        this.y -= changeY;
+                        //update collisions
+                        
+                        if(collide[0]||collide[1]) {
+                            this.xmove *= -0.5;
+                            this.ymove *= -0.5;
+                            this.speed *= -0.5;
+                        }
+
+                        if(Keys.keys[37]) {
+                            this.dir -= Math.max(Math.min(distTo(0,0,this.xmove,this.ymove),2),0);
+                        }
+                        if(Keys.keys[39]) {
+                            this.dir += Math.max(Math.min(distTo(0,0,this.xmove,this.ymove),2),0);
+                        }
+                        //turn
+
+                        if(Keys.keys[38]) {
+                            this.speed += 0.05;
+                        }
+                        if(Keys.keys[40]) {
+                            this.speed -= 0.05;
+                        }
+                        //move
+
+                        this.speed *= (1-this.friction);
+                        //friction
+
+                        if(Keys.keys[32]) {
+                            this.traction = this.traction*0.9+0.02*0.1;
+                        } else {
+                            this.traction = this.traction*0.99+0.5*0.01;
+                        }
+                        //drift
+
+                        var moveDir = dirTo(0,0,this.xmove,this.ymove)+(this.speed<0?180:0);
+                        var moveSpeed = distTo(0,0,this.xmove,this.ymove);
+                        var t = turn(moveDir,this.dir);
+                        if(Math.abs(t)>40) {
+                            var alpha = (Math.abs(t)-40)/40;
+                            var left = rotate(this.x,this.y,this.x-10,this.y-40,-this.dir);
+                            var right = rotate(this.x,this.y,this.x+10,this.y-40,-this.dir);
+                            game.tireMarks.left.push({x:left[0],y:left[1],alpha:alpha});
+                            game.tireMarks.right.push({x:right[0],y:right[1],alpha:alpha});
+                        }
+                        //skid marks
+
+                        var move = distToMove(this.speed,this.dir);
+                        this.xmove = move[0]*this.traction+this.xmove*(1-this.traction);
+                        this.ymove = move[1]*this.traction+this.ymove*(1-this.traction);
+
+                        game.cam.x = game.cam.x*0.95+this.x*0.05;
+                        game.cam.y = game.cam.y*0.95+this.y*0.05;
+                    },
+                    draw: function() {
+                        ctx.save();
+                        ctx.translate(this.x,this.y);
+                        ctx.rotate((this.dir+180)*Math.PI/180);
+                        ctx.drawImage(imgs[0],-18.75,-10,37.5,60);
+                        ctx.restore();
+                    }
+                },
+                tireMarks: {
+                    left: [],
+                    right: [],
+                    update: function() {
+                        while(this.left.length>500) {
+                            this.left.shift();
+                        }
+                        while(this.right.length>500) {
+                            this.right.shift();
+                        }
+                    },
+                    draw: function() {
+                        if(this.left.length>0) {
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            for(n=1;n<this.left.length;n++) {
+                                var o = this.left[n];
+                                var o2 = this.left[n-1];
+                                if(distTo(o2.x,o2.y,o.x,o.y)<10) {
+                                    ctx.save();
+                                    ctx.globalAlpha = o.alpha;
+                                    ctx.beginPath();
+                                    ctx.moveTo(o2.x,o2.y);
+                                    ctx.lineTo(o.x,o.y);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+                            }
+                            ctx.stroke();
+                        }
+                        if(this.right.length>0) {
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 2;
+                            for(n=1;n<this.right.length;n++) {
+                                var o = this.right[n];
+                                var o2 = this.right[n-1];
+                                if(distTo(o2.x,o2.y,o.x,o.y)<10) {
+                                    ctx.save();
+                                    ctx.globalAlpha = o.alpha;
+                                    ctx.beginPath();
+                                    ctx.moveTo(o2.x,o2.y);
+                                    ctx.lineTo(o.x,o.y);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+                            }
+                        }
+                    }
+                },
+                cam: {
+                    x: 0,
+                    y: 0
+                }
+            }
+
+            var blocks = generateMaze({width:10,height:10});
+            for(var x=0;x<blocks.length;x++) {
+                for(var y=0;y<blocks[x].length;y++) {
+                    if(blocks[x][y]&&Math.random()<0.3&&x>0&&y>0&&x<blocks.length-1&&y<blocks[x].length-1) {
+                        blocks[x][y] = 0;
+                    }
+                    if(blocks[x][y]&&(Math.random()>0.1||!(x>0&&y>0&&x<blocks.length-1&&y<blocks[x].length-1))) {
+                        var b = {};
+                        b.type = 'building';
+                        b.collide = true;
+                        b.w = 170;
+                        b.h = 170;
+                        b.b = 5;
+                        b.z = 0;
+                        b.x = x*200-235;
+                        b.y = y*200-235;
+                        if(!(x>0&&y>0&&x<blocks.length-1&&y<blocks[x].length-1)) {
+                            b.b = 1;
+                            b.w = 200;
+                            b.h = 200;
+                            b.x = x*200-250;
+                            b.y = y*200-250;
+                        }
+                        game.objects.objects.push(b);
+                    }
+                }
+            }
+            for(var x=0;x<blocks.length;x++) {
+                for(var y=0;y<blocks[x].length;y++) {
+                    if(x==0||y==0) continue;
+                    if(!blocks[x][y]&&!blocks[x-1][y]&&!blocks[x][y-1]&&!blocks[x-1][y-1]) {
+                        var b = {};
+                        b.type = 'tree stem';
+                        b.collide = true;
+                        b.w = 30;
+                        b.h = 30;
+                        b.b = 1;
+                        b.z = 0;
+                        b.x = x*200-265;
+                        b.y = y*200-265;
+                        game.objects.objects.push(b);
+                        var b = {};
+                        b.type = 'tree top';
+                        b.collide = false;
+                        b.w = 80;
+                        b.h = 80;
+                        b.b = 1;
+                        b.z = 1;
+                        b.x = x*200-295;
+                        b.y = y*200-295;
+                        game.objects.objects.push(b);
+                    }
+                }
+            }
+            for(var x=0;x<blocks.length;x++) {
+                for(var y=0;y<blocks[x].length;y++) {
+                    if(!blocks[x][y]) {
+                        var b = {};
+                        b.type = 'road';
+                        b.w = 200;
+                        b.h = 200;
+                        b.x = x*200-250;
+                        b.y = y*200-250;
+                        game.objects.objects.push(b);
+                    }
+                }
+            }
+            for(o of game.objects.objects) {
+                if(o.type!='road') continue;
+                var x = o.x;
+                var y = o.y;
+                var left = false;
+                var right = false;
+                var up = false;
+                var down = false;
+                for(o2 of game.objects.objects) {
+                    if(o2.type!='road') continue;
+                    var x2 = o2.x;
+                    var y2 = o2.y;
+                    if(x==x2&&y==y2) continue;
+                    if(x==x2) {
+                        if(y2==y+200) {
+                            down = true;
+                        }
+                        if(y2==y-200) {
+                            up = true;
+                        }
+                    }
+                    if(y==y2) {
+                        if(x2==x+200) {
+                            right = true;
+                        }
+                        if(x2==x-200) {
+                            left = true;
+                        }
+                    }
+                }
+                o.left = left;
+                o.right = right;
+                o.up = up;
+                o.down = down;
+            }
+
+            game.planes.update();
+            
+            var instructions = true;
+        </script>
+    </body>
+</html>

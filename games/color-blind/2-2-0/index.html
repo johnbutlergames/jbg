@@ -1,0 +1,1361 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Color Blind";
+            var dimensions = {width:1000,height:1000};
+            var images = {
+                "heart": "images/heart.png",
+                "heartBackground": "images/heart-background.png",
+                "heartBrokenLeft": "images/heart-broken-left.png",
+                "heartBrokenRight": "images/heart-broken-right.png",
+                "gear": "images/gear.png"
+            };
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+            Loading.loaded = true;
+            Loading.intro = 0;
+
+            function f(s) {
+                ctx.font = s+"px Arial";
+            }
+
+            function main() {
+                menu.tick();
+                t++;
+            }
+
+            var menu = {
+                page: "title screen",
+                switchPage: "title screen",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 70,
+                titleScreenAnimation: 0,
+                titleScreenLetters: [],
+                particles: [],
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        var colors = ["red","yellow","lime","blue","rgb(160,32,240)","black"];
+                        for(var n=0;n<6;n++) {
+                            var x = -1300*(1-easeInOut(a*1.7-n*0.07));
+                            if(this.switchPage==this.page) {
+                                var x = 1300*(1-easeInOut(a*1.7-n*0.07));
+                            }
+                            ctx.save();
+                            ctx.translate(x+1000,0);
+                            ctx.fillStyle = colors[n];
+                            ctx.beginPath();
+                            ctx.moveTo(300,0);
+                            ctx.lineTo(0,1000);
+                            ctx.lineTo(-1300,1000);
+                            ctx.lineTo(-1000,0);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+                        this.titleScreenButtons();
+                    } else if(page=="game") {
+                        game.update();
+                    } else if(page=="tutorial") {
+                        tutorial.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+                        this.drawTitleScreen();
+                    } else if(page=="game") {
+                        game.draw();
+                    } else if(page=="tutorial") {
+                        tutorial.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+                        this.updateTitleScreen();
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    } else if(page=="tutorial") {
+                        tutorial.updateEffects();
+                    } else if(page=="new game") {
+                        this.page = "game";
+                        this.switchPage = "game";
+                        game.reset();
+                    }
+                },
+                drawTitleScreen: function() {
+                    var a = this.titleScreenAnimation;
+                    var shake = 0;
+                    if(a>150&&a<190) {
+                        shake = 40-(a-150);
+                    }
+                    var buffer = 0;
+                    if(a>150) buffer = 40;
+                    ctx.save();
+                    ctx.translate((Math.random()*2-1)*shake,(Math.random()*2-1)*shake);
+                    var letters = "COLOR".split("");
+                    var colors = ["rgb(255,0,0)","rgb(255,255,0)","rgb(0,255,0)","rgb(0,0,255)","rgb(160,32,240)"];
+                    for(var n=0;n<5;n++) {
+                        var o = this.titleScreenLetters[n];
+                        ctx.save();
+                        var currentColor = colors[n];
+                        if(a>150) {
+                            if(a>200) {
+                                var color = Math.max((Math.sin((a-n*15-170)/70)-0.95)*20,0);
+                                currentColor = game.color.grayscale(currentColor,1-color*0.6);
+                            } else {
+                                currentColor = game.color.grayscale(currentColor,1);
+                            }
+                        }
+                        ctx.translate(n*250-520,0);
+                        var letterAnimation = 1-easeInOut((a-n*25)/25);
+                        ctx.translate(letterAnimation*600,-letterAnimation*1000);
+                        ctx.beginPath();
+                        if(n==0) {
+                            ctx.moveTo(200,-buffer);
+                        } else {
+                            ctx.moveTo(600,-buffer);
+                        }
+                        if(n==4) {
+                            ctx.lineTo(1300,-buffer);
+                        } else {
+                            ctx.lineTo(900,-buffer);
+                        }
+                        if(n==4) {
+                            ctx.lineTo(800,1000+buffer);
+                        } else {
+                            ctx.lineTo(300,1000+buffer);
+                        }
+                        if(n==0) {
+                            ctx.lineTo(-400,1000+buffer);
+                        } else {
+                            ctx.lineTo(0,1000+buffer);
+                        }
+                        ctx.closePath();
+                        ctx.fillStyle = currentColor;
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                    for(var n=0;n<5;n++) {
+                        var letter = letters[n];
+                        var s = easeInOut((a-n*25)/25);
+                        var xmove = 0;
+                        var ymove = 0;
+                        if(a>180) {
+                            xmove = easeInOut((a-180)/25)*(160-n*80-20);
+                            ymove = easeInOut((a-180)/25)*(535-n*110);
+                        }
+                        var animationXmove = 0;
+                        var animationYmove = 0;
+                        if(a>200) {
+                            var move = Math.max((Math.sin((a-n*15-170)/70)-0.975)*40,0)*50;
+                            animationYmove = -move;
+                            s += move/1000;
+                        }
+                        ctx.save();
+                        ctx.translate(n*190+140+xmove+animationXmove,n*110+110+ymove+animationYmove);
+                        ctx.scale(s,s);
+                        ctx.fillStyle = "black";
+                        if(a>150) {
+                            ctx.fillStyle = colors[n];
+                        }
+                        ctx.font = "bold 150px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(letter,0,0);
+                        ctx.restore();
+                    }
+                    if(a>120) {
+                        var ymove = (1-easeInOut((a-120)/45))*500;
+                        ctx.save();
+                        ctx.translate(0,ymove);
+                        ctx.fillStyle = "white";
+                        ctx.beginPath();
+                        ctx.moveTo(-40,700);
+                        for(var n=0;n<23;n++) {
+                            ctx.lineTo(-40+n*50,700+(n%2==0?40:0));
+                        }
+                        ctx.lineTo(1040,1040);
+                        ctx.lineTo(-40,1040);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.fillStyle = "black";
+                        ctx.font = "bold 150px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("BLIND",500,870-60*easeInOut((a-180)/25));
+                        ctx.restore();
+                    }
+                    ctx.restore();
+
+                    if(a>220) {
+                        var dist = distTo(Mouse.x,Mouse.y,500,280);
+                        var s = easeInOut((a-220)/30);
+                        if(dist<150) s += 0.05;
+                        ctx.save();
+                        ctx.translate(500,280);
+                        ctx.scale(s,s);
+                        ctx.fillStyle = "white";
+                        ctx.lineWidth = 15;
+                        ctx.strokeStyle = "rgb(220,220,220)";
+                        ctx.lineJoin = "round";
+                        ctx.lineCap = "round";
+                        ctx.beginPath();
+                        ctx.arc(0,0,150,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(-35,-60);
+                        ctx.lineTo(60,0);
+                        ctx.lineTo(-35,60);
+                        ctx.closePath();
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if(a>310) {
+                        var dist = distTo(Mouse.x,Mouse.y,920,920);
+                        var s = easeInOut((a-310)/25);
+                        if(dist<60) s *= 1.1;
+                        ctx.save();
+                        ctx.translate(920,920);
+                        ctx.scale(s,s);
+                        ctx.drawImage(images.gear,-50,-50,100,100);
+                        ctx.restore();
+                    }
+
+                    ctx.fillStyle = "black";
+                    ctx.font = "40px Arial";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+
+                    var s = easeInOut((a-270)/25);
+                    ctx.save();
+                    ctx.translate(500,900);
+                    ctx.scale(s,s);
+                    ctx.fillText("Highscore: "+highscore,0,0);
+                    ctx.restore();
+
+                    var s = easeInOut((a-290)/25);
+                    ctx.save();
+                    ctx.translate(500,955);
+                    ctx.scale(s,s);
+                    ctx.fillText("By John Butler",0,0);
+                    ctx.restore();
+
+                    for(var o of this.particles) {
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        ctx.rotate(o.angle*Math.PI/180);
+                        ctx.fillStyle = o.color;
+                        ctx.fillRect(-10,-10,20,20);
+                        ctx.restore();
+                    }
+                },
+                updateTitleScreen: function() {
+                    this.titleScreenAnimation++;
+                    var colors = ["red","yellow","lime","blue","rgb(160,32,240)"];
+                    var a = this.titleScreenAnimation;
+                    for(var o of this.particles) {
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.ymove += 0.2;
+                        o.xmove *= 0.99;
+                        o.ymove *= 0.99;
+                        o.angle += o.turn;
+                    }
+                    if(a==150) {
+                        for(var x=0;x<50;x++) {
+                            var o = {};
+                            o.x = x*20+10;
+                            o.y = 720*Math.random();
+                            o.color = colors[Math.floor(x/10)];
+                            o.xmove = Math.random()*5-2;
+                            o.ymove = Math.random()*15-14;
+                            o.angle = 0;
+                            o.turn = Math.random()*20-10;
+                            this.particles.push(o);
+                        }
+                    }
+                },
+                titleScreenButtons: function() {
+                    var a = this.titleScreenAnimation;
+                    if(a>220) {
+                        var dist = distTo(Mouse.x,Mouse.y,500,280);
+                        if(dist<150&&Mouse.click) {
+                            if(tutorial.completed) {
+                                menu.switchPage = "new game";
+                                game.reset();
+                            } else {
+                                tutorial.completed = true;
+                                menu.switchPage = "tutorial";
+                                tutorial.reset();
+                            }
+                        }
+                    }
+                    if(a>310) {
+                        var dist = distTo(Mouse.x,Mouse.y,920,920);
+                        if(dist<60&&Mouse.click) {
+                            menu.switchPage = "settings";
+                        }
+                    }
+                },
+                resetTitleScreen: function() {
+                    this.titleScreenLetters = [];
+                    var title = "ColorBlind";
+                    f(160);
+                    for(var letter of title.split("")) {
+                        var o = {};
+                        o.letter = letter;
+                        o.width = ctx.measureText(letter).width;
+                        this.titleScreenLetters.push(o);
+                    }
+                    this.particles = [];
+                }
+            }
+
+            var tutorial = {
+                completed: false,
+                skipTutorialButtonAnimation: 0,
+                level: 0,
+                update: function() {
+                    if(Mouse.clickInBox(850-130,50-35,260,70,110)) {
+                        menu.switchPage = "new game";
+                        this.skipTutorialButtonAnimation = 1;
+                    }
+                },
+                updateEffects: function() {
+                    game.particles.update();
+                    game.level.prompt.update();
+                    game.buttons.update();
+                    if(this.skipTutorialButtonAnimation) this.skipTutorialButtonAnimation++;
+                    game.level.incorrectButtonClickedAnimation = 0;
+                    if(game.level.correctButtonClickedAnimation) game.level.correctButtonClickedAnimation++;
+                    if(game.level.startNewLevel()) {
+                        this.level++;
+                        this.newLevel();
+                    }
+                },
+                draw: function() {
+                    game.particles.drawBackground();
+                    game.buttons.draw();
+                    game.particles.draw();
+                    game.level.prompt.draw();
+
+                    this.drawSkipButton();
+                },
+                drawSkipButton: function() {
+                    var a = this.skipTutorialButtonAnimation;
+                    ctx.save();
+                    ctx.translate(850,50);
+                    var s = 1-0.15*easeInOut(a/20);
+                    ctx.scale(s,s);
+                    ctx.fillStyle = "white";
+                    if(Mouse.inBox(850-130,50-35,260,70,110)) {
+                        ctx.fillStyle = "rgb(230,230,230)";
+                    }
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.roundRect(-130,-35,260,70,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = "38px Arial";
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Skip Tutorial",0,0);
+                    ctx.restore();
+                },
+                reset: function() {
+                    this.level = 0;
+                    this.newLevel();
+                },
+                newLevel: function() {
+                    game.level.correctButtonClickedAnimation = 0;
+                    game.level.incorrectButtonClickedAnimation = 0;
+                    if(this.level==0) {
+                        game.buttons.createButtonGrid([{color:"Red",text:""},{color:"Orange",text:""},{color:"Yellow",text:""},{color:"Green",text:""},{color:"Blue",text:""},{color:"Purple",text:""}],2);
+                        game.level.prompt.beforeText = "Match color to color";
+                        game.level.prompt.buttonText = "";
+                        game.level.prompt.buttonColor = "Yellow";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==1) {
+                        game.buttons.createButtonGrid([{color:"White",text:"Red"},{color:"White",text:"Orange"},{color:"White",text:"Yellow"},{color:"White",text:"Green"},{color:"White",text:"Blue"},{color:"White",text:"Purple"}],0);
+                        game.level.prompt.beforeText = "Match word to word";
+                        game.level.prompt.buttonText = "Red";
+                        game.level.prompt.buttonColor = "White";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==2) {
+                        game.buttons.createButtonGrid([{color:"White",text:"Red"},{color:"White",text:"Orange"},{color:"White",text:"Yellow"},{color:"White",text:"Green"},{color:"White",text:"Blue"},{color:"White",text:"Purple"}],3);
+                        game.level.prompt.beforeText = "Match color to word";
+                        game.level.prompt.buttonText = "";
+                        game.level.prompt.buttonColor = "Green";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==3) {
+                        game.buttons.createButtonGrid([{color:"Red",text:""},{color:"Orange",text:""},{color:"Yellow",text:""},{color:"Green",text:""},{color:"Blue",text:""},{color:"Purple",text:""}],5);
+                        game.level.prompt.beforeText = "Match word to color";
+                        game.level.prompt.buttonText = "Purple";
+                        game.level.prompt.buttonColor = "White";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==4) {
+                        game.buttons.createButtonGrid([{color:"Red",text:"Purple"},{color:"Orange",text:"Blue"},{color:"Yellow",text:"Green"},{color:"Green",text:"Yellow"},{color:"Blue",text:"Orange"},{color:"Purple",text:"Red"}],3);
+                        game.level.prompt.beforeText = "Match color to color";
+                        game.level.prompt.buttonText = "Blue";
+                        game.level.prompt.buttonColor = "Green";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==5) {
+                        game.buttons.createButtonGrid([{color:"Purple",text:"Red"},{color:"Blue",text:"Orange"},{color:"Green",text:"Yellow"},{color:"Yellow",text:"Green"},{color:"Orange",text:"Blue"},{color:"Red",text:"Purple"}],4);
+                        game.level.prompt.beforeText = "Match word to word";
+                        game.level.prompt.buttonText = "Blue";
+                        game.level.prompt.buttonColor = "Yellow";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==6) {
+                        game.buttons.createButtonGrid([{color:"Purple",text:"Red"},{color:"Blue",text:"Orange"},{color:"Green",text:"Yellow"},{color:"Yellow",text:"Green"},{color:"Orange",text:"Blue"},{color:"Red",text:"Purple"}],1);
+                        game.level.prompt.beforeText = "Match color to word";
+                        game.level.prompt.buttonText = "Purple";
+                        game.level.prompt.buttonColor = "Orange";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==7) {
+                        game.buttons.createButtonGrid([{color:"Red",text:"Purple"},{color:"Orange",text:"Blue"},{color:"Yellow",text:"Green"},{color:"Green",text:"Yellow"},{color:"Blue",text:"Orange"},{color:"Purple",text:"Red"}],0);
+                        game.level.prompt.beforeText = "Match word to color";
+                        game.level.prompt.buttonText = "Red";
+                        game.level.prompt.buttonColor = "Green";
+                        game.level.prompt.newPrompt();
+                    } else if(this.level==8) {
+                        menu.switchPage = "new game";
+                    }
+                }
+            }
+
+            var game = {
+                update: function() {
+                    this.buttons.update();
+                    this.level.updateButtons();
+                },
+                updateEffects: function() {
+                    this.particles.update();
+                    this.level.update();
+                },
+                draw: function() {
+                    this.particles.drawBackground();
+                    this.buttons.draw();
+                    this.level.draw();
+                    this.particles.draw();
+                },
+                reset: function() {
+                    this.particles.reset();
+                    this.level.reset();
+                },
+                level: {
+                    level: 0,
+                    correctButtonClickedAnimation: 0,
+                    incorrectButtonClickedAnimation: 0,
+                    update: function() {
+                        if(this.correctButtonClickedAnimation) this.correctButtonClickedAnimation++;
+                        if(this.incorrectButtonClickedAnimation) this.incorrectButtonClickedAnimation++;
+                        if(this.correctButtonClickedAnimation==2) {
+                            this.time.createScoreObjects();
+                        }
+                        if(this.incorrectButtonClickedAnimation==2) {
+                            this.lives.loseLife();
+                        }
+                        if(this.startNewLevel()) {
+                            if(this.lives.lives>0) {
+                                this.newLevel();
+                            } else {
+                                this.gameOver.update();
+                            }
+                        }
+                        this.prompt.update();
+                        this.time.update();
+                        this.lives.update();
+                        this.score.update();
+                    },
+                    updateButtons: function() {
+                        if(this.startNewLevel()&&this.lives.lives==0) {
+                            this.gameOver.updateButtons();
+                        }
+                    },
+                    draw: function() {
+                        this.prompt.draw();
+                        this.lives.draw();
+                        this.time.draw();
+                        this.score.draw();
+                        if(this.lives.lives==0) {
+                            this.gameOver.draw();
+                        }
+                    },
+                    reset: function() {
+                        this.score.score = 0;
+                        this.level = 0;
+                        this.lives.lives = 3;
+                        this.gameOver.reset();
+                        this.newLevel();
+                    },
+                    startNewLevel: function() {
+                        return this.correctButtonClickedAnimation>105||this.incorrectButtonClickedAnimation>65;
+                    },
+                    startEndAnimation: function() {
+                        return this.correctButtonClickedAnimation>80||this.incorrectButtonClickedAnimation>40;
+                    },
+                    buttonClicked: function() {
+                        return this.correctButtonClickedAnimation||this.incorrectButtonClickedAnimation;
+                    },
+                    prompt: {
+                        beforeText: "",
+                        buttonText: "",
+                        buttonColor: "",
+                        startAnimation: 0,
+                        endAnimation: 0,
+                        update: function() {
+                            this.startAnimation++;
+                            if(this.endAnimation) {
+                                this.endAnimation++;
+                            } else if(game.level.startEndAnimation()) {
+                                this.endAnimation++;
+                            }
+                        },
+                        draw: function() {
+                            var s = easeInOut(this.startAnimation/40)*easeInOut(1-this.endAnimation/40);
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.save();
+                            ctx.translate(500,140);
+                            ctx.scale(s,s);
+                            ctx.fillStyle = "black";
+                            ctx.font = "55px Arial";
+                            ctx.fillText(this.beforeText,0,0);
+                            ctx.restore();
+
+                            ctx.save();
+                            ctx.translate(500,270);
+                            ctx.scale(s,s);
+                            var o = {};
+                            o.text = this.buttonText;
+                            o.color = this.buttonColor;
+                            o = game.buttons.create(o);
+                            o.startAnimation = 40;
+                            o.x = 0;
+                            o.y = 0;
+                            game.buttons.drawButton(o);
+                            ctx.restore();
+                        },
+                        newPrompt: function() {
+                            this.startAnimation = 0;
+                            this.endAnimation = 0;
+                        }
+                    },
+                    lives: {
+                        lives: 0,
+                        objects: [],
+                        update: function() {
+                            for(var o of this.objects) {
+                                o.time++;
+                                if(o.image=="heart") {
+                                    o.scale = Math.min(1+o.time/100,1.2);
+                                } else {
+                                    o.alpha -= 0.02;
+                                    o.scale = 1.2+o.time/60;
+                                    o.turn *= 0.99;
+                                }
+                                o.x += o.xmove;
+                                o.y += o.ymove;
+                                o.xmove *= o.damping;
+                                o.ymove *= o.damping;
+                                o.angle += o.turn;
+
+                                if(o.time==30&&o.image=="heart") {
+                                    o.delete = true;
+                                    var left = {};
+                                    left.image = "heartBrokenLeft";
+                                    left.x = o.x;
+                                    left.y = o.y;
+                                    left.xmove = o.xmove-1.5;
+                                    left.ymove = o.ymove;
+                                    left.time = 0;
+                                    left.alpha = 1;
+                                    left.damping = 0.95;
+                                    left.angle = 0;
+                                    left.turn = -0.4;
+                                    this.objects.push(left);
+                                    var right = {};
+                                    right.image = "heartBrokenRight";
+                                    right.x = o.x;
+                                    right.y = o.y;
+                                    right.xmove = o.xmove+1.5;
+                                    right.ymove = o.ymove;
+                                    right.time = 0;
+                                    right.alpha = 1;
+                                    right.damping = 0.95;
+                                    right.angle = 0;
+                                    right.turn = 0.4;
+                                    this.objects.push(right);
+                                    for(var n=0;n<15;n++) {
+                                        var p = {};
+                                        p.type = "heart break particle";
+                                        p.x = o.x;
+                                        p.y = o.y;
+                                        game.particles.create(p);
+                                    }
+                                }
+                                o.alpha = Math.max(o.alpha,0);
+                                if(o.alpha==0) o.delete = true;
+                            }
+                            this.objects = this.objects.filter(e=>!e.delete);
+                        },
+                        draw: function() {
+                            for(var n=0;n<3;n++) {
+                                ctx.drawImage(images.heartBackground,70*n+25,40,60,60);
+                            }
+                            for(var n=0;n<this.lives;n++) {
+                                ctx.drawImage(images.heart,70*n+25,40,60,60);
+                            }
+                            for(var o of this.objects) {
+                                ctx.save();
+                                ctx.translate(o.x,o.y);
+                                ctx.scale(o.scale,o.scale);
+                                ctx.rotate(o.angle*Math.PI/180);
+                                ctx.globalAlpha = o.alpha;
+                                ctx.drawImage(images[o.image],-30,-30,60,60);
+                                ctx.restore();
+                            }
+                        },
+                        loseLife: function() {
+                            var o = {};
+                            o.time = 0;
+                            o.alpha = 1;
+                            o.x = 70*this.lives-15;
+                            o.y = 70;
+                            o.xmove = 2;
+                            o.ymove = 5;
+                            o.damping = 0.95;
+                            o.image = "heart";
+                            o.angle = 0;
+                            o.turn = 0;
+                            this.objects.push(o);
+
+                            this.lives--;
+                        }
+                    },
+                    time: {
+                        time: 0,
+                        timeAnimation: 0,
+                        maxTime: 0,
+                        scoreObjects: [],
+                        color: "",
+                        update: function() {
+                            this.timeAnimation = this.timeAnimation*0.9+this.time*0.1;
+                            if(!game.level.buttonClicked()) {
+                                this.time--;
+                                this.time = Math.max(0,this.time);
+                                if(this.time==0) {
+                                    game.level.incorrectButtonClickedAnimation = 1;
+                                }
+                            } else {
+                                if(game.level.correcetButtonClickedAnimation) {
+                                    this.timeAnimation = 0;
+                                } else {
+                                    this.time = -50;
+                                }
+                            }
+                            var percent = this.time/this.maxTime;
+                            if(percent>0.8) {
+                                percent = 1;
+                            } else {
+                                percent /= 0.8;
+                            }
+                            this.color = `rgb(${(1-percent)*512},${percent*512},0)`;
+
+                            var a = game.level.correctButtonClickedAnimation;
+                            for(var n=0;n<this.scoreObjects.length;n++) {
+                                var o = this.scoreObjects[n];
+                                if(a>o.id) {
+                                    o.move = true;
+                                }
+                                o.xmove *= o.damping;
+                                o.ymove *= o.damping;
+                                if(!o.move) continue;
+
+                                o.x += o.xmove;
+                                o.y += o.ymove;
+                                o.angle += o.turn;
+
+                                o.moveTime++;
+                                if(o.moveTime<15) continue;
+                                var target = {x:game.level.score.scoreX,y:60};
+                                var dir = dirTo(o.x,o.y,target.x,target.y);
+                                var move = distToMove(Math.min(o.moveTime-15,15),dir);
+                                o.x += move.x;
+                                o.y += move.y;
+
+                                var dist = distTo(o.x,o.y,target.x,target.y);
+                                o.alpha = Math.min(1,dist/100);
+                                if(dist<20) {
+                                    o.delete = true;
+                                    game.level.score.add(o.scoreAmount);
+                                }
+                            }
+                            this.scoreObjects = this.scoreObjects.filter(e=>!e.delete);
+                        },
+                        draw: function() {
+                            ctx.fillStyle = "rgb(220,220,220)";
+                            ctx.fillRect(0,0,1000,20);
+
+                            var percent = this.timeAnimation/this.maxTime;
+                            ctx.fillStyle = this.color;
+                            ctx.fillRect(0,0,1100*percent,20);
+
+                            for(var n=0;n<this.scoreObjects.length;n++) {
+                                var o = this.scoreObjects[n];
+                                ctx.save();
+                                ctx.translate(o.x,o.y);
+                                ctx.rotate(o.angle*Math.PI/180);
+                                ctx.globalAlpha = o.alpha;
+                                ctx.fillStyle = o.color;
+                                ctx.fillRect(-10,-10,20,20);
+                                ctx.restore();
+                            }
+                        },
+                        newTimeForLevel: function(level) {
+                            var bonusTime = Math.max(0,1000-level*100);
+                            this.maxTime = 1000-level*6+bonusTime;
+                            this.time = this.maxTime;
+                        },
+                        createScoreObjects: function() {
+                            var percent = this.time/this.maxTime;
+                            var totalScore = 25+game.level.level+25*percent;
+
+                            var width = this.timeAnimation/this.maxTime*1100;
+                            for(var n=0;n<width/20;n++) {
+                                var o = {};
+                                o.x = n*20+10;
+                                o.y = 10;
+                                o.color = this.color;
+                                o.xmove = Math.random()*4-2;
+                                o.ymove = Math.random()*10+2;
+                                o.damping = 0.98;
+                                o.angle = 0;
+                                o.turn = Math.random()*20-10;
+                                o.moveTime = 0;
+                                o.alpha = 1;
+                                this.scoreObjects.push(o);
+                            }
+                            this.scoreObjects.reverse();
+                            this.scoreObjects.map((e,i)=>e.id=i);
+                            var scoreForEach = totalScore/this.scoreObjects.length;
+                            this.scoreObjects.map(e=>e.scoreAmount=scoreForEach);
+                        }
+                    },
+                    score: {
+                        score: 0,
+                        addAnimation: 0,
+                        scoreX: 0,
+                        update: function() {
+                            if(this.addAnimation>0) this.addAnimation--;
+                            if(game.level.lives.lives==0&&game.level.gameOver.animation==1) {
+                                this.score = Math.round(this.score);
+                                if(highscore<this.score) {
+                                    highscore = this.score;
+                                    game.level.gameOver.newRecord = true;
+                                    updateHighscore();
+                                }
+                            }
+                        },
+                        draw: function() {
+                            ctx.save();
+                            if(game.level.lives.lives==0) {
+                                ctx.globalAlpha = 1-easeInOut(game.level.gameOver.animation/20);
+                            }
+
+                            var scoreText = Math.round(this.score);
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "40px Arial";
+                            var width = ctx.measureText(scoreText).width;
+                            this.scoreX = 980-width/2;
+                            ctx.save();
+                            ctx.translate(this.scoreX,60);
+                            var s = 1+this.addAnimation/15;
+                            ctx.scale(s,s);
+                            ctx.fillText(scoreText,0,0);
+                            ctx.restore();
+                            ctx.textAlign = "right";
+                            ctx.fillText("Score: ",980-width,60);
+
+                            ctx.fillText("Level: "+game.level.level,980,120);
+
+                            ctx.restore();
+                        },
+                        add: function(amount) {
+                            this.score += amount;
+                            this.addAnimation = 5;
+                        }
+                    },
+                    gameOver: {
+                        animation: 0,
+                        retryClickTime: 0,
+                        quitClickTime: 0,
+                        newRecord: false,
+                        animatedScore: 0,
+                        update: function() {
+                            this.animation++;
+                            if(this.retryClickTime) this.retryClickTime++;
+                            if(this.quitClickTime) this.quitClickTime++;
+                        },
+                        updateButtons: function() {
+                            if(this.animation>150) {
+                                if(Mouse.clickInBox(320-150,800-70,300,140)) {
+                                    this.retryClickTime = 1;
+                                    menu.switchPage = "new game";
+                                }
+                                if(Mouse.clickInBox(680-150,800-70,300,140)) {
+                                    this.quitClickTime = 1;
+                                    menu.switchPage = "title screen";
+                                }
+                            }
+                        },
+                        draw: function() {
+                            var a = this.animation;
+                            ctx.save();
+                            ctx.translate(500,300);
+                            var s = easeInOut((a-10)/20);
+                            ctx.scale(s,s);
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "100px Arial";
+                            ctx.fillText("Game Over!",0,0);
+                            ctx.restore();
+
+                            this.animatedScore = Math.round(Math.min(1,Math.max(0,(a-70)/(50+game.level.score.score/100)))*game.level.score.score);
+                            ctx.save();
+                            ctx.translate(500,430);
+                            var s = easeInOut((a-50)/20);
+                            ctx.scale(s,s);
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "70px Arial";
+                            ctx.fillText("Score: "+this.animatedScore,0,0);
+                            ctx.restore();
+
+                            if(this.newRecord) {
+                                var width = ctx.measureText("Score: "+this.animatedScore).width;
+                                var s = easeInOut((a-120-game.level.score.score/100)/20);
+                                ctx.save();
+                                ctx.translate(530+width/2,425);
+                                ctx.scale(s,s);
+                                ctx.fillStyle = "red";
+                                ctx.roundRect(0,-60,200,120,20);
+                                ctx.fill();
+                                ctx.fillStyle = "black";
+                                ctx.textAlign = "center";
+                                ctx.textBaseline = "middle";
+                                ctx.font = "40px Arial";
+                                ctx.fillText("New",100,-25);
+                                ctx.fillText("Record!",100,25);
+                                ctx.restore();
+                            }
+
+                            ctx.save();
+                            ctx.translate(500,530);
+                            var s = easeInOut((a-90)/20);
+                            ctx.scale(s,s);
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "70px Arial";
+                            ctx.fillText("Level: "+game.level.level,0,0);
+                            ctx.restore();
+
+                            ctx.save();
+                            ctx.translate(500,630);
+                            var s = easeInOut((a-130)/20);
+                            ctx.scale(s,s);
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "70px Arial";
+                            ctx.fillText("Highscore: "+highscore,0,0);
+                            ctx.restore();
+
+                            ctx.strokeStyle = "black";
+                            ctx.fillStyle = "white";
+                            ctx.lineWidth = 5;
+                            ctx.font = "70px Arial";
+
+                            ctx.save();
+                            ctx.translate(320,800);
+                            var s = easeInOut((a-170)/20)-0.2*easeInOut(this.retryClickTime/20);
+                            ctx.scale(s,s);
+                            if(Mouse.inBox(320-150,800-70,300,140)) {
+                                ctx.fillStyle = "rgb(230,230,230)"
+                            }
+                            ctx.roundRect(-150,-70,300,140,20);
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.fillStyle = "black";
+                            ctx.fillText("Retry",0,0);
+                            ctx.restore();
+
+                            ctx.save();
+                            ctx.translate(680,800);
+                            var s = easeInOut((a-190)/20)-0.2*easeInOut(this.quitClickTime/20);
+                            ctx.scale(s,s);
+                            if(Mouse.inBox(680-150,800-70,300,140)) {
+                                ctx.fillStyle = "rgb(230,230,230)"
+                            }
+                            ctx.roundRect(-150,-70,300,140,20);
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.fillStyle = "black";
+                            ctx.fillText("Quit",0,0);
+                            ctx.restore();
+                        },
+                        reset: function() {
+                            this.retryClickTime = 0;
+                            this.quitClickTime = 0;
+                            this.animation = 0;
+                            this.animatedScore = 0;
+                            this.newRecord = false;
+                        }
+                    },
+                    newLevel: function() {
+                        this.level++;
+                        this.correctButtonClickedAnimation = 0;
+                        this.incorrectButtonClickedAnimation = 0;
+                        game.buttons.createNewLevel(this.level);
+                        this.time.newTimeForLevel(this.level);
+                        this.prompt.newPrompt();
+                    }
+                },
+                buttons: {
+                    colorSchemes: {
+                        "Red": {
+                            fill: "rgb(255,0,0)",
+                            border: "rgb(190,0,0)"
+                        },
+                        "Orange": {
+                            fill: "rgb(255,150,0)",
+                            border: "rgb(180,90,0)"
+                        },
+                        "Yellow": {
+                            fill: "rgb(255,255,0)",
+                            border: "rgb(190,190,0)"
+                        },
+                        "Green": {
+                            fill: "rgb(0,255,0)",
+                            border: "rgb(0,180,0)"
+                        },
+                        "Blue": {
+                            fill: "rgb(0,0,255)",
+                            border: "rgb(0,0,170)",
+                            textColor: "white"
+                        },
+                        "Purple": {
+                            fill: "rgb(160,32,240)",
+                            border: "rgb(110,15,180)",
+                            textColor: "white"
+                        },
+                        "White": {
+                            fill: "rgb(255,255,255)",
+                            border: "rgb(180,180,180)"
+                        },
+                        "Black": {
+                            fill: "rgb(0,0,0)",
+                            border: "rgb(0,0,0)",
+                            textColor: "white"
+                        },
+                        "Pink": {
+                            fill: "rgb(255,180,230)",
+                            border: "rgb(190,110,160)"
+                        },
+                        "Cyan": {
+                            fill: "rgb(0,255,255)",
+                            border: "rgb(0,180,180)"
+                        },
+                        "Brown": {
+                            fill: "rgb(139,69,19)",
+                            border: "rgb(100,40,13)",
+                            textColor: "white"
+                        },
+                        "Beige": {
+                            fill: "rgb(245,245,220)",
+                            border: "rgb(210,210,170)"
+                        },
+                        "Gray": {
+                            fill: "rgb(200,200,200)",
+                            border: "rgb(170,170,170)"
+                        },
+                    },
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            o.startAnimation++;
+                            if(o.endAnimation) {
+                                o.endAnimation++;
+                            } else if(game.level.startEndAnimation()) {
+                                o.endAnimation = 1;
+                            }
+                            if(o.shake>0) o.shake -= 0.5;
+                            if(o.clicked) {
+                                o.clickedAnimation++;
+                                continue;
+                            }
+                            if(game.level.buttonClicked()) continue;
+                            if(Mouse.clickInBox(o.x-150,o.y-80,300,160)) {
+                                o.clicked = true;
+                                o.clickedAnimation = 0;
+                                if(o.correct) {
+                                    game.level.correctButtonClickedAnimation = 1;
+                                    var p = {};
+                                    p.type = "correct button click aura";
+                                    p.x = o.x;
+                                    p.y = o.y;
+                                    p.color = o.borderColor;
+                                    game.particles.create(p);
+                                } else {
+                                    game.level.incorrectButtonClickedAnimation = 1;
+                                    o.shake = 10;
+                                }
+                                for(var n=0;n<10;n++) {
+                                    var p = {};
+                                    p.type = "button click particle";
+                                    p.color = o.borderColor;
+                                    if(!o.correct) {
+                                        p.color = game.color.mergeColors("rgb(120,120,120)",game.color.grayscale(p.color,1),0.5);
+                                    }
+                                    game.particles.create(p);
+                                }
+                            }
+                        }
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            this.drawButton(o);
+                        }
+                    },
+                    drawButton: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        if(o.shake>0) {
+                            if(t%2==0) {
+                                ctx.rotate(o.shake*Math.PI/180);
+                            } else {
+                                ctx.rotate(-o.shake*Math.PI/180);
+                            }
+                        }
+                        var fillColor = o.fillColor;
+                        var borderColor = o.borderColor;
+                        if(o.clicked) {
+                            if(!o.correct) {
+                                var fillGray = "rgb(150,150,150)";
+                                var borderGray = "rgb(120,120,120)";
+                                var actualFillGray = game.color.grayscale(fillColor,easeInOut(o.clickedAnimation/10));
+                                var actualBorderGray = game.color.grayscale(borderColor,easeInOut(o.clickedAnimation/10));
+                                fillColor = game.color.mergeColors(fillColor,fillGray,easeInOut(o.clickedAnimation/10));
+                                borderColor = game.color.mergeColors(borderColor,borderGray,easeInOut(o.clickedAnimation/10));
+                                fillColor = game.color.mergeColors(fillColor,actualFillGray,0.5);
+                                borderColor = game.color.mergeColors(borderColor,actualBorderGray,0.5);
+                            }
+                            var s = 1-easeInOut(o.clickedAnimation/10)*0.2;
+                            if(o.correct) {
+                                s = 1+easeInOut(o.clickedAnimation/10)*0.2;
+                            }
+                            ctx.scale(s,s);
+                        }
+                        var s = easeInOut(o.startAnimation/40);
+                        ctx.scale(s,s);
+                        if(o.endAnimation) {
+                            var s = easeInOut(1-o.endAnimation/40);
+                            ctx.scale(s,s);
+                        }
+                        ctx.fillStyle = fillColor;
+                        ctx.strokeStyle = borderColor;
+                        ctx.lineWidth = 6;
+                        ctx.roundRect(-150,-80,300,160,20);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = o.textColor;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.font = "70px Arial";
+                        ctx.fillText(o.text,0,0);
+                        ctx.restore();
+                    },
+                    create: function(o) {
+                        var colorScheme = this.colorSchemes[o.color];
+                        if(colorScheme===undefined) colorScheme = this.colorSchemes.Red;
+                        o.fillColor = colorScheme.fill;
+                        o.borderColor = colorScheme.border;
+                        o.textColor = colorScheme.textColor||"black";
+                        o.clicked = false;
+                        o.clickedAnimation = 0;
+                        o.startAnimation = 0;
+                        o.endAnimation = 0;
+                        return o;
+                    },
+                    createButtonGrid: function(array,correctIndex) {
+                        this.objects = [];
+                        for(var n=0;n<array.length;n++) {
+                            var e = array[n];
+                            var o = {};
+                            o.color = e.color;
+                            o.text = e.text;
+                            o.x = 500+175*(n%2==0?-1:1);
+                            o.y = 470+Math.floor(n/2)*200;
+                            this.objects.push(this.create(o));
+                        }
+                        this.objects[correctIndex].correct = true;
+                    },
+                    getLevelColors: function(level) {
+                        var colors = ["Red","Orange","Yellow","Green","Blue","Purple"];
+                        if(level>5) colors.push("White");
+                        if(level>10) colors.push("Pink");
+                        if(level>15) colors.push("Cyan");
+                        if(level>20) colors.push("Brown");
+                        if(level>25) colors.push("Gray");
+                        if(level>30) colors.push("Beige");
+                        if(level>35) colors.push("Black");
+                        return colors;
+                    },
+                    createNewLevel: function(level) {
+                        var fillColors = this.getLevelColors(level);
+                        var texts = this.getLevelColors(level);
+                        var correctFillIndex = Math.floor(Math.random()*fillColors.length);
+                        var correctFill = fillColors[correctFillIndex];
+                        var correctTextIndex = Math.floor(Math.random()*texts.length);
+                        var correctText = texts[correctTextIndex];
+                        game.level.prompt.buttonColor = correctFill;
+                        game.level.prompt.buttonText = correctText;
+                        var correctButton = {};
+                        var match1 = Math.random()<0.5?"color":"word";
+                        var match2 = Math.random()<0.5?"color":"word";
+                        if(match1=="color") {
+                            if(match2=="color") {
+                                fillColors.splice(correctFillIndex,1);
+                                game.level.prompt.beforeText = "Match color to color";
+                                correctButton.color = correctFill;
+                                correctButton.text = texts[Math.floor(Math.random()*texts.length)];
+                            } else if(match2=="word") {
+                                texts.splice(correctFillIndex,1);
+                                game.level.prompt.beforeText = "Match color to word";
+                                correctButton.color = fillColors[Math.floor(Math.random()*fillColors.length)];
+                                correctButton.text = correctFill;
+                            }
+                        } else if(match1=="word") {
+                            if(match2=="color") {
+                                fillColors.splice(correctTextIndex,1);
+                                game.level.prompt.beforeText = "Match word to color";
+                                correctButton.text = texts[Math.floor(Math.random()*texts.length)];
+                                correctButton.color = correctText;
+                            } else if(match2=="word") {
+                                texts.splice(correctTextIndex,1);
+                                game.level.prompt.beforeText = "Match word to word";
+                                correctButton.text = correctText;
+                                correctButton.color = fillColors[Math.floor(Math.random()*fillColors.length)];
+                            }
+                        }
+                        var buttons = [];
+                        for(var n=0;n<5;n++) {
+                            var o = {};
+                            o.color = fillColors[Math.floor(Math.random()*fillColors.length)];
+                            o.text = texts[Math.floor(Math.random()*texts.length)];
+                            buttons.push(o);
+                        }
+                        var correctIndex = Math.floor(Math.random()*buttons.length);
+                        buttons.splice(correctIndex,0,correctButton);
+                        this.createButtonGrid(buttons,correctIndex);
+                    }
+                },
+                particles: {
+                    objects: [],
+                    backgroundObjects: [],
+                    update: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            this.updateObject(o);
+                        }
+                        for(var n=0;n<this.backgroundObjects.length;n++) {
+                            var o = this.backgroundObjects[n];
+                            this.updateObject(o);
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                        this.backgroundObjects = this.backgroundObjects.filter(e=>!e.delete);
+                    },
+                    updateObject: function(o) {
+                        if(o.decay) o.alpha -= o.decay;
+                        if(o.xmove) o.x += o.xmove;
+                        if(o.ymove) o.y += o.ymove;
+                        if(o.damping) o.xmove *= o.damping;
+                        if(o.damping) o.ymove *= o.damping;
+                        if(o.turn) o.angle += o.turn;
+                        if(o.update) o.update();
+                        if(o.alpha<=0) o.delete = true;
+                    },
+                    drawBackground: function() {
+                        for(var n=0;n<this.backgroundObjects.length;n++) {
+                            var o = this.backgroundObjects[n];
+                            this.drawObject(o);
+                        }
+                    },
+                    draw: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            this.drawObject(o);
+                        }
+                    },
+                    drawObject: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        if(o.alpha) ctx.globalAlpha = o.alpha;
+                        if(o.angle) ctx.rotate(o.angle*Math.PI/180);
+                        if(o.type=="button click particle") {
+                            ctx.fillStyle = o.color;
+                            ctx.fillRect(-5,-5,10,10);
+                        }
+                        if(o.type=="heart break particle") {
+                            ctx.fillStyle = o.color;
+                            ctx.fillRect(-4,-4,8,8);
+                        }
+                        if(o.type=="correct button click aura") {
+                            ctx.fillStyle = o.color;
+                            ctx.beginPath();
+                            ctx.arc(0,0,o.radius,0,2*Math.PI);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    },
+                    create: function(o) {
+                        var background = false;
+                        if(o.type=="button click particle") {
+                            var move = distToMove(Math.random()*4+1,Math.random()*360);
+                            o.xmove = move.x;
+                            o.ymove = move.y-3;
+                            o.alpha = 3+Math.random()*3;
+                            o.decay = 0.05;
+                            o.x = Mouse.x;
+                            o.y = Mouse.y;
+                            o.damping = 0.98;
+                            o.angle = Math.random()*360;
+                            o.turn = Math.random()*20-10;
+                            o.update = function() {
+                                this.ymove += 0.05;
+                            }
+                        }
+                        if(o.type=="heart break particle") {
+                            var move = distToMove(Math.random()*4+1,Math.random()*360);
+                            o.color = "rgba(255,0,0,0.7)";
+                            o.xmove = move.x/2;
+                            o.ymove = move.y;
+                            o.alpha = 3+Math.random()*3;
+                            o.decay = 0.1;
+                            o.damping = 0.98;
+                            o.angle = Math.random()*360;
+                            o.turn = Math.random()*20-10;
+                            o.update = function() {
+                                this.ymove += 0.05;
+                            }
+                        }
+                        if(o.type=="correct button click aura") {
+                            background = true;
+                            o.alpha = 0.7;
+                            o.radius = 120;
+                            o.decay = 0.02;
+                            o.update = function() {
+                                this.radius *= 1.03;
+                            }
+                        }
+                        if(!background) {
+                            this.objects.push(o);
+                        } else {
+                            this.backgroundObjects.push(o);
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                        this.backgroundObjects = [];
+                    }
+                },
+                color: {
+                    grayscale: function(color,percent) {
+                        var parsed = this.parseRGBString(color);
+                        var r = parsed[0]*0.3;
+                        var g = parsed[1]*0.59;
+                        var b = parsed[2]*0.11;
+                        var grayValue = r+g+b;
+                        var grayscale = this.createRGBString([grayValue,grayValue,grayValue]);
+                        if(percent==1) return grayscale;
+                        var merged = this.mergeColors(color,grayscale,percent);
+                        return merged;
+                    },
+                    mergeColors: function(color1,color2,percent) {
+                        var parsed1 = this.parseRGBString(color1);
+                        var parsed2 = this.parseRGBString(color2);
+                        var merged = [];
+                        for(var n=0;n<3;n++) {
+                            merged.push(parsed1[n]*(1-percent)+parsed2[n]*percent);
+                        }
+                        return this.createRGBString(merged);
+                    },
+                    parseRGBString: function(color) {
+                        var intString = color.slice(4,-1);
+                        var intArray = intString.split(",").map(Number);
+                        return intArray;
+                    },
+                    createRGBString: function(array) {
+                        return `rgb(${array[0]},${array[1]},${array[2]})`;
+                    }
+                }
+            }
+
+            function updateHighscore() {
+                localStorage.setItem("colorblindhighscore",highscore);
+            }
+
+            var t = 0;
+            var highscore = 0;
+            if(localStorage.getItem("colorblindhighscore")!=null) {
+                highscore = localStorage.getItem("colorblindhighscore");
+                highscore = Number(highscore);
+                if(isNaN(highscore)) highscore = 0;
+            }
+
+            menu.resetTitleScreen();
+            tutorial.reset();
+        </script>
+    </body>
+</html>

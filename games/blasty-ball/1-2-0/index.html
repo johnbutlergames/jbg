@@ -1,0 +1,1895 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Blasty Ball";
+            var dimensions = {width:2000,height:1000};
+            var images = {};
+            var audios = {};
+            
+            initialize();
+            window.setInterval(update,10);
+
+            function getText(number) {
+                number %= 100;
+                if(number<10) {
+                    number = "0"+number;
+                }
+                return number;
+            }
+            
+            function main() {
+                menu.update();
+            }
+
+            var menu = {
+                page: "home",
+                switchPage: "home",
+                switchPageAnimation: 0,
+                objects: {home:[{type:'player',playerId:0,x:50,y:300,r:35,angle:50,blasting:1},{type:'player',playerId:1,x:900,y:100,r:35,angle:250,blasting:0},{type:'ball',x:170,y:200,r:20},{type:'ball',x:158,y:210,r:20,o:0.4},{type:'ball',x:146,y:220,r:20,o:0.2}],credits:[{type:'player',playerId:0,x:900,y:100,r:35,angle:160,blasting:0},{type:'player',playerId:1,x:890,y:300,r:35,angle:20,blasting:0},{type:'ball',x:100,y:400,r:20}],selectRoundType:[{type:'player',playerId:0,x:900,y:370,r:35,angle:300,blasting:0},{type:'player',playerId:1,x:100,y:400,r:35,angle:0,blasting:0},{type:'ball',x:100,y:100,r:20}],selectGameMode:[{type:'player',playerId:0,x:340,y:140,r:20,angle:30,blasting:0},{type:'player',playerId:1,x:290,y:140,r:20,angle:300,blasting:0},{type:'player',playerId:0,x:340,y:240,r:20,angle:290,blasting:0},{type:'player',playerId:0,x:270,y:340,r:20,angle:80,blasting:0},{type:'ball',x:330,y:330,r:12}]},
+                animation: 0,
+                update: function() {
+                    if(this.switchPage!==this.page) {
+                        this.animation++;
+                        if(this.animation==20) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.animation>0) {
+                            this.animation--;
+                        }
+                    }
+                    //animation
+
+                    this.drawPage(this.page);
+
+                    var objects = this.objects[this.page];
+                    if(objects!==undefined) {
+                        var n = 0;
+                        while(n < objects.length) {
+                            var obj = objects[n];
+                            if(obj.o) {
+                                ctx.globalAlpha = obj.o;
+                            }
+                            ctx.save();
+                            ctx.translate(obj.x,obj.y);
+                            ctx.scale(obj.r/20,obj.r/20);
+                            game.objects.drawObject(obj);
+                            ctx.restore();
+                            ctx.globalAlpha = 1;
+                            n++;
+                        }
+                    }
+                    //draw objects
+
+                    ctx.globalAlpha = this.animation/20;
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,2000,1000);
+                    ctx.globalAlpha = 1;
+                },
+                drawPage: function(page) {
+                    if(page=='home') {
+                        ctx.font = '100px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Blasty Ball',500,100);
+                        //title
+
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.roundRect(420,180,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(420,180,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'selectGameMode';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Play',500,220);
+                        //play button
+
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.roundRect(420,280,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(420,280,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'options';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Options',500,320);
+                        //options button
+
+                        ctx.roundRect(420,380,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(420,380,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'credits';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Credits',500,420);
+                        //credits button
+                    } else if(page=='new game') {
+                        game.reset();
+                        this.page = "game";
+                        this.switchPage = "game";
+                    } else if(page=='credits') {
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Credits:',500,60);
+                        //title
+
+                        ctx.font = '45px Trebuchet MS';
+                        ctx.fillText('Game Design: John Butler',500,150);
+                        ctx.fillText('Programming: John Butler',500,220);
+                        ctx.fillText('Artwork: John Butler',500,290);
+                        //credits
+
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.roundRect(420,400,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(420,400,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'home';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Back',500,440);
+                        //back button
+                    } else if(page=='options') {
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Options:',500,60);
+                        //title
+
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.roundRect(420,400,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(420,400,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'home';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Back',500,440);
+                        //back button
+
+                        ctx.lineWidth = 5;
+                        ctx.textAlign = 'right';
+                        var optionText = ['Ball Focus','Blast Tracing','Player Scoring','No Puppy Guarding','Power-Ups'];
+                        var options = ['ballFocus','blastTracing','playerScoring','noPuppyGuarding','bonuses'];
+                        var n = 0;
+                        while(n < options.length) {
+                            var text = optionText[n];
+                            var option = game.options[options[n]];
+                            ctx.fillStyle = 'black';
+                            ctx.fillText(text,530,125+n*57);
+                            //text
+
+                            ctx.beginPath();
+                            ctx.roundRect(550,100+n*57,100,50,20);
+                            ctx.fillStyle = 'white';
+                            if(Mouse.inBox(550,100+n*57,100,50)) {
+                                ctx.fillStyle = 'rgb(220,220,220)';
+                                if(Mouse.click) {
+                                    game.options[options[n]] = !game.options[options[n]];
+                                }
+                            }
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.fillStyle = 'black';
+                            ctx.beginPath();
+                            if(option) {
+                                ctx.arc(625,125+n*57,20,0,2*Math.PI);
+                                ctx.fill();
+                            } else {
+                                ctx.arc(575,125+n*57,17,0,2*Math.PI);
+                                ctx.stroke();
+                            }
+                            //button
+                            n++;
+                        }
+                        //options
+                    } else if(page=='selectGameMode') {
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Game Mode:',500,60);
+                        //title
+
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 5;
+                        ctx.roundRect(380,100,240,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(380,100,240,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'selectRoundType';
+                                game.options.ai = [0,0];
+                                game.tutorial = false;
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Multiplayer',500,140);
+                        //multiplayer button
+
+                        ctx.roundRect(380,200,240,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(380,200,240,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'selectAIOptions';
+                                game.options.ai = [1,0];
+                                game.tutorial = false;
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Singleplayer',500,240);
+                        ctx.font = '30px Trebuchet MS';
+                        //singleplayer button
+
+                        ctx.roundRect(380,300,240,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(380,300,240,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                game.options.ai = [0,0];
+                                this.switchPage = "new game";
+                                game.tutorial = true;
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Tutorial',500,340);
+                        //tutorial button
+
+                        ctx.roundRect(420,400,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(420,400,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'home';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Back',500,440);
+                        //back button
+                        
+                        ctx.fillText('🤖',270,235);
+                    } else if(page=='selectAIOptions') {
+                        ctx.lineWidth = 4;
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('AI Options:',500,60);
+                        //title
+
+                        ctx.font = '50px Trebuchet MS';
+                        ctx.fillText('AI is ',250,150);
+
+                        ctx.lineWidth = 0.1;
+                        if(game.options.ai[0]) {
+                            ctx.lineWidth = 4;
+                        }
+                        ctx.fillStyle = 'rgb(100,100,255)';
+                        ctx.strokeStyle = 'black';
+                        ctx.roundRect(320,110,160,80,20);
+                        if(Mouse.inBox(320,110,160,80)) {
+                            ctx.fillStyle = 'blue';
+                            if(Mouse.click) {
+                                game.options.ai = [1,0];
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.lineWidth = 0.1;
+                        if(game.options.ai[1]) {
+                            ctx.lineWidth = 4;
+                        }
+                        ctx.fillStyle = 'rgb(255,100,100)';
+                        ctx.strokeStyle = 'black';
+                        ctx.roundRect(520,110,160,80,20);
+                        if(Mouse.inBox(520,110,160,80)) {
+                            ctx.fillStyle = 'red';
+                            if(Mouse.click) {
+                                game.options.ai = [0,1];
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Red',600,150);
+                        ctx.fillText('Blue',400,150);
+                        //who is AI
+
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('AI Level:',200,300);
+                        ctx.lineWidth = 0.1;
+                        if(game.options.ai[0]===1||game.options.ai[1]==1) {
+                            ctx.lineWidth = 4;
+                        }
+                        ctx.fillStyle = 'rgb(230,230,230)';
+                        ctx.strokeStyle = 'black';
+                        ctx.roundRect(320,260,160,80,20);
+                        if(Mouse.inBox(320,260,160,80)) {
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                            if(Mouse.click) {
+                                if(game.options.ai[0]) {
+                                    game.options.ai[0] = 1;
+                                }
+                                if(game.options.ai[1]) {
+                                    game.options.ai[1] = 1;
+                                }
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.lineWidth = 0.1;
+                        if(game.options.ai[0]===2||game.options.ai[1]==2) {
+                            ctx.lineWidth = 4;
+                        }
+                        ctx.fillStyle = 'rgb(230,230,230)';
+                        ctx.strokeStyle = 'black';
+                        ctx.roundRect(520,260,160,80,20);
+                        if(Mouse.inBox(520,260,160,80)) {
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                            if(Mouse.click) {
+                                if(game.options.ai[0]) {
+                                    game.options.ai[0] = 2;
+                                }
+                                if(game.options.ai[1]) {
+                                    game.options.ai[1] = 2;
+                                }
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.lineWidth = 0.1;
+                        if(game.options.ai[0]===3||game.options.ai[1]==3) {
+                            ctx.lineWidth = 4;
+                        }
+                        ctx.fillStyle = 'rgb(230,230,230)';
+                        ctx.strokeStyle = 'black';
+                        ctx.roundRect(720,260,200,80,20);
+                        if(Mouse.inBox(720,260,200,80)) {
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                            if(Mouse.click) {
+                                if(game.options.ai[0]) {
+                                    game.options.ai[0] = 3;
+                                }
+                                if(game.options.ai[1]) {
+                                    game.options.ai[1] = 3;
+                                }
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('noob',400,300);
+                        ctx.fillText('Pro',600,300);
+                        ctx.fillText('HACKER',820,300);
+                        //ai level
+
+                        ctx.lineWidth = 4;
+                        ctx.roundRect(510,400,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(510,400,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'selectRoundType';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Next',590,440);
+                        //next button
+
+                        ctx.roundRect(330,400,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(330,400,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'selectGameMode';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Back',410,440);
+                        //back button
+                    } else if(page=='selectRoundType') {
+                        ctx.font = '70px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Round Type:',500,50);
+                        //title
+
+                        ctx.roundRect(510,100,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(510,100,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'firstto3';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('First to 3',640,140);
+                        //first to 3
+
+                        ctx.roundRect(510,200,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(510,200,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'firstto5';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('First to 5',640,240);
+                        //first to 5
+
+                        ctx.roundRect(510,300,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(510,300,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'firstto10';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('First to 10',640,340);
+                        //first to 10
+
+                        ctx.roundRect(230,100,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(230,100,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'mostin1';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Most in 1:00',360,140);
+                        //most in 1:00
+
+                        ctx.roundRect(230,200,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(230,200,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'mostin3';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Most in 3:00',360,240);
+                        //most in 3:00
+
+                        ctx.roundRect(230,300,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(230,300,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'mostin5';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Most in 5:00',360,340);
+                        //most in 5:00
+
+                        ctx.roundRect(510,400,260,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(510,400,260,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'new game';
+                                game.options.roundType = 'infinite';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Infinite',640,440);
+                        //infinite
+
+                        ctx.roundRect(330,400,160,80,20);
+                        ctx.fillStyle = 'white';
+                        if(Mouse.inBox(330,400,160,80)) {
+                            ctx.fillStyle = 'rgb(220,220,220)';
+                            if(Mouse.click) {
+                                this.switchPage = 'selectGameMode';
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.fillStyle = 'black';
+                        ctx.font = '40px Trebuchet MS';
+                        ctx.fillText('Back',410,440);
+                        //back button
+                    } else if(page=="game") {
+                        game.tick();
+                    }
+                },
+                updatePage: function(page) {
+                }
+            }
+
+            var game = {
+                timer: 0,
+                gameOver: false,
+                gameOverAnimation: 0,
+                tutorial: false,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                    if(this.tutorial) {
+                        this.updateTutorial();
+                    }
+                },
+                update: function() {
+                    if(this.options.roundType.startsWith('mostin')&&this.startTime<=1&&this.timer>0) {
+                        this.timer--;
+                    }
+                    if(menu.switchPageAnimation==0&&!this.gameOver) {
+                        this.spawners.update();
+                        this.objects.update();
+                    }
+                    if(this.startTime>0&&menu.switchPageAnimation==0) {
+                        this.startTime--;
+                    }
+                    if(this.scoreTime[0]>0) {
+                        this.scoreTime[0]--;
+                    }
+                    if(this.scoreTime[1]>0) {
+                        this.scoreTime[1]--;
+                    }
+
+                    this.objects.objects[0].y = 250-this.goalyBoxSize[0]/2;
+                    this.objects.objects[1].y = 250+this.goalyBoxSize[0]/2;
+                    this.objects.objects[2].y = 250-this.goalyBoxSize[1]/2;
+                    this.objects.objects[3].y = 250+this.goalyBoxSize[1]/2;
+                    //update goaly box size
+
+                    var inGoalyBoxes = [0,0];
+                    var n = 0;
+                    while(n < this.objects.objects.length) {
+                        var obj = this.objects.objects[n];
+                        if(obj.type=='player'&&obj.y>160&&obj.y<340) {
+                            if((obj.playerId==1&&obj.x<160)||(obj.playerId==0&&obj.x>840)) {
+                                inGoalyBoxes[obj.playerId] = 1;
+                            }
+                        }
+                        if(inGoalyBoxes[0]&&inGoalyBoxes[1]) {
+                            break;
+                        }
+                        n++;
+                    }
+                    if(!this.tutorial) {
+                        if(inGoalyBoxes[0]) {
+                            this.goalyBoxTime[1]++;
+                            this.goalyBoxTime[1] = Math.min(this.goalyBoxTime[1],100);
+                        } else {
+                            this.goalyBoxTime[1] = 0;
+                        }
+                        if(inGoalyBoxes[1]) {
+                            this.goalyBoxTime[0]++;
+                            this.goalyBoxTime[0] = Math.min(this.goalyBoxTime[0],100);
+                        } else {
+                            this.goalyBoxTime[0] = 0;
+                        }
+                        if(this.options.noPuppyGuarding) {
+                            if(this.goalyBoxTime[0]==100) {
+                                this.goalyBoxSize[0]++;
+                            } else {
+                                this.goalyBoxSize[0]--;
+                            }
+                            if(this.goalyBoxTime[1]==100) {
+                                this.goalyBoxSize[1]++;
+                            } else {
+                                this.goalyBoxSize[1]--;
+                            }
+                            this.goalyBoxSize[0] = Math.max(this.goalyBoxSize[0],180);
+                            this.goalyBoxSize[1] = Math.max(this.goalyBoxSize[1],180);
+                        }
+                        this.goalyBoxSize[0] = Math.min(this.goalyBoxSize[0],400);
+                        this.goalyBoxSize[1] = Math.min(this.goalyBoxSize[1],400);
+                    }
+                    //find if players are in goaly boxes
+
+                    this.particles.update();
+                    //update particles
+
+                    if(this.options.bonuses&&!this.tutorial) {
+                        this.bonuses.update();
+                    }
+                    //update bonuses
+
+                    if(this.options.roundType.startsWith('mostin')&&this.timer==0) {
+                        this.gameOver = true;
+                    }
+                    if(this.options.roundType=='firstto3'&&(this.player1Score==3||this.player2Score==3)) {
+                        this.gameOver = true;
+                    }
+                    if(this.options.roundType=='firstto5'&&(this.player1Score==5||this.player2Score==5)) {
+                        this.gameOver = true;
+                    }
+                    if(this.options.roundType=='firstto10'&&(this.player1Score==10||this.player2Score==10)) {
+                        this.gameOver = true;
+                    }
+                    //calculate if game is over
+                },
+                gameOverMenu: function() {
+                    this.gameOverAnimation++;
+                    var a = this.gameOverAnimation;
+                    var y = -Math.sin(a/12)*500/(a*0.1);
+                    if(a>75) {
+                        y = 0;
+                    }
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.roundRect(350,100+y,300,300,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    var red = this.player1Score;
+                    var blue = this.player2Score;
+                    var text = 'Tie!';
+                    var color = 'black';
+                    if(red>blue) {
+                        text = 'Red Wins!';
+                        color = 'red';
+                    } else if(red<blue) {
+                        text = 'Blue Wins!';
+                        color = 'blue';
+                    }
+                    ctx.fillStyle = color;
+                    ctx.textAlign = 'center';
+                    ctx.font = '50px Trebuchet MS';
+                    ctx.fillText(text,500,145+y);
+
+                    ctx.font = '40px Trebuchet MS';
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('to',500,195+y);
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = 'red';
+                    ctx.fillText(red,470,195+y);
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'blue';
+                    ctx.fillText(blue,530,195+y);
+                    //score text
+
+                    ctx.textAlign = 'center';
+                    ctx.roundRect(420,225+y,160,70,20);
+                    ctx.fillStyle = 'white';
+                    if(Mouse.inBox(420,225+y,160,70)) {
+                        ctx.fillStyle = 'rgb(220,220,220)';
+                        if(Mouse.click) {
+                            menu.switchPage = "new game";
+                        }
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Retry',500,260+y);
+                    //retry button
+
+                    ctx.roundRect(420,315+y,160,70,20);
+                    ctx.fillStyle = 'white';
+                    if(Mouse.inBox(420,315+y,160,70)) {
+                        ctx.fillStyle = 'rgb(220,220,220)';
+                        if(Mouse.click) {
+                            menu.switchPage = 'home';
+                        }
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Quit',500,350+y);
+                    //quit button
+                },
+                reset: function() {
+                    this.goalyBoxSize = [180,180];
+                    this.gameOverAnimation = 0;
+                    this.gameOver = false;
+                    this.startTime = 100;
+                    this.bonuses.spawnTime = 500;
+                    this.objects.objects = [{x:0,y:160,radius:20,static:true},{x:0,y:340,radius:20,static:true},{x:1000,y:160,radius:20,static:true},{x:1000,y:340,radius:20,static:true},{x:20,y:0,radius:50,static:true},{x:980,y:0,radius:50,static:true},{x:20,y:500,radius:50,static:true},{x:980,y:500,radius:50,static:true}];
+                    var n = 0;
+                    while(n < this.spawners.spawners.length) {
+                        var spawner = this.spawners.spawners[n];
+                        spawner.time = 100;
+                        spawner.queue = [];
+                        n++;
+                    }
+                    if(game.tutorial) {
+                        this.respawnPlayer(0);
+                        this.goalyBoxSize[0] = 0;
+                        this.goalyBoxSize[1] = 0;
+                        this.startTime = 0;
+                        this.tutorialNumber = 0;
+                        this.options.roundType = 'tutorial';
+                    } else {
+                        this.spawners.spawn(2,'ball');
+                        this.respawnPlayer(0);
+                        this.respawnPlayer(1);
+                    }
+                    this.player1Score = 0;
+                    this.player2Score = 0;
+
+                    if(this.options.roundType=='mostin1') {
+                        this.timer = 3000;
+                    }
+                    if(this.options.roundType=='mostin3') {
+                        this.timer = 9000;
+                    }
+                    if(this.options.roundType=='mostin5') {
+                        this.timer = 15000;
+                    }
+                    //set timer
+                },
+                draw: function() {
+                    ctx.fillStyle = 'rgb(255,230,230)';
+                    ctx.fillRect(0,0,500,500);
+                    ctx.fillStyle = 'rgb(240,240,255)';
+                    ctx.fillRect(500,0,500,500);
+                    //draw both sides colored rectangles
+
+                    ctx.fillStyle = 'black';
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'black';
+                    if(this.scoreTime[0]>0) {
+                        ctx.strokeStyle = 'red';
+                    }
+                    if(this.goalyBoxTime[1]==100&&game.options.noPuppyGuarding) {
+                        ctx.strokeStyle = 'red';
+                    }
+                    ctx.strokeRect(850,160,160,180);
+                    ctx.strokeStyle = 'black';
+                    if(this.scoreTime[1]>0) {
+                        ctx.strokeStyle = 'red';
+                    }
+                    if(this.goalyBoxTime[0]==100&&game.options.noPuppyGuarding) {
+                        ctx.strokeStyle = 'red';
+                    }
+                    ctx.strokeRect(-10,160,160,180);
+                    //draw goaly boxes
+
+                    ctx.strokeStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(-250,250,500,0,2*Math.PI);
+                    ctx.stroke();
+                    ctx.strokeStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(1250,250,500,0,2*Math.PI);
+                    ctx.stroke();
+                    //draw goaly circles
+
+                    if(game.options.noPuppyGuarding) {
+                        ctx.fillStyle = 'red';
+                        ctx.font = '13px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        if(this.goalyBoxTime[0]==100) {
+                            ctx.fillText('No Puppyguarding...',90,150);
+                        }
+                        if(this.goalyBoxTime[1]==100) {
+                            ctx.fillText('No Puppyguarding...',910,150);
+                        }
+                    }
+                    //draw no puppyguarding text
+
+                    ctx.strokeStyle = 'black';
+                    ctx.beginPath();
+                    ctx.moveTo(500,0);
+                    ctx.lineTo(500,500);
+                    ctx.stroke();
+                    //draw middle line
+
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,20,250-this.goalyBoxSize[0]/2);
+                    ctx.fillRect(0,250+this.goalyBoxSize[0]/2,20,250);
+                    ctx.fillRect(980,0,20,250-this.goalyBoxSize[1]/2);
+                    ctx.fillRect(980,250+this.goalyBoxSize[1]/2,20,250);
+                    //draw black static rectangles
+
+                    this.spawners.draw();
+                    //draw spawning balls
+
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = '35px Trebuchet MS';
+                    ctx.fillStyle = 'rgb(255,0,0)';
+                    if(game.options.showScores[0]) {
+                        ctx.fillText(getText(this.player1Score),80,250);
+                    }
+                    ctx.fillStyle = 'rgb(0,0,255)';
+                    if(game.options.showScores[1]) {
+                        ctx.fillText(getText(this.player2Score),920,250);
+                    }
+                    //draw player scores
+
+                    this.objects.draw();
+                    //draw objects
+
+                    this.particles.draw();
+                    //draw particles
+
+                    if(this.options.roundType.startsWith('mostin')&&this.startTime==0) {
+                        var seconds = Math.floor(this.timer%3000/50);
+                        if(seconds<10) {
+                            seconds = '0'+seconds;
+                        }
+                        var time = Math.floor(this.timer/3000)+':'+seconds;
+                        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                        ctx.roundRect(430,0,140,60,20);
+                        ctx.fill();
+                        if(this.timer<=300&&this.timer%50>30||this.timer<50) {
+                            ctx.fillStyle = 'red';
+                        } else {
+                            ctx.fillStyle = 'black';
+                        }
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.font = '50px Trebuchet MS';
+                        ctx.fillText(time,500,30);
+                    }
+                    //draw timer
+
+                    if(this.startTime>0&&menu.switchPageAnimation==0) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                        ctx.roundRect(430,60,140,80,20);
+                        ctx.fill();
+                        var s = this.startTime;
+                        ctx.fillStyle = 'black';
+                        var text = '3';
+                        if(s<75) {
+                            text = '2';
+                        }
+                        if(s<50) {
+                            text = '1';
+                        }
+                        if(s<25) {
+                            ctx.fillStyle = 'rgba(0,255,0,'+(s/25)+')';
+                            text = 'Go!';
+                        }
+                        ctx.font = '60px Trebuchet MS';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(text,500,100);
+                    }
+                    //draw 3 2 1 Go! text
+
+                    if(this.gameOver) {
+                        this.gameOverMenu();
+                    }
+                    //game over menu
+                },
+                tutorialNumber: 0,
+                updateTutorial: function() {
+                    var player = this.objects.objects[8];
+                    ctx.fillStyle = 'blue';
+                    ctx.font = '50px Trebuchet MS';
+                    ctx.textAlign = 'center';
+                    if(this.objects.objects.length==9&&this.tutorialNumber==0) {
+                        this.tutorialNumber++;
+                    }
+                    if(this.tutorialNumber>=1&&this.tutorialNumber<2) {
+                        ctx.fillText('Use the Arrow Keys to Move.',500,100);
+                        if(Keys.keys[37]||Keys.keys[38]||Keys.keys[39]||Keys.keys[40]) {
+                            this.tutorialNumber += 0.02;
+                        }
+                    }
+                    if(this.tutorialNumber>2&&this.tutorialNumber<3) {
+                        this.tutorialNumber = 2;
+                        this.spawners.spawn(2,'ball');
+                    }
+                    if(this.tutorialNumber==2&&this.objects.objects.length==10) {
+                        this.tutorialNumber = 3;
+                    }
+                    if(this.tutorialNumber==3) {
+                        ctx.fillText('Press Space to Blast.',500,100);
+                        if(distTo(player.x,player.y,500,250)<100&&Keys.keys[32]) {
+                            this.tutorialNumber = 4;
+                        }
+                    }
+                    if(this.tutorialNumber==4) {
+                        ctx.fillText('Blast the ball into the goal.',500,100);
+                        this.goalyBoxSize[0]++;
+                        this.goalyBoxSize[0] = Math.min(this.goalyBoxSize[0],180);
+                        if(this.goalyBoxSize[0]==180&&this.player2Score>0) {
+                            this.tutorialNumber = 5;
+                        }
+                    }
+                    if(this.tutorialNumber==5) {
+                        ctx.fillText('Score 3 Points.',500,100);
+                        if(this.player2Score>=3) {
+                            this.tutorialNumber = 6;
+                        }
+                    }
+                    if(this.tutorialNumber>5) {
+                        ctx.fillText('Tutorial Complete.',500,100);
+                        this.tutorialNumber += 0.02;
+                    }
+                    if(this.tutorialNumber>7) {
+                        page = 'menu';
+                        menu.page = 'home';
+                        menu.switchPage = 'home';
+                    }
+                },
+                score: function(playerID,goalID) {
+                    if(goalID===0||goalID===1) {
+                        this.scoreTime[goalID] = 25;
+                    }
+                    if(playerID==0) {
+                        this.player1Score++;
+                    } else {
+                        this.player2Score++;
+                    }
+                },
+                respawnPlayer: function(playerID,twin) {
+                    var player = this.objects.createObject('player');
+                    player.twin = twin;
+                    player.y = 250;
+                    player.playerId = playerID;
+                    player.moved = false;
+                    player.blasted = false;
+                    if(playerID==0) {
+                        player.angle = 270;
+                        player.keyBinds = this.player1Keys;
+                        player.x = 900;
+                    } else {
+                        player.angle = 90;
+                        player.keyBinds = this.player2Keys;
+                        player.x = 100;
+                    }
+                    this.spawners.spawners[playerID].queue.push(player);
+                },
+                objects: {
+                    static: [],
+                    objects: [],
+                    update: function() {
+                        if(word.endsWith("JOHNBUTLERGAMES")) {
+                            word = '';
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                var obj = this.objects[n];
+                                if(obj.type=='player') {
+                                    obj.type = 'ball';
+                                    obj.friction = 0.995;
+                                }
+                                n++;
+                            }
+                            game.respawnPlayer(0);
+                            game.respawnPlayer(1);
+                        }
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            obj.id = n;
+                            var update = this.updateObject(obj);
+                            if(obj.type=='player') {
+                                this.updatePlayer(obj);
+                            }
+                            if(obj.x+obj.radius<0||obj.x-obj.radius>1000) {
+                                if(obj.type=='ball') {
+                                    game.spawners.spawn(2,'ball');
+                                    if(obj.x<500) {
+                                        game.score(1,1);
+                                    } else {
+                                        game.score(0,0);
+                                    }
+                                    this.objects.splice(n,1);
+                                    n--;
+                                } else if(obj.type=='player') {
+                                    if(game.options.playerScoring) {
+                                        if(obj.x<500) {
+                                            game.score(obj.playerId,1);
+                                        } else {
+                                            game.score(obj.playerId,0);
+                                        }
+                                        if(!obj.twin) {
+                                            game.respawnPlayer(obj.playerId);
+                                        }
+                                        this.objects.splice(n,1);
+                                        n--;
+                                    } else {
+                                        var g = game.goalyBoxSize;
+                                        if(obj.x<500) {
+                                            obj.y = Math.max(Math.min(obj.y,260+g[1]/2-obj.r),240-g[1]/2+obj.r);
+                                            obj.y = 250;
+                                            obj.x = 1000+obj.radius;
+                                        } else {
+                                            obj.y = Math.max(Math.min(obj.y,260+g[0]/2-obj.r),240-g[0]/2+obj.r);
+                                            obj.y = 250;
+                                            obj.x = -obj.radius;
+                                        }
+                                    }
+                                }
+                            }
+                            if(update) {
+                                this.objects.splice(n,1);
+                            } else {
+                                n++;
+                            }
+                            //if object went into goal, score it
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            ctx.save();
+                            ctx.translate(obj.x,obj.y);
+                            ctx.scale(obj.radius/20,obj.radius/20);
+                            this.drawObject(obj);
+                            ctx.restore();
+                            if(obj.type=='ball') {
+                                var n2 = 0;
+                                while(n2 < this.objects.length) {
+                                    var obj2 = this.objects[n2];
+                                    if(obj.id==n2||obj2.type!='player') {
+                                        n2++;
+                                        continue;
+                                    }
+                                    var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                    if(dist<obj2.radius*3+obj.radius) {
+                                        if(game.options.blastTracing) {
+                                            var width = 5+(dist-obj.radius-obj2.radius)/2;
+                                            var alpha = (17-Math.max(width,0))/10+0.5;
+                                            var dir = dirTo(obj2.x,obj2.y,obj.x,obj.y);
+                                            var move = distToMove(2,dir);
+                                            var cors = {x:obj.x,y:obj.y};
+                                            while(distTo(cors.x,cors.y,obj.x,obj.y)<2000) {
+                                                cors.x += move.x;
+                                                cors.y += move.y;
+                                                var collision = false;
+                                                if(cors.x<0||cors.x>1000||cors.y<0||cors.y>500) {
+                                                    collision = true;
+                                                }
+                                                var n3 = 0;
+                                                while(n3 < this.objects.length) {
+                                                    var obj3 = this.objects[n3];
+                                                    if(n3!=obj.id) {
+                                                        var dist = distTo(obj3.x,obj3.y,cors.x,cors.y);
+                                                        if(dist<obj3.radius) {
+                                                            collision = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    n3++;
+                                                }
+                                                if(collision) {
+                                                    break;
+                                                }
+                                            }
+                                            ctx.strokeStyle = 'rgba(0,0,0,'+alpha+')';
+                                            ctx.lineWidth = 2;
+                                            ctx.setLineDash([10]);
+                                            ctx.beginPath();
+                                            ctx.moveTo(obj.x,obj.y);
+                                            ctx.lineTo(cors.x,cors.y);
+                                            ctx.stroke();
+                                            ctx.setLineDash([]);
+                                        }
+                                        if(game.options.ballFocus) {
+                                            var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                            var width = 5+(dist-obj.radius-obj2.radius)/2;
+                                            var alpha = (17-Math.max(width,0))/10+0.5;
+                                            if(obj2.playerId==0) {
+                                                ctx.strokeStyle = 'rgba(0,0,150,'+alpha+')';
+                                            } else {
+                                                ctx.strokeStyle = 'rgba(150,0,0,'+alpha+')';
+                                            }
+                                            ctx.setLineDash([(obj.radius+width)*Math.PI/4]);
+                                            ctx.beginPath();
+                                            ctx.arc(obj.x,obj.y,obj.radius+width,0,2*Math.PI);
+                                            ctx.stroke();
+                                            ctx.setLineDash([]);
+                                        }
+                                    }
+                                    n2++;
+                                }
+                            }
+                            n++;
+                        }
+                    },
+                    drawObject: function(obj) {
+                        if(obj.type=='player') {
+                            ctx.save();
+                            ctx.rotate(obj.angle*Math.PI/180);
+
+                            ctx.fillStyle = 'black';
+                            ctx.fillRect(-10,-6.67*(4+2*obj.blasting),20,6.67*(4+2*obj.blasting));
+                            ctx.fillRect(-16,-6.67*(5+2*obj.blasting),32,6.67);
+
+                            ctx.restore();
+
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 2;
+                            ctx.fillStyle = 'rgb(150,0,0)';
+                            if(obj.playerId==0) {
+                                ctx.fillStyle = 'rgb(0,0,150)';
+                            }
+                            ctx.beginPath();
+                            ctx.arc(0,0,20,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.stroke();
+                            
+                            if(!obj.moved&&obj.moved!==undefined) {
+                                ctx.font = '20px Trebuchet MS';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillStyle = 'black';
+                                ctx.fillText(getKey(obj.keyBinds[0]),-50,0);
+                                ctx.fillText(getKey(obj.keyBinds[1]),0,-50);
+                                ctx.fillText(getKey(obj.keyBinds[2]),50,0);
+                                ctx.fillText(getKey(obj.keyBinds[3]),0,50);
+                            }
+                            if(!obj.blasted&&obj.blasted!==undefined) {
+                                ctx.font = '20px Trebuchet MS';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillStyle = 'black';
+                                ctx.fillText(getKey(obj.keyBinds[4])+' to Blast',0,80);
+                            }
+                        } else if(obj.type=='bonus') {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.fillStyle = 'white';
+                            ctx.strokeStyle = 'lime';
+                            ctx.lineWidth = 4;
+                            ctx.arc(0,0,20,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.stroke();
+                            ctx.clip();
+                            if(obj.bonusType=='speedboost') {
+                                ctx.strokeStyle = 'black';
+                                ctx.lineWidth = 4;
+                                ctx.lineCap = 'round';
+                                ctx.beginPath();
+                                ctx.moveTo(0,-12);
+                                ctx.lineTo(0,12);
+                                ctx.stroke();
+                                ctx.beginPath();
+                                ctx.moveTo(-12,0);
+                                ctx.lineTo(12,0);
+                                ctx.stroke();
+                                ctx.save();
+                                var n = 0;
+                                while(n < 4) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(0,-12);
+                                    ctx.lineTo(2,-10);
+                                    ctx.lineTo(-2,-10);
+                                    ctx.closePath();
+                                    ctx.stroke();
+                                    ctx.rotate(Math.PI/2);
+                                    n++;
+                                }
+                                ctx.restore();
+                            } else if(obj.bonusType=='powerboost') {
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(0,-4,15,8);
+                                ctx.fillRect(-4,-8,4,16);
+                            } else if(obj.bonusType=='sizeboost') {
+                                ctx.strokeStyle = 'black';
+                                ctx.lineWidth = 2;
+                                ctx.beginPath();
+                                ctx.arc(0,0,12,0,2*Math.PI);
+                                ctx.stroke();
+                                ctx.beginPath();
+                                ctx.arc(0,0,6,0,2*Math.PI);
+                                ctx.stroke();
+                            } else if(obj.bonusType=='twinboost') {
+                                ctx.fillStyle = 'black';
+                                ctx.beginPath();
+                                ctx.arc(-6,0,5,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.beginPath();
+                                ctx.arc(6,0,5,0,2*Math.PI);
+                                ctx.fill();
+                            }
+                            ctx.restore();
+                        } else if(obj.type=='ball'||obj.static) {
+                            ctx.beginPath();
+                            ctx.fillStyle = 'black';
+                            ctx.arc(0,0,20,0,2*Math.PI);
+                            ctx.fill();
+
+                            if(obj.trail!==undefined&&obj.trail.length>0) {
+                                var speed = distTo(0,0,obj.xmove,obj.ymove);
+                                var o = Math.min(speed/40,0.2);
+                                ctx.fillStyle = 'rgba(0,0,0,'+o+')';
+                                ctx.beginPath();
+                                ctx.moveTo(obj.trail[0].x-obj.x,obj.trail[0].y-obj.y);
+                                var n = 1;
+                                while(n < obj.trail.length) {
+                                    var last = obj.trail[n-1];
+                                    var p = obj.trail[n];
+                                    var dir = dirTo(p.x,p.y,last.x,last.y);
+                                    var d = obj.radius*n/10;
+                                    var r = rotate(p.x,p.y,p.x,p.y-d,-dir+90);
+                                    ctx.lineTo(r[0]-obj.x,r[1]-obj.y);
+                                    n++;
+                                }
+                                var n = obj.trail.length-1;
+                                while(n > 0) {
+                                    var last = obj.trail[n-1];
+                                    var p = obj.trail[n];
+                                    var dir = dirTo(p.x,p.y,last.x,last.y);
+                                    var d = obj.radius*n/10;
+                                    var r = rotate(p.x,p.y,p.x,p.y-d,-dir-90);
+                                    ctx.lineTo(r[0]-obj.x,r[1]-obj.y);
+                                    n--;
+                                }
+                                ctx.lineTo(obj.trail[0].x-obj.x,obj.trail[0].y-obj.y);
+                                ctx.fill();
+                            }
+                            //trail
+                        }
+                    },
+                    updateObject: function(obj) {
+                        obj.mass = Math.pow(obj.radius,2)*Math.PI;
+                        if(obj.static===undefined) {
+                            obj.static = false;
+                        }
+                        if(obj.type=='bonus') {
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                var obj2 = this.objects[n];
+                                if(obj2.type=='player') {
+                                    var dist = distTo(obj2.x,obj2.y,obj.x,obj.y);
+                                    if(dist<obj.radius+obj2.radius) {
+                                        obj2.bonuses.push({time:obj.duration,type:obj.bonusType});
+                                        return true;
+                                    }
+                                }
+                                n++;
+                            }
+                        }
+                        if(!obj.static) {
+                            if(obj.trail!==undefined) {
+                                obj.trail.push({x:obj.x,y:obj.y});
+                                if(obj.trail.length>20) {
+                                    obj.trail.shift();
+                                }
+                            }
+
+                            obj.x += obj.xmove;
+                            obj.y += obj.ymove;
+                            //move
+
+                            obj.xmove *= obj.friction;
+                            obj.ymove *= obj.friction;
+                            //damping
+
+                            if(obj.y<obj.radius) {
+                                obj.y = 2*obj.radius-obj.y;
+                                obj.ymove *= -1;
+                            }
+                            if(obj.y+obj.radius>500) {
+                                obj.y = 1000-2*obj.radius-obj.y;
+                                obj.ymove *= -1;
+                            }
+                            if(obj.y-obj.radius<250-game.goalyBoxSize[0]/2||obj.y+obj.radius>250+game.goalyBoxSize[0]/2) {
+                                if(obj.x-obj.radius<20) {
+                                    obj.x = 40+2*obj.radius-obj.x;
+                                    obj.xmove *= -1;
+                                }
+                            }
+                            if(obj.y-obj.radius<250-game.goalyBoxSize[1]/2||obj.y+obj.radius>250+game.goalyBoxSize[1]/2) {
+                                if(obj.x+obj.radius>980) {
+                                    obj.x = 1960-2*obj.radius-obj.x;
+                                    obj.xmove *= -1;
+                                }
+                            }
+                            //wall collisions
+
+                            var n2 = 0;
+                            while(n2 < this.objects.length) {
+                                if(obj.id!=n2) {
+                                    var obj2 = this.objects[n2];
+                                    var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                                    if(dist<obj.radius+obj2.radius&&obj2.type!='bonus') {
+                                        var dir = dirTo(obj.x,obj.y,obj2.x,obj2.y);
+                                        var penetrationDist = dist-obj.radius-obj2.radius;
+                                        if(obj2.static) {
+                                            var speed = distTo(0,0,obj.xmove,obj.ymove);
+                                            var move1 = distToMove(speed,dir+180);
+                                            var move2 = distToMove(penetrationDist,dir);
+                                            obj.xmove = move1.x;
+                                            obj.ymove = move1.y;
+                                            obj.x += move2.x;
+                                            obj.y += move2.y;
+                                        } else {
+                                            var speed = distTo(0,0,obj.xmove,obj.ymove)+distTo(0,0,obj2.xmove,obj2.ymove);
+                                            var move1 = distToMove(speed/2,dir+180);
+                                            var move2 = distToMove(penetrationDist/2,dir);
+                                            obj.xmove = move1.x;
+                                            obj.ymove = move1.y;
+                                            obj2.xmove = -move1.x;
+                                            obj2.ymove = -move1.y;
+                                            obj.x += move2.x;
+                                            obj.y += move2.y;
+                                            obj2.x -= move2.x;
+                                            obj2.y -= move2.y;
+                                        }
+                                    }
+                                    if(obj2.type=='player'&&dist<obj2.radius*3+obj.radius&&obj2.focus==obj.id&&obj2.blast) {
+                                        var dir = dirTo(obj2.x,obj2.y,obj.x,obj.y);
+                                        var move = distToMove(obj2.power,dir);
+                                        obj.xmove = move.x;
+                                        obj.ymove = move.y;
+                                        //blasted by player
+                                    }
+                                }
+                                n2++;
+                            }
+                            //handle collisions
+                        }
+                        return false;
+                    },
+                    updatePlayer: function(obj) {
+                        var move = [0,0];
+                        var blast = false;
+                        if(!game.options.ai[obj.playerId]) {
+                            if(Keys.keys[obj.keyBinds[0]]) {
+                                move[0]--;
+                                obj.moved = true;
+                            }
+                            if(Keys.keys[obj.keyBinds[1]]) {
+                                move[1]--;
+                                obj.moved = true;
+                            }
+                            if(Keys.keys[obj.keyBinds[2]]) {
+                                move[0]++;
+                                obj.moved = true;
+                            }
+                            if(Keys.keys[obj.keyBinds[3]]) {
+                                move[1]++;
+                                obj.moved = true;
+                            }
+                            if(Keys.keys[obj.keyBinds[4]]) {
+                                blast = true;
+                                obj.blasted = true;
+                            }
+                        } else {
+                            var controls = updateAI(obj,game.options.ai[obj.playerId]);
+                            move[0] = controls[0];
+                            move[1] = controls[1];
+                            blast = controls[2];
+                            obj.moved = true;
+                            obj.blasted = true;
+                        }
+                        var dir = dirTo(0,0,move[0],move[1]);
+                        var dist = Math.min(distTo(0,0,move[0],move[1]),1);
+                        move = distToMove(dist*obj.speed,dir);
+                        obj.xmove += move.x;
+                        obj.ymove += move.y;
+                        //move player with keys
+
+                        if(blast) {
+                            obj.blasting += 0.5;
+                            if(obj.blasting<1) {
+                                obj.blast = true;
+                            } else {
+                                obj.blast = false;
+                            }
+                        } else{
+                            obj.blasting -= 0.3;
+                            obj.blast = false;
+                        }
+                        obj.blasting = Math.max(Math.min(obj.blasting,1),0);
+                        //find if blasting
+
+                        var closestObject = [Infinity,null];
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            if(obj.id!=n) {
+                                var obj2 = this.objects[n];
+                                if(!obj2.static) {
+                                    var dist = distTo(obj.x,obj.y,obj2.x,obj2.y)-obj.radius-obj2.radius;
+                                    if(dist<closestObject[0]) {
+                                        closestObject = [dist,n];
+                                    }
+                                }
+                            }
+                            n++;
+                        }
+                        if(closestObject[1]!=null) {
+                            obj.focus = closestObject[1];
+                            var obj2 = this.objects[closestObject[1]];
+                            var dir = dirTo(obj.x,obj.y,obj2.x,obj2.y);
+                            obj.angle += turn(obj.angle,dir)/5;
+                        }
+                        //target closest object
+
+                        var n = 0;
+                        while(n < obj.bonuses.length) {
+                            var bonus = obj.bonuses[n];
+                            bonus.time--;
+                            if(bonus.time<=0) {
+                                obj.bonuses.splice(n,1);
+                            } else {
+                                n++;
+                            }
+                        }
+                        //handle bonuses
+
+                        if(this.hasBonus(obj,'speedboost')) {
+                            obj.speed = 1.5;
+                        } else {
+                            obj.speed = 1;
+                        }
+                        if(this.hasBonus(obj,'powerboost')) {
+                            obj.power = 15;
+                        } else {
+                            obj.power = 10;
+                        }
+                        if(this.hasBonus(obj,'sizeboost')) {
+                            var t = this.hasBonus(obj,'sizeboost').time;
+                            if(t>490) {
+                                obj.radius = 15+500-t;
+                            } else if(t<10) {
+                                obj.radius = 15+t;
+                            } else {
+                                obj.radius = 25;
+                            }
+                        } else {
+                            obj.radius = 15;
+                        }
+                        if(this.hasBonus(obj,'twinboost')) {
+                            if(this.hasBonus(obj,'twinboost').time==999) {
+                                game.respawnPlayer(obj.playerId,true);
+                            }
+                        } else if(!obj.twin) {
+                            var n = 0;
+                            while(n < game.objects.objects.length) {
+                                var obj2 = game.objects.objects[n];
+                                if(obj2.type=='player'&&obj2.playerId==obj.playerId&&obj2.twin) {
+                                    game.objects.objects.splice(n,1);
+                                    n--;
+                                }
+                                n++;
+                            }
+                        }
+                    },
+                    createObject: function(type) {
+                        if(type=='player') {
+                            return {type:'player',playerId:0,x:0,y:0,angle:0,keyBinds:[],xmove:0,ymove:0,friction:0.8,radius:15,focus:0,blasting:0,speed:1,power:10,bonuses:[]};
+                        }
+                        if(type=='ball') {
+                            return {type:'ball',xmove:0,ymove:0,friction:0.99,radius:10,trail:[]};
+                        }
+                        if(type=='bonus') {
+                            var type = ['speedboost','powerboost','sizeboost','twinboost'][Math.floor(Math.random()*4)];
+                            if(type=='twinboost') {
+                                return {type:'bonus',static:true,radius:10,duration:1000,bonusType:type}
+                            } else {
+                                return {type:'bonus',static:true,radius:10,duration:500,bonusType:type}
+                            }
+                        }
+                    },
+                    hasBonus(obj,type) {
+                        var n = 0;
+                        while(n < obj.bonuses.length) {
+                            var bonus = obj.bonuses[n];
+                            if(bonus.type==type) {
+                                return bonus;
+                            }
+                            n++;
+                        }
+                        return false;
+                    }
+                },
+                bonuses: {
+                    spawnTime: 0,
+                    update: function() {
+                        this.spawnTime--;
+                        if(this.spawnTime==0) {
+                            this.spawnTime = 500;
+                            game.spawners.spawn(Math.floor(Math.random()*4)+3,'bonus');
+                        }
+                    }
+                },
+                spawners: {
+                    spawners: [{r:20,x:800,y:250},{r:20,x:200,y:250},{r:15,x:500,y:250},{r:15,x:160,y:70},{r:15,x:160,y:430},{r:15,x:840,y:70},{r:15,x:840,y:430},{r:100,x:500,y:250}],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.spawners.length) {
+                            var spawner = this.spawners[n];
+                            if(spawner.queue.length!=0) {
+                                spawner.queue[0].x = spawner.x;
+                                spawner.queue[0].y = spawner.y;
+                                var spawning = spawner.queue[0];
+                                if(spawning.type!='bonus') {
+                                    var n2 = 0;
+                                    while(n2 < game.objects.objects.length) {
+                                        var obj = game.objects.objects[n2];
+                                        if(!obj.static) {
+                                            var dist = distTo(spawning.x,spawning.y,obj.x,obj.y);
+                                            if(dist<obj.radius+spawning.radius) {
+                                                var dir = dirTo(spawning.x,spawning.y,obj.x,obj.y);
+                                                var move = distToMove((100-spawner.time)/50,dir);
+                                                obj.x += move.x+Math.random()/10-0.05;
+                                                obj.y += move.y+Math.random()/10-0.05;
+                                            }
+                                        }
+                                        n2++;
+                                    }
+                                }
+                                //move objects away from spawning object, if not bonus
+
+                                if(spawner.time==0) {
+                                    spawner.time = 100;
+                                    game.objects.objects.push(spawner.queue[0]);
+                                    spawner.queue.shift();
+                                } else {
+                                    spawner.time--;
+                                }
+                                //spawn object if time is up
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.spawners.length) {
+                            var spawner = this.spawners[n];
+                            var r = spawner.r;
+                            var x = spawner.x;
+                            var y = spawner.y;
+                            if(spawner.time==0||spawner.time>25) {
+                                ctx.strokeStyle = 'black';
+                            } else if(spawner.time<25) {
+                                ctx.strokeStyle = 'lime';
+                            }
+                            ctx.beginPath();
+                            ctx.arc(x,y,r,0,2*Math.PI);
+                            ctx.stroke();
+                            //draw outline
+
+                            ctx.strokeStyle = 'black';
+                            ctx.beginPath();
+                            ctx.moveTo(x,y-r);
+                            ctx.lineTo(x,y+r);
+                            ctx.stroke();
+                            //draw line down middle
+
+                            if(spawner.queue.length>0) {
+                                var ball = spawner.queue[0];
+                                var time = spawner.time;
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.arc(x,y,r-1,0,2*Math.PI);
+                                ctx.clip();
+
+                                ctx.strokeStyle = 'black';
+                                ctx.lineWidth = 2;
+                                //init
+
+                                ctx.save();
+                                ctx.translate(x,y);
+                                ctx.scale(ball.radius/20,ball.radius/20);
+                                game.objects.drawObject(ball);
+                                ctx.restore();
+                                //draw spawning ball
+
+                                var grd = ctx.createLinearGradient(499,250,500,250);
+                                grd.addColorStop(0,'rgb(255,230,230)');
+                                grd.addColorStop(1,'rgb(240,240,255)');
+                                var t = (100-time)*r/40;
+                                //calculate colors and how far rectangles are spread apart
+
+                                ctx.fillStyle = 'rgba(0,0,0,'+(time/100)+')';
+                                ctx.fillRect(x-r,y-r,r*2,r*2);
+                                //draw darkness
+
+                                ctx.fillStyle = grd;
+                                ctx.fillRect(x+t,y-r,r,r*2);
+                                ctx.strokeRect(x+t,y-r,r,r*2);
+                                ctx.fillRect(x-r-t,y-r,r,r*2);
+                                ctx.strokeRect(x-r-t,y-r,r,r*2);
+                                //draw rectangles
+
+                                ctx.restore();
+                            }
+                            n++;
+                        }
+                    },
+                    spawn: function(spawnerID,ballType) {
+                        var ball = game.objects.createObject(ballType);
+                        var spawner = this.spawners[spawnerID];
+                        ball.x = spawner.x;
+                        ball.y = spawner.y;
+                        spawner.queue.push(ball);
+                    }
+                },
+                particles: {
+                    particles: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.particles.length) {
+                            var particle = this.particles[n];
+                            particle.x += particle.xmove;
+                            particle.y += particle.ymove;
+                            particle.alpha -= particle.decay;
+                            if(particle.alpha<=0) {
+                                this.particles.splice(n,1);
+                            } else {
+                                n++;
+                            }
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.particles.length) {
+                            var particle = this.particles[n];
+                            ctx.fillStyle = particle.color;
+                            ctx.globalAlpha = particle.alpha;
+                            ctx.fillRect(particle.x-2,particle.y-2,4,4);
+                            n++;
+                        }
+                        ctx.globalAlpha = 1;
+                    }
+                },
+                cam: {
+                    x: 0,
+                    y: 0,
+                    zoom: 1,
+                    update: function() {
+                        var rect = {x:-100,y:0,w:400,h:0}
+                        var objects = [];
+                        var n = 0;
+                        while(n < game.objects.objects.length) {
+                            var obj = game.objects.objects[n];
+                            if(!obj.static) {
+                                objects.push(obj);
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < objects.length) {
+                            var object = objects[n];
+                            if(n==0) {
+                                rect.x = object.x-rect.w/2;
+                                rect.y = object.y-rect.h/2;
+                            } else {
+                                if(object.x>rect.x+rect.w) {
+                                    rect.w = object.x-rect.x;
+                                } else if(object.x<rect.x) {
+                                    var difX = rect.x-object.x;
+                                    rect.x -= difX;
+                                    rect.w += difX;
+                                }
+                                if(object.y>rect.y+rect.h) {
+                                    rect.h = object.y-rect.y;
+                                } else if(object.y<rect.y) {
+                                    var difX = rect.y-object.y;
+                                    rect.y -= difX;
+                                    rect.h += difX;
+                                }
+                            }
+                            n++;
+                        }
+                        rect.x -= 40;
+                        rect.y -= 40;
+                        rect.w += 80;
+                        rect.h += 80;
+                        if(rect.w>rect.h*2) {
+                            rect.y += (rect.h*2-rect.w)/2;
+                            rect.h = rect.w/2;
+                        } else {
+                            rect.x += (rect.w/2-rect.h)/2;
+                            rect.w = rect.h*2;
+                        }
+                        this.x = rect.x;
+                        this.y = rect.y;
+                        this.zoom = 1000/rect.w;
+                    }
+                },
+                options: {
+                    ballFocus: false,
+                    blastTracing: false,
+                    playerScoring: true,
+                    noPuppyGuarding: true,
+                    bonuses: true,
+                    showScores: [1,1],
+                    ai: [0,0],
+                    trails: true,
+                    roundType: ''
+                },
+                goalyBoxSize: [180,180],
+                goalyBoxTime: [0,0],
+                scoreTime: [0,0],
+                player1Score: 0,
+                player2Score: 0,
+                player1Keys: [37,38,39,40,32],
+                player2Keys: [65,87,68,83,49],
+                startTime: 100
+            }
+
+            function getKey(key) {
+                if(key==37) return '◄';
+                if(key==38) return '▲';
+                if(key==39) return '►';
+                if(key==40) return '▼';
+                if(key==32) return 'Space';
+                return String.fromCharCode(key);
+            }
+            
+            function updateAI(obj,level) {
+                var blast = false;
+                var xmove = 0;
+                var ymove = 0;
+                var nearestBall = [false,Infinity];
+                var nearestPlayer = [false,Infinity];
+                var nearestObject = [false,Infinity];
+                var goal = {x:0,y:250};
+                var target = {x:600,y:250};
+                if(obj.playerId==1) {
+                    goal.x = 1000;
+                    target.x = 400;
+                }
+                var n = 0;
+                while(n < game.objects.objects.length) {
+                    var obj2 = game.objects.objects[n];
+                    var dist = distTo(obj.x,obj.y,obj2.x,obj2.y);
+                    if(obj2.type=='ball'&&dist<nearestBall[1]) {
+                        nearestBall = [n,dist];
+                    }
+                    if(obj2.type=='player'&&obj.playerId!=obj2.playerId&&dist<nearestPlayer[1]) {
+                        nearestPlayer = [n,dist];
+                    }
+                    n++;
+                }
+                if(level==1) {
+                    if(obj.switchTarget===undefined) {
+                        obj.switchTarget = 0;
+                    }
+                    obj.switchTarget--;
+                    if(obj.targetNum===undefined||game.objects.objects[obj.targetNum]===undefined||obj.switchTarget<=0) {
+                        obj.switchTarget = Math.random()*100+50;
+                        obj.targetNum = Math.floor(Math.random()*game.objects.objects.length);
+                    }
+                    var obj2 = game.objects.objects[obj.targetNum];
+                    target.x = obj2.x;
+                    target.y = obj2.y;
+                    if(obj.switchTarget%70>60) {
+                        blast = true;
+                    }
+                } else if(level==2) {
+                    if(nearestBall[0]!==false) {
+                        var ball = game.objects.objects[nearestBall[0]];
+                        if(nearestPlayer[0]!==false) {
+                            var player = game.objects.objects[nearestPlayer[0]];
+                            if(distTo(player.x,player.y,ball.x,ball.y)<nearestBall[1]) {
+                                target.x = ball.x*2-player.x;
+                                target.y = ball.y*2-player.y;
+                            } else {
+                                target = {x:ball.x,y:ball.y};
+                            }
+                        } else {
+                            target = {x:ball.x,y:ball.y};
+                        }
+                        if(nearestBall[1]<40) {
+                            blast = true;
+                        }
+                    }
+                } else if(level==3) {
+                    if(nearestBall[0]!==false) {
+                        var ball = game.objects.objects[nearestBall[0]];
+                        if(distTo(ball.x,ball.y,goal.x,goal.y)<distTo(obj.x,obj.y,goal.x,goal.y)) {
+                            if(nearestPlayer[0]!==false) {
+                                var player = game.objects.objects[nearestPlayer[0]];
+                                if(distTo(player.x,player.y,ball.x,ball.y)<nearestBall[1]) {
+                                    target.x = ball.x*2-player.x;
+                                    target.y = ball.y*2-player.y;
+                                } else {
+                                    target = {x:ball.x,y:ball.y};
+                                }
+                            } else {
+                                target = {x:ball.x,y:ball.y};
+                            }
+                        } else {
+                            target.x = ball.x*2-goal.x;
+                            target.y = ball.y*2-goal.y;
+                        }
+                        if(nearestBall[1]<40) {
+                            blast = true;
+                        }
+                        if(nearestPlayer[1]<60) {
+                            blast = true;
+                        }
+                    }
+                }
+                var dir = dirTo(obj.x,obj.y,target.x,target.y);
+                var move = distToMove(1,dir);
+                xmove = move.x;
+                ymove = move.y;
+                return [xmove,ymove,blast];
+            }
+            
+            game.reset();
+            /*
+            To Do:
+            Add Pause menu or something?
+            Add Replays?
+            Add Tiebreaker?
+            Add particle effects when ball bounces on wall
+            */
+        </script>
+    </body>
+</html>

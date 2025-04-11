@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>John Butler Games</title>
+    <meta charset="utf-8">
+    <meta name="google-site-verification" content="H6sTO6-eWEFsKEkNMgry8dN0L2-k3s2lyog0GWD2NO4" />
+    <meta name="author" content="John Butler">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="game-data.json"></script>
+    <script src="updates.json"></script>
+    <script src="scripts.js"></script>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EXRQS6M7G7"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-EXRQS6M7G7');
+</script>
+
+<body>
+    <canvas id="timeline-canvas"></canvas>
+    <script>
+        var Keys = {};
+        var Mouse = {
+            x: 0,
+            y: 0,
+            down: false,
+            downStart: false,
+            downStartCors: { x: 0, y: 0 }
+        };
+
+        function easeInOut(a) {
+            a = 1.02 / (1 + 2.71828 ** (-10 * (a - 0.5))) - 0.007;
+            return Math.min(Math.max(a, 0), 1);
+        }
+
+        window.addEventListener("load", initialize);
+
+        var date = new Date();
+        var datePointer = date.getTime();
+        var targetDatePointer = datePointer;
+        var _year = 31536000000;
+        var _day = 86400000;
+        var zoom = _year * 1;
+        var targetZoom = zoom;
+        var canvas, ctx, width, height;
+        var versionData = [];
+        var updatesHistogram = {};
+        var majorUpdates = [
+            {
+                "date": "10-14-2020",
+                "title": "JBG is created on google sites",
+                "description": ""
+            },
+            {
+                "date": "11-3-2020",
+                "title": "The JBG logo is created"
+            },
+            {
+                "date": "11-24-2020",
+                "title": "Game of the Day is created",
+                "minor": "true"
+            },
+            {
+                "date": "2-12-2021",
+                "title": "Random Game Spinner is created",
+                "minor": "true"
+            },
+            {
+                "date": "2-25-2021",
+                "title": "Main Page Update",
+                "minor": "true"
+            },
+            {
+                "date": "4-2-2021",
+                "title": "Main Page Update",
+                "minor": "true"
+            },
+            {
+                "date": "5-21-2021",
+                "title": "Main Page Update",
+                "minor": "true"
+            },
+            {
+                "date": "8-17-2021",
+                "title": "Johnbutlergames transfers to w3schools domain",
+                "minor": "true"
+            },
+            {
+                "date": "10-5-2021",
+                "title": "Johnbutlergames.com is purchased",
+                "minor": "true"
+            },
+            {
+                "date": "8-1-2022",
+                "title": "",
+                "description": ""
+            },
+            {
+                "date": "9-1-2023",
+                "title": "Johnbutlergames Unblocked",
+                "description": ""
+            }
+        ];
+        //majorUpdates = [];
+        function initialize() {
+            window.setInterval(updateTimeline, 10);
+            document.body.style.overflow = "none";
+            canvas = document.getElementById("timeline-canvas");
+            ctx = canvas.getContext("2d");
+            setCanvasSize();
+            window.addEventListener("resize", setCanvasSize);
+            canvas.addEventListener("wheel", scrollTimeline);
+            window.onkeydown = function (e) {
+                Keys[e.keyCode] = true;
+            }
+            window.onkeyup = function (e) {
+                Keys[e.keyCode] = false;
+            }
+            canvas.onmousemove = function (e) {
+                Mouse.x = e.pageX;
+                Mouse.y = e.pageY;
+            }
+            canvas.onmousedown = function () {
+                Mouse.down = true;
+                Mouse.downStart = true;
+            }
+            canvas.onmouseup = function () {
+                Mouse.down = false;
+            }
+
+            var keys = Object.keys(versions);
+            for (var key of keys) {
+                var first = true;
+                for (var version of versions[key]) {
+                    var o = {};
+                    o.game = key;
+                    o.version = version.version;
+                    o.date = version.date;
+                    o.title = version.title;
+                    o.first = first;
+                    var split = o.date.split("-").map(Number);
+                    o.dateScore = split[1] + split[0] * 31 + split[2] * 31 * 12;
+                    if (!updatesHistogram[split[2]]) updatesHistogram[split[2]] = { updates: 0, newReleases: 0 };
+                    if (!updatesHistogram[split[2]][split[0]]) updatesHistogram[split[2]][split[0]] = { updates: 0, newReleases: 0 };
+                    if (o.first) {
+                        updatesHistogram[split[2]].newReleases++;
+                        updatesHistogram[split[2]][split[0]].newReleases++;
+                    } else {
+                        updatesHistogram[split[2]].updates++;
+                        updatesHistogram[split[2]][split[0]].updates++;
+                    }
+                    o.description = version.description;
+                    o.updatesInDate = 1;
+                    o.updateId = 0;
+                    versionData.push(o);
+                    first = false;
+                }
+            }
+            versionData = versionData.sort((a, b) => (b.dateScore + b.first ? 0.1 : 0) - (a.dateScore + a.first ? 0.1 : 0));
+            for (var n = 0; n < versionData.length; n++) {
+                var o = versionData[n];
+                for (var n2 = n + 1; n2 < versionData.length; n2++) {
+                    var o2 = versionData[n2];
+                    if (o2.dateScore != o.dateScore) break;
+                    o.updatesInDate++;
+                    o2.updatesInDate++;
+                    o2.updateId++;
+                }
+            }
+
+            for (var o of majorUpdates) {
+                var split = o.date.split("-").map(Number);
+                var time = new Date(split[2], split[0] - 1, split[1]).getTime();
+                o.time = time;
+            }
+        }
+        function setCanvasSize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height - 66;
+            updateTimeline();
+        }
+        function scrollTimeline(event) {
+            event.preventDefault();
+            var scrollX = event.deltaX;
+            var scrollY = event.deltaY;
+            targetZoom += scrollY * _year / 100 * (zoom / _year / 2);
+            targetZoom = Math.max(Math.min(targetZoom, _year * 8), _year / 24);
+            targetDatePointer += scrollX * _year / (1 / zoom) / 10000000000000;
+        }
+        function updateViewport() {
+            zoom = zoom * 0.8 + targetZoom * 0.2;
+            datePointer = datePointer * 0.8 + targetDatePointer * 0.2;
+
+            if (Keys[37] || Keys[65]) {
+                targetDatePointer -= 5 * _year / (1 / zoom) / 10000000000000;
+            }
+            if (Keys[39] || Keys[68]) {
+                targetDatePointer += 5 * _year / (1 / zoom) / 10000000000000;
+            }
+            if (Keys[38] || Keys[87]) {
+                targetZoom -= 10 * _year / 100 * (zoom / _year / 2);
+                targetZoom = Math.max(Math.min(targetZoom, _year * 8), _year / 24);
+            }
+            if (Keys[40] || Keys[83]) {
+                targetZoom += 10 * _year / 100 * (zoom / _year / 2);
+                targetZoom = Math.max(Math.min(targetZoom, _year * 8), _year / 24);
+            }
+
+            if (Mouse.downStart) {
+                Mouse.downStart = false;
+                Mouse.downStartCors = { x: Mouse.x, y: Mouse.y };
+            }
+            if (Mouse.down) {
+                function convertPositionToTime(pos) {
+                    return (pos / width - 0.5) * zoom * 2 + datePointer;
+                }
+                var startTime = convertPositionToTime(Mouse.lastX);
+                var endTime = convertPositionToTime(Mouse.x);
+                var add = endTime - startTime;
+                targetDatePointer -= add;
+            }
+            Mouse.lastX = Mouse.x;
+            Mouse.lastY = Mouse.y;
+        }
+        function drawInstructions() {
+            ctx.fillStyle = "black";
+            ctx.font = "20px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText("Arrow Keys/WASD or Mouse to Move the Timeline", 10, 25);
+            ctx.fillText("Game Release", 40, 50);
+            ctx.fillText("Game Update", 40, 75);
+            ctx.fillStyle = "rgb(0,0,240)";
+            ctx.beginPath();
+            ctx.arc(20, 43, 7, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = "rgb(0,0,150)";
+            ctx.beginPath();
+            ctx.arc(20, 68, 7, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        function updateTimeline() {
+            updateViewport();
+
+            ctx.clearRect(0, 0, width, height);
+
+            var timelineYPos = height - 200;
+            ctx.save();
+            ctx.translate(0, timelineYPos);
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(width, 0);
+            ctx.stroke();
+
+            var time = datePointer;
+            var floor = time - zoom;
+            var ceil = time + zoom;
+            function convertTimeToPosition(t) {
+                return ((t - time) / zoom / 2 + 0.5) * width;
+            }
+            var visibleYears = [];
+            var startYear = Math.ceil(floor / _year);
+            var endYear = Math.ceil(ceil / _year);
+            for (var year = startYear - 2; year < endYear + 1; year++) {
+                visibleYears.push(year + 1970);
+            }
+            visibleYears = visibleYears.map(function (e) {
+                var o = {};
+                o.year = e;
+                var position = new Date(e, 0, 0).getTime();
+                o.position = convertTimeToPosition(position);
+                o.textPosition = convertTimeToPosition(position + 0.5 * _year);
+                o.leapYear = new Date(e, 1, 29).getDate() == 29;
+                o.startPosition = o.position;
+                o.endPosition = convertTimeToPosition(position + _year + (o.leapYear ? _day : 0));
+                return o;
+            });
+
+            var showMonthMarkers = zoom < _year * 4 ? easeInOut((_year * 4 - zoom) / (_year * 1.5)) : 0;
+            var showMonthText = zoom < _year / 3 ? easeInOut((_year / 3 - zoom) / (_year / 10)) : 0;
+            var showDateMarkers = zoom < _year / 6 ? easeInOut((_year / 6 - zoom) / (_year / 15)) : 0;
+            var markerScaleFactor = 1 / (zoom / _year) * 0.15 + 0.85;
+            var yearTextFollows = zoom < _year * 1.5 ? easeInOut((_year * 1.5 - zoom) / (_year / 2)) : 0;
+            var monthTextFollows = zoom < _year / 12 ? easeInOut((_year / 12 - zoom) / (_year / 30)) : 0;
+
+            for (var year of visibleYears) {
+                ctx.save();
+                ctx.translate(year.position, 0);
+
+                if (showMonthMarkers < 1) {
+                    var w = year.endPosition - year.startPosition;
+                    var updatesHeight;
+                    var newReleasesHeight;
+                    if (!updatesHistogram[year.year]) {
+                        updatesHeight = 0;
+                        newReleasesHeight = 0;
+                    } else {
+                        updatesHeight = updatesHistogram[year.year].updates
+                        newReleasesHeight = updatesHistogram[year.year].newReleases;
+                    }
+                    var height1 = newReleasesHeight * 0.8;
+                    var height2 = updatesHeight * 0.8;
+                    ctx.save();
+                    ctx.globalAlpha = 1 - showMonthMarkers;
+                    if (newReleasesHeight) {
+                        ctx.fillStyle = "rgba(0,0,240,0.5)";
+                        ctx.fillRect(0, -height1, w, height1);
+                    }
+                    if (updatesHeight) {
+                        ctx.fillStyle = "rgba(0,0,150,0.5)";
+                        ctx.fillRect(0, -height2 - height1, w, height2);
+                    }
+                    ctx.restore();
+                }
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 2;
+                ctx.fillStyle = "black";
+                ctx.scale(markerScaleFactor, markerScaleFactor);
+                ctx.beginPath();
+                ctx.moveTo(0, -20);
+                ctx.lineTo(0, 20);
+                ctx.stroke();
+
+                ctx.restore();
+
+                var position = year.textPosition;
+                var followPosition = width / 2;
+                followPosition = Math.min(Math.max(followPosition, year.startPosition + 70), year.endPosition - 70);
+                position = position * (1 - yearTextFollows) + followPosition * yearTextFollows;
+                ctx.save();
+                ctx.translate(position, 0);
+                var scale = Math.min(1 / zoom * _year * 5, 1.5);
+                ctx.scale(scale, scale);
+                ctx.font = "25px Arial";
+                ctx.textAlign = "center";
+                ctx.textBasline = "top";
+                ctx.fillStyle = "black";
+                ctx.fillText(year.year, 0, 70);
+                ctx.restore();
+            }
+
+            var visibleMonths = [];
+            if (showMonthMarkers) {
+                for (var year of visibleYears) {
+                    for (var n = 0; n < 12; n++) {
+                        var month = {};
+                        month.start = new Date(year.year, n, 0).getTime();
+                        var length;
+                        if (n == 0) length = 31;
+                        if (n == 1 && year.leapYear) length = 29;
+                        if (n == 1 && !year.leapYear) length = 28;
+                        if (n == 2) length = 31;
+                        if (n == 3) length = 30;
+                        if (n == 4) length = 31;
+                        if (n == 5) length = 30;
+                        if (n == 6) length = 31;
+                        if (n == 7) length = 31;
+                        if (n == 8) length = 30;
+                        if (n == 9) length = 31;
+                        if (n == 10) length = 30;
+                        if (n == 11) length = 31;
+                        month.id = n;
+                        month.length = length;
+                        month.startPosition = convertTimeToPosition(month.start);
+                        month.endPosition = convertTimeToPosition(month.start + month.length * _day);
+                        month.year = year.year;
+                        if (month.startPosition > width || month.startPosition + month.endPosition < -width) continue;
+                        visibleMonths.push(month);
+                    }
+                }
+                var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                for (var o of visibleMonths) {
+                    ctx.save();
+                    ctx.translate(o.startPosition, 0);
+                    if (showDateMarkers < 1) {
+                        var w = o.endPosition - o.startPosition;
+                        var updatesHeight;
+                        var newReleasesHeight;
+                        if (!updatesHistogram[o.year]) {
+                            updatesHeight = 0;
+                            newReleasesHeight = 0;
+                        } else if (!updatesHistogram[o.year][o.id + 1]) {
+                            updatesHeight = 0;
+                            newReleasesHeight = 0;
+                        } else {
+                            updatesHeight = updatesHistogram[o.year][o.id + 1].updates
+                            newReleasesHeight = updatesHistogram[o.year][o.id + 1].newReleases;
+                        }
+                        var height1 = newReleasesHeight * 5;
+                        var height2 = updatesHeight * 5;
+                        ctx.save();
+                        ctx.globalAlpha = showMonthMarkers * (1 - showDateMarkers);
+                        if (newReleasesHeight) {
+                            ctx.fillStyle = "rgba(0,0,240,0.5)";
+                            ctx.fillRect(0, -height1, w, height1);
+                        }
+                        if (updatesHeight) {
+                            ctx.fillStyle = "rgba(0,0,150,0.5)";
+                            ctx.fillRect(0, -height2 - height1, w, height2);
+                        }
+                        ctx.restore();
+                    }
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 1;
+                    ctx.save();
+                    ctx.scale(markerScaleFactor, markerScaleFactor);
+                    ctx.globalAlpha = showMonthMarkers;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -10);
+                    ctx.lineTo(0, 10);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    ctx.restore();
+
+                    if (showMonthText) {
+                        var position = o.startPosition / 2 + o.endPosition / 2;
+                        var followPosition = width / 2;
+                        followPosition = Math.max(Math.min(followPosition, o.endPosition - 100), o.startPosition + 100);
+                        position = position * (1 - monthTextFollows) + followPosition * monthTextFollows;
+                        ctx.save();
+                        ctx.translate(position, 0);
+                        ctx.globalAlpha = showMonthText;
+                        ctx.fillStyle = "black";
+                        ctx.font = 30 - (zoom / _year * 40) + "px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBasline = "middle";
+                        ctx.fillText(monthNames[o.id], 0, 60);
+                        ctx.restore();
+                    }
+                }
+            }
+            var visibleDates = [];
+            if (showDateMarkers) {
+                for (var o of visibleMonths) {
+                    for (var n = 0; n < o.length; n++) {
+                        var o2 = {};
+                        o2.time = new Date(o.year, o.id, n + 1).getTime();
+                        o2.position = convertTimeToPosition(o2.time);
+                        o2.month = o.id;
+                        visibleDates.push(o2);
+                    }
+                }
+                for (var o of visibleDates) {
+                    ctx.save();
+                    ctx.translate(o.position, 0);
+                    ctx.globalAlpha = showDateMarkers;
+                    ctx.scale(markerScaleFactor, markerScaleFactor);
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -3);
+                    ctx.lineTo(0, 3);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+            var position = convertTimeToPosition(date.getTime());
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "red";
+            ctx.beginPath();
+            ctx.moveTo(position, -height + 200);
+            ctx.lineTo(position, 0);
+            ctx.stroke();
+
+            if (showDateMarkers) {
+                for (var version of versionData) {
+                    if (version.date.includes("?")) continue;
+                    var split = version.date.split("-").map(Number);
+                    var year = split[2];
+                    var month = split[0] - 1;
+                    var day = split[1];
+                    var versionTime = new Date(year, month, day).getTime();
+                    var position = convertTimeToPosition(versionTime);
+                    ctx.save();
+                    ctx.translate(position, -10 * version.updateId);
+                    ctx.globalAlpha = showDateMarkers;
+                    ctx.fillStyle = "rgb(0,0,150)";
+                    if (version.first) ctx.fillStyle = "rgb(0,0,240)";
+                    ctx.beginPath();
+                    ctx.arc(0, -20, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    if (showDateMarkers) {
+                        var includeV = "0123456789".includes(version.version[0]);
+                        ctx.rotate(-90 * Math.PI / 180);
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "left";
+                        ctx.textBasline = "middle";
+                        ctx.font = "20px Arial";
+                        ctx.fillText(`${getTitle(version.game)} ${(includeV ? "v" : "") + version.version}`, 40, 8);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            for (var o of majorUpdates) {
+                var position = convertTimeToPosition(o.time);
+                ctx.save();
+                ctx.translate(position, 0);
+                ctx.fillStyle = "rgb(255,150,80)";
+                ctx.beginPath();
+                ctx.arc(0, -20, 5, 0, 2 * Math.PI);
+                ctx.fill();
+
+                if (showDateMarkers) {
+                    ctx.rotate(-90 * Math.PI / 180);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "left";
+                    ctx.textBasline = "middle";
+                    ctx.font = "25px Arial";
+                    ctx.fillText(o.title, 40, 8);
+                }
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            drawInstructions();
+        }
+    </script>
+</body>
+
+</html>

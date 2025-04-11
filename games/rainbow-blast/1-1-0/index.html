@@ -1,0 +1,399 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            function update() {
+                var d = new Date().getTime();
+                fps = Math.round(600/(d-lastTime));
+                lastTime = d;
+
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        ctx.clearRect(0,0,canvas.width,canvas.height);
+                        Loading.updateIntro();
+                    } else {
+                        ctx.fillStyle = "rgba(255,255,255,0.1)";
+                        ctx.fillRect(0,0,2000,1000);
+                        main();
+                    }
+                } else {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.downStart = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            var title = "Rainbow Blast";
+            var dimensions = {width:2000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                updateChunks();
+                drawCells();
+                updateMouse();
+                drawSidebar();
+            }
+
+            function drawSidebar() {
+                var options = [
+                    {text:"Mouse Strength",variable:"mousePullStrength",min:0.05,max:0.4},
+                    {text:"Mouse Range",variable:"mousePullRadius",min:25,max:200},
+                    {text:"Cell Attraction",variable:"cellPullStrength",min:0.0001,max:0.003},
+                    {text:"Cell Spin",variable:"cellPullSpin",min:-50,max:50},
+                    {text:"Blob Size",variable:"spewLimit",min:18,max:120},
+                    {text:"Cell Count",variable:"cellCount",min:1,max:1200}
+                ];
+
+                if(Keys.down[32]) sidebar = !sidebar;
+                if(!sidebar) return;
+                ctx.fillStyle = "rgba(240,240,240,0.9)";
+                ctx.fillRect(0,0,420,1000);
+                ctx.fillStyle = "black";
+                ctx.textBaseline = "middle";
+                ctx.textAlign = "center";
+                ctx.font = "bold 50px Arial";
+                ctx.fillText("Rainbow Blast!",210,50);
+                ctx.font = "bold 30px Arial";
+                ctx.fillRect(50,90,320,3);
+                ctx.fillText("Mouse: Pull Cells Together",210,150);
+                ctx.fillText("Space: Toggle Sidebar",210,210);
+                ctx.fillRect(50,260,320,3);
+                ctx.fillText("Color Scheme #"+((colorScheme%7+7)%7+1),210,330);
+                ctx.fillText("<",44,327);
+                ctx.fillText(">",370,327);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.fillStyle = "rgba(0,0,0,0)";
+                if(Mouse.inBox(20,300,50,50)) ctx.fillStyle = "rgba(0,0,0,0.15)";
+                ctx.roundRect(20,300,50,50,5);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "rgba(0,0,0,0)";
+                if(Mouse.inBox(345,300,50,50)) ctx.fillStyle = "rgba(0,0,0,0.15)";
+                ctx.roundRect(345,300,50,50,5);
+                ctx.fill();
+                ctx.stroke();
+                if(Mouse.clickInBox(20,300,50,50)) {
+                    colorScheme--;
+                }
+                if(Mouse.clickInBox(345,300,50,50)) {
+                    colorScheme++;
+                }
+
+                if(!Mouse.down) {
+                    optionSelected = false;
+                }
+                
+                for(var n=0;n<options.length;n++) {
+                    var o = options[n];
+                    ctx.fillStyle = "black";
+                    ctx.fillText(o.text,210,400+n*85);
+                    ctx.fillStyle = "rgb(200,200,200)";
+                    ctx.roundRect(30,420+n*85,360,10,5);
+                    ctx.fill();
+
+                    var value = this[o.variable];
+                    var percent = (value-o.min)/(o.max-o.min);
+                    ctx.fillStyle = "black";
+                    ctx.beginPath();
+                    ctx.arc(30+360*percent,425+n*85,10,0,2*Math.PI);
+                    ctx.fill();
+                    if(Mouse.inBox(0,400+n*85,420,50)&&Mouse.downStart) {
+                        if(optionSelected===false) {
+                            optionSelected = n;
+                        }
+                    }
+                    if(optionSelected===n) {
+                        var x = Math.min(Math.max((Mouse.x-30)/360,0),1);
+                        this[o.variable] = o.min+x*(o.max-o.min);
+                    }
+                }
+
+                ctx.fillStyle = "black";
+                ctx.fillRect(50,900,320,3);
+                ctx.fillText("By John Butler",210,950);
+            }
+
+            function updateMouse() {
+                if(sidebar&&Mouse.x<420) return;
+                if(!Mouse.down) return;
+                var mouseX = Mouse.x/2;
+                var mouseY = Mouse.y/2;
+                for(var chunk of chunks) {
+                    for(var o of chunk.cells) {
+                        var dist = distTo(o.x,o.y,mouseX,mouseY);
+                        if(dist>mousePullRadius) continue;
+                        var dir = dirTo(o.x,o.y,mouseX,mouseY);
+                        var move = distToMove(mousePullStrength,dir);
+                        o.xmove += move.x;
+                        o.ymove += move.y;
+                    }
+                }
+                
+                if(Mouse.down) {
+                    ctx.fillStyle = "rgba(0,0,0,0.02)";
+                    ctx.beginPath();
+                    ctx.arc(Mouse.x,Mouse.y,mousePullRadius*2,0,2*Math.PI);
+                    ctx.fill();
+                }
+            }
+
+            function updateChunks() {
+                var realCellCount = 0;
+                var switchChunkCells = [];
+                for(var n=0;n<chunks.length;n++) {
+                    var chunk = chunks[n];
+                    for(var o of chunk.cells) o.cellsInRadius = 0;
+                    var x = chunk.x;
+                    var y = chunk.y;
+                    var neighborChunks = [
+                        chunks.find(e=>e.x==x-50&&e.y==y-50),
+                        chunks.find(e=>e.x==x&&e.y==y-50),
+                        chunks.find(e=>e.x==x+50&&e.y==y-50),
+                        chunks.find(e=>e.x==x-50&&e.y==y),
+                        chunks.find(e=>e.x==x+50&&e.y==y),
+                        chunks.find(e=>e.x==x-50&&e.y==y+50),
+                        chunks.find(e=>e.x==x&&e.y==y+50),
+                        chunks.find(e=>e.x==x+50&&e.y==y+50)
+                    ];
+                    var neighborCells = [];
+                    for(var o of neighborChunks) {
+                        if(!o) continue;
+                        neighborCells = neighborCells.concat(o.cells);
+                    }
+                    updateCells(chunk.cells,neighborCells);
+                }
+                for(var chunk of chunks) {
+                    for(var n=0;n<chunk.cells.length;n++) {
+                        var o = chunk.cells[n];
+                        realCellCount++;
+                        if(o.cellsInRadius>spewLimit) {
+                            var dir = Math.random()*360;
+                            var move = distToMove(o.cellsInRadius/7,dir);
+                            o.xmove += move.x;
+                            o.ymove += move.y;
+                        }
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.xmove *= 0.9;
+                        o.ymove *= 0.9;
+                        if(o.x<0) o.x = 0;
+                        if(o.y<0) o.y = 0;
+                        if(o.x>999) o.x = 999;
+                        if(o.y>499) o.y = 499;
+                        var x = Math.floor(o.x/50)*50;
+                        var y = Math.floor(o.y/50)*50;
+                        if(x!=o.chunkX||y!=o.chunkY) {
+                            switchChunkCells.push(o);
+                            chunk.cells.splice(n,1);
+                            n--;
+                        }
+                        o.blink = false;
+                        o.blinkLevel--;
+                        if(o.blinkLevel <= 0) {
+                            o.blinkLevel = o.reset;
+                            o.blink = true;
+                        }
+                    }
+                }
+                for(var o of switchChunkCells) {
+                    o.chunkX = Math.floor(o.x/50)*50;
+                    o.chunkY = Math.floor(o.y/50)*50;
+                    while(o.chunkX>=1000) o.chunkX -= 50;
+                    while(o.chunkX<=-50) o.chunkX += 50;
+                    while(o.chunkY>=500) o.chunkY -= 50;
+                    while(o.chunkY<=-50) o.chunkY += 50;
+                    var chunk = chunks.find(e=>e.x==o.chunkX&&e.y==o.chunkY);
+                    chunk.cells.push(o);
+                    o.switchChunk = false;
+                }
+                chunks = randomize(chunks);
+
+                if(realCellCount>cellCount) {
+                    for(var n=0;n<chunks.length;n++) {
+                        var chunk = chunks[n];
+                        if(chunk.cells.length<realCellCount-cellCount) {
+                            realCellCount -= chunk.cells.length;
+                            chunk.cells = [];
+                        } else {
+                            chunk.cells.splice(0,realCellCount-cellCount);
+                            realCellCount = cellCount;
+                            break;
+                        }
+                    }
+                }
+                while(realCellCount<cellCount) {
+                    createCell();
+                    realCellCount++;
+                }
+            }
+
+            function updateCells(cells,neighborCells) {
+                for(var n=0;n<cells.length;n++) {
+                    var o = cells[n];
+                    for(var n2=n+1;n2<cells.length;n2++) {
+                        var o2 = cells[n2];
+                        var dist = distTo(o.x,o.y,o2.x,o2.y);
+                        var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                        if(dist<cellCollisionDistance) {
+                            var penetrationDistance = dist-cellCollisionDistance;
+                            var move = distToMove(penetrationDistance/2,dir);
+                            o.x += move.x;
+                            o.y += move.y;
+                            o2.x -= move.x;
+                            o2.y -= move.y;
+                        }
+                        if(dist<cellPullRadius) {
+                            o.cellsInRadius++;
+                            o2.cellsInRadius++;
+                            if(o.blink) {
+                                o.blinkLevel -= (cellPullRadius-dist)/3;
+                                var move = distToMove((cellPullRadius-dist)*cellPullStrength,dir+cellPullSpin);
+                                o.xmove += move.x;
+                                o.ymove += move.y;
+                            }
+                            if(o2.blink) {
+                                o2.blinkLevel -= (cellPullRadius-dist)/3;
+                                var move = distToMove((cellPullRadius-dist)*cellPullStrength,dir+180+cellPullSpin);
+                                o2.xmove += move.x;
+                                o2.ymove += move.y;
+                            }
+                        }
+                    }
+                    for(var n2=0;n2<neighborCells.length;n2++) {
+                        var o2 = neighborCells[n2];
+                        var dist = distTo(o.x,o.y,o2.x,o2.y);
+                        var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                        if(dist<cellCollisionDistance) {
+                            var penetrationDistance = dist-cellCollisionDistance;
+                            var move = distToMove(penetrationDistance/2,dir);
+                            o.x += move.x;
+                            o.y += move.y;
+                            o2.x -= move.x;
+                            o2.y -= move.y;
+                        }
+                        if(dist<cellPullRadius) {
+                            o.cellsInRadius++;
+                            if(o.blink) {
+                                o.blinkLevel -= (cellPullRadius-dist)/3;
+                                var move = distToMove((cellPullRadius-dist)*cellPullStrength,dir+cellPullSpin);
+                                o.xmove += move.x;
+                                o.ymove += move.y;
+                            }
+                        }
+                    }
+                }
+            }
+
+            function drawCells() {
+                for(var chunk of chunks) {
+                    for(var o of chunk.cells) {
+                        var speed = distTo(0,0,o.xmove,o.ymove);
+                        ctx.fillStyle = getColor(o.cellsInRadius,speed);
+                        ctx.fillRect(o.x*2-10,o.y*2-10,20,20);
+                    }
+                }
+            }
+
+            function getColor(n1,n2) {
+                var s = (colorScheme%7+7)%7;
+                if(s==0) {
+                    return `hsl(${300-n1*5},100%,50%)`;
+                } else if(s==1) {
+                    return `hsl(${300-n1},100%,50%)`;
+                } else if(s==2) {
+                    return `hsl(${-n1},100%,50%)`;
+                } else if(s==3) {
+                    return `hsl(${250-n1},100%,50%)`;
+                } else if(s==4) {
+                    return `hsl(${120-n1},100%,40%)`;
+                } else if(s==5) {
+                    var n = Math.floor(n1/10);
+                    return ["red","orange","yellow","green","blue","purple","rgb(50,0,50)"][Math.min(n,6)];
+                } else if(s==6) {
+                    return `hsl(${n2>7?30:200},${n2>7?100:20}%,${80-n1}%)`;
+                }
+            }
+
+            function reset() {
+                mousePullRadius = 100;
+                mousePullStrength = 0.2;
+                cellPullStrength = 0.001;
+                cellPullSpin = 0;
+                cellPullRadius = 50;
+                cellCollisionDistance = 10;
+                spewLimit = 60;
+                sidebar = true;
+                cellCount = 1000;
+                colorScheme = 0;
+                
+                chunks = [];
+                for(var x=0;x<20;x++) {
+                    for(var y=0;y<10;y++) {
+                        var o = {};
+                        o.x = x*50;
+                        o.y = y*50;
+                        o.cells = [];
+                        chunks.push(o);
+                    }
+                }
+                chunks = randomize(chunks);
+
+                var n = 0;
+                while(n < cellCount) {
+                    createCell();
+                    n++;
+                }
+            }
+
+            function createCell() {
+                var o = {};
+                o.blink = false;
+                o.xmove = 0;
+                o.ymove = 0;
+                o.x = Math.random()*999;
+                o.y = Math.random()*499;
+                o.reset = 100;
+                o.cellsInRadius = 0;
+                o.blinkLevel = Math.random()*o.reset;
+                o.chunkX = Math.floor(o.x/50)*50;
+                o.chunkY = Math.floor(o.y/50)*50;
+                var chunk = chunks.find(e=>e.x==o.chunkX&&e.y==o.chunkY);
+                chunk.cells.push(o);
+            }
+
+            function randomize(arr) {
+                var newArr = [];
+                while(arr.length>0) newArr.push(arr.splice(Math.floor(Math.random()*arr.length),1)[0]);
+                return newArr;
+            }
+
+            var chunks = [];
+            var mousePullRadius = 100;
+            var mousePullStrength = 0.2;
+            var cellPullStrength = 0.001;
+            var cellPullSpin = 0;
+            var cellPullRadius = 50;
+            var cellCollisionDistance = 10;
+            var spewLimit = 60;
+            var sidebar = true;
+            var cellCount = 1000;
+            var colorScheme = 0;
+            var optionSelected = false;
+
+            reset();
+        </script>
+    </body>
+</html>

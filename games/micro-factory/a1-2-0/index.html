@@ -1,0 +1,910 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Micro Factory";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+        var t = 0;
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var menu = {
+            page: "game",
+            switchPage: "game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.background.update();
+                this.objects.update();
+                this.level.update();
+                this.cam.update();
+                this.editing.update();
+                this.editing.ui.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                this.background.draw();
+
+                ctx.save();
+                this.cam.viewport.align();
+                this.objects.draw();
+                this.editing.draw();
+                this.level.boundary.draw();
+                ctx.restore();
+
+                this.editing.ui.draw();
+            },
+            reset: function () {
+                this.editing.reset();
+            },
+            keys: {
+                action: function (label, type) {
+                    var keys = this[label];
+                    for (var key of keys) {
+                        if (Keys[type][key]) return true;
+                    }
+                    return false;
+                },
+                panCamLeft: [37, 65],
+                panCamRight: [39, 68],
+                panCamUp: [38, 87],
+                panCamDown: [40, 83],
+                zoomCamIn: [90],
+                zoomCamOut: [88],
+                rotatePlacementClockwise: [82],
+                rotatePlacementCounterclockwise: [69]
+            },
+            background: {
+                update: function () {
+
+                },
+                draw: function () {
+                    ctx.fillStyle = "rgb(200,200,200)";
+                    ctx.fillRect(0, 0, 1500, 1000);
+
+                    ctx.save();
+                    game.cam.viewport.align();
+                    var backgroundTiles = [];
+                    var vx = Math.floor(game.cam.viewport.x / 100) * 100 - 100;
+                    var vy = Math.floor(game.cam.viewport.y / 100) * 100 - 100;
+                    var vw = Math.ceil(game.cam.viewport.w / 100) * 100 + 200;
+                    var vh = Math.ceil(game.cam.viewport.h / 100) * 100 + 200;
+                    /*for (var x = vx; x < vx + vw; x += 100) {
+                        for (var y = vy; y < vy + vh; y += 100) {
+                            backgroundTiles.push({ x: x, y: y, w: 100, h: 100 });
+                        }
+                        for (var o of backgroundTiles) {
+                            ctx.strokeStyle = "black";
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(o.x, o.y, o.w, o.h);
+                        }
+                    }*/
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "black";
+                    for (var x = vx; x < vx + vw; x += 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, vy);
+                        ctx.lineTo(x, vy + vh);
+                        ctx.stroke();
+                    }
+                    for (var y = vy; y < vy + vh; y += 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(vx, y);
+                        ctx.lineTo(vx + vw, y);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            },
+            objects: {
+                objects: [],
+                update: function () {
+                    if (Keys.down[32]) this.tick();
+                },
+                tick: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        o.move = false;
+                        for (var n2 = 0; n2 < this.objects.length; n2++) {
+                            var o2 = this.objects[n2];
+                            if (o2.x != o.x) continue;
+                            if (o2.type != "piston") continue;
+                            if (o2.y != o.y - 100) continue;
+                            o.move = true;
+                        }
+                    }
+                    for (var o of this.objects) {
+                        if (o.move) o.y += 100;
+                    }
+                },
+                clearObjectsAtCoordinates: function (x, y) {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        if (x != o.x || y != o.y) continue;
+                        this.objects.splice(n, 1);
+                        n--;
+                    }
+                },
+                draw: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x + 50, o.y + 50);
+                    ctx.rotate(o.angle * Math.PI / 180);
+                    this.drawObjectInPosition(o);
+                    ctx.restore();
+                },
+                drawObjectInPosition: function (o) {
+                    if (o.type == "piston") {
+                        ctx.fillStyle = "green";
+                        ctx.fillRect(-40, -40, 80, 60);
+                        ctx.fillRect(-20, 20, 40, 10);
+                        ctx.fillRect(-40, 30, 80, 10);
+                    } else if (o.type == "element") {
+                        ctx.fillStyle = "red";
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 40, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                },
+                create: function (o) {
+                    this.objects.push(o);
+                }
+            },
+            editing: {
+                creatingObject: {},
+                mouseOffset: { x: 0, y: 0 },
+                objectPlacementCors: { x: 0, y: 0 },
+                objectPreviewCors: { x: 0, y: 0 },
+                creatingObjectDimensions: { w: 0, h: 0 },
+                canPlace: true,
+                update: function () {
+                    this.selection.update();
+                    this.updatePlacementRotation();
+                    this.updatePlacementPosition();
+                    this.canPlace = this.validatePlacement();
+                    this.updatePlacing();
+                },
+                draw: function () {
+                    if (this.selection.active) {
+                        this.selection.draw();
+                        return;
+                    }
+                    if (!this.canPlace) return;
+                    ctx.save();
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    var x = this.objectPlacementCors.x;
+                    var y = this.objectPlacementCors.y;
+                    var w = this.creatingObjectDimensions.w;
+                    var h = this.creatingObjectDimensions.h;
+                    ctx.fillRect(x, y, w, h);
+
+                    if (this.creatingObject.type == "paste data") {
+                        ctx.save();
+                        ctx.translate(this.objectPlacementCors.x, this.objectPlacementCors.y);
+                        for (var n = 0; n < this.creatingObject.objects.length; n++) {
+                            var o = this.creatingObject.objects[n];
+                            game.objects.drawObject(o);
+                        }
+                        ctx.restore();
+                    } else {
+                        game.objects.drawObject(this.creatingObject);
+                    }
+                    ctx.restore();
+                },
+                updatePlacing: function () {
+                    if (this.selection.active) return;
+                    if (!this.canPlace) return;
+                    if (!Mouse.click) return;
+                    var correctButton = Mouse.clickButtons[0] && !Mouse.clickButtons[1] && !Mouse.clickButtons[2];
+                    if (!correctButton) return;
+                    if (this.creatingObject.type == "paste data") {
+                        for (var n = 0; n < this.creatingObject.objects.length; n++) {
+                            var o = this.creatingObject.objects[n];
+                            o.x += this.objectPlacementCors.x;
+                            o.y += this.objectPlacementCors.y;
+                            game.objects.clearObjectsAtCoordinates(o.x, o.y);
+                            this.placeObject(o);
+                        }
+                        this.selection.selection = {
+                            x: this.objectPlacementCors.x,
+                            y: this.objectPlacementCors.y,
+                            w: this.creatingObjectDimensions.w,
+                            h: this.creatingObjectDimensions.h
+                        };
+                        this.selection.finalizeSelection();
+                        this.setCreatingObject(0);
+                    } else {
+                        var o = {};
+                        game.objects.clearObjectsAtCoordinates(this.objectPlacementCors.x, this.objectPlacementCors.y)
+                        for (var key of Object.keys(this.creatingObject)) {
+                            o[key] = this.creatingObject[key];
+                        }
+                        o.x = this.objectPlacementCors.x;
+                        o.y = this.objectPlacementCors.y;
+                        this.placeObject(o);
+                    }
+                },
+                placeObject: function (o) {
+                    var hitbox = {x:o.x,y:o.y,w:100,h:100};
+                    if (!blocksColliding(hitbox, game.level.boundary)) return;
+                    game.objects.create(o);
+                },
+                updatePlacementRotation: function () {
+                    if (game.keys.action("rotatePlacementClockwise", "down")) {
+                        this.rotatePlacement(90);
+                    }
+                    if (game.keys.action("rotatePlacementCounterclockwise", "down")) {
+                        this.rotatePlacement(-90);
+                    }
+                },
+                rotatePlacement: function (angle) {
+                    if (this.creatingObject.type == "paste data") {
+                        this.rotatePasteData(angle);
+                    } else {
+                        this.creatingObject.angle += angle;
+                        this.creatingObject.angle = (this.creatingObject.angle % 360 + 360) % 360;
+                    }
+                },
+                rotatePasteData: function (angle) {
+                    var data = {};
+                    data.x = 0;
+                    data.y = 0;
+                    data.w = this.creatingObjectDimensions.w;
+                    data.h = this.creatingObjectDimensions.h;
+                    data.objects = this.creatingObject.objects;
+                    data = game.editing.rotateObjectData(angle, data);
+                    this.creatingObjectDimensions.w = data.w;
+                    this.creatingObjectDimensions.h = data.h;
+                },
+                updatePlacementPosition: function () {
+                    var mouseX = game.cam.viewport.mouse.x + this.mouseOffset.x;
+                    var mouseY = game.cam.viewport.mouse.y + this.mouseOffset.y;
+                    this.objectPlacementCors.x = Math.floor(mouseX / 100) * 100;
+                    this.objectPlacementCors.y = Math.floor(mouseY / 100) * 100;
+                    var x = mouseX - Math.floor(mouseX / 100) * 100;
+                    var y = mouseY - Math.floor(mouseY / 100) * 100;
+                    var dist = distTo(50, 50, x, y);
+                    var percent = 1 * ((dist / 50) ** 5);
+                    percent = Math.min(percent, 1);
+                    var targetX = (this.objectPlacementCors.x + 50) * (1 - percent) + game.cam.viewport.mouse.x * percent;
+                    var targetY = (this.objectPlacementCors.y + 50) * (1 - percent) + game.cam.viewport.mouse.y * percent;
+                    this.objectPreviewCors.x = targetX;
+                    this.objectPreviewCors.y = targetY;
+                    this.creatingObject.x = this.objectPreviewCors.x - 50;
+                    this.creatingObject.y = this.objectPreviewCors.y - 50;
+                },
+                validatePlacement: function () {
+                    if (this.ui.mouseInHitbox()) return false;
+                    //var placementBox = { x: this.objectPlacementCors.x, y: this.objectPlacementCors.y, w: 100, h: 100 };
+                    //if (!blocksColliding(placementBox, game.level.boundary)) return false;
+                    return true;
+                },
+                setCreatingObject: function (n) {
+                    this.ui.objectSelectedId = n;
+                    this.creatingObject = this.ui.objects[this.ui.objectSelectedId];
+                    this.creatingObjectDimensions = { w: 100, h: 100 };
+                    this.creatingObject.angle = 0;
+                    this.mouseOffset = { x: 0, y: 0 };
+                },
+                rotateObjectData: function (angle, data) {
+                    angle = (angle % 360 + 360) % 360;
+                    if (angle == 0) return data;
+                    if (angle == 90) {
+                        return this.rotateObjectDataClockwise(data);
+                    }
+                    if (angle == 180) {
+                        return this.rotateObjectDataClockwise(this.rotateObjectDataClockwise(data));
+                    }
+                    if (angle == 270) {
+                        return this.rotateObjectDataClockwise(this.rotateObjectDataClockwise(this.rotateObjectDataClockwise(data)));
+                    }
+                },
+                rotateObjectDataClockwise: function (data) {
+                    for (var o of data.objects) {
+                        o.x -= data.x;
+                        o.y -= data.y;
+                    }
+                    for (var o of data.objects) {
+                        o.angle += 90;
+                        o.angle %= 360;
+                        var x = o.x;
+                        var y = o.y;
+                        o.x = data.h - 100 - y;
+                        o.y = x;
+                    }
+                    for (var o of data.objects) {
+                        o.x += data.x;
+                        o.y += data.y;
+                    }
+                    var w = data.w;
+                    var h = data.h;
+                    data.w = h;
+                    data.h = w;
+                    return data;
+                },
+                reset: function () {
+                    this.setCreatingObject(0);
+                    this.opacity = this.opacityLowerBound;
+                },
+                selection: {
+                    active: false,
+                    selectionStartCoordinates: false,
+                    selectionEndCoordinates: false,
+                    creatingSelection: false,
+                    selection: false,
+                    selectionFinalized: false,
+                    update: function () {
+                        this.active = game.editing.creatingObject.type == "selection";
+                        this.tooltip.update();
+                        if (!this.active) {
+                            this.clearSelection();
+                            return;
+                        }
+                        var correctButton = Mouse.buttons[0] && !Mouse.buttons[1] && !Mouse.buttons[2];
+                        if (Mouse.down && correctButton) {
+                            var notUsingUI = !game.editing.ui.mouseInHitbox() && !this.tooltip.mouseInHitbox();
+                            if (notUsingUI) this.selectionFinalized = false;
+                            if (!this.creatingSelection && notUsingUI) this.startSelection();
+                            if (this.creatingSelection) this.updateSelection();
+                        } else {
+                            if (this.creatingSelection) {
+                                this.finalizeSelection();
+                            }
+                        }
+                    },
+                    updateSelection: function () {
+                        this.selectionEndCoordinates = { x: game.editing.objectPlacementCors.x, y: game.editing.objectPlacementCors.y };
+                        this.selection = this.createBoxFromPoints(this.selectionStartCoordinates, this.selectionEndCoordinates);
+                        this.selection.w += 100;
+                        this.selection.h += 100;
+                    },
+                    startSelection: function () {
+                        this.selectionStartCoordinates = { x: game.editing.objectPlacementCors.x, y: game.editing.objectPlacementCors.y };
+                        this.creatingSelection = true;
+                    },
+                    clearSelection: function () {
+                        this.creatingSelection = false;
+                        this.selection = false;
+                        this.selectionFinalized = false;
+                        this.selectionStartCoordinates = false;
+                        this.selectionEndCoordinates = false;
+                    },
+                    createBoxFromPoints: function (p1, p2) {
+                        var minX = Math.min(p1.x, p2.x);
+                        var minY = Math.min(p1.y, p2.y);
+                        var maxX = Math.max(p1.x, p2.x);
+                        var maxY = Math.max(p1.y, p2.y);
+                        var box = {};
+                        box.x = minX;
+                        box.y = minY;
+                        box.w = maxX - minX;
+                        box.h = maxY - minY;
+                        return box;
+                    },
+                    finalizeSelection: function () {
+                        var objectsInSelection = [];
+                        for (var o of game.objects.objects) {
+                            var rect = { x: o.x, y: o.y, w: 100, h: 100 };
+                            if (!blocksColliding(rect, this.selection)) continue;
+                            objectsInSelection.push(o);
+                        }
+                        if (objectsInSelection.length == 0) {
+                            this.clearSelection();
+                            return;
+                        }
+                        this.selectionFinalized = true;
+                        var minX = Math.min(...objectsInSelection.map(e => e.x));
+                        var minY = Math.min(...objectsInSelection.map(e => e.y));
+                        var maxX = Math.max(...objectsInSelection.map(e => e.x)) + 100;
+                        var maxY = Math.max(...objectsInSelection.map(e => e.y)) + 100;
+                        this.selection = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+                        this.creatingSelection = false;
+                    },
+                    draw: function () {
+                        if (!this.selection) return;
+                        if (this.selectionFinalized) {
+                            ctx.fillStyle = "rgba(0,0,0,0.15)";
+                            ctx.fillRect(this.selection.x, this.selection.y, this.selection.w, this.selection.h);
+                            ctx.strokeStyle = "rgb(50,50,50)";
+                            ctx.lineWidth = 10;
+                            ctx.setLineDash([50, 50]);
+                            ctx.lineDashOffset = t * 1.5;
+                            ctx.strokeRect(this.selection.x, this.selection.y, this.selection.w, this.selection.h);
+                            ctx.setLineDash([]);
+                        } else {
+                            ctx.fillStyle = "rgba(0,0,0,0.1)";
+                            ctx.fillRect(this.selection.x, this.selection.y, this.selection.w, this.selection.h);
+                        }
+                    },
+                    tooltip: {
+                        visible: true,
+                        x: 0,
+                        y: 0,
+                        rootCors: { x: 0, y: 0 },
+                        opacity: 0,
+                        hitbox: { x: 0, y: 0, w: 310, h: 75 },
+                        options: ["clear", "copy", "move", "rotate clockwise", "rotate counterclockwise"],
+                        optionSizes: [1, 1, 1, 1, 1],
+                        update: function () {
+                            this.visible = game.editing.selection.selectionFinalized;
+                            if (!this.visible) return;
+                            this.updateOpacity();
+                            this.setPosition();
+
+                            for (var n = 0; n < this.options.length; n++) {
+                                var o = this.options[n];
+                                var dist = distTo(this.x + this.hitbox.x + n * 60 + 35, this.y + this.hitbox.y + 37.5, Mouse.x, Mouse.y);
+                                if (dist < 25) {
+                                    this.optionSizes[n] += 0.03;
+                                    if (Mouse.click) {
+                                        this.performAction(o);
+                                    }
+                                } else {
+                                    this.optionSizes[n] -= 0.03;
+                                }
+                                this.optionSizes[n] = Math.max(1, Math.min(this.optionSizes[n], 1.15));
+                            }
+                        },
+                        draw: function () {
+                            if (!this.visible) return;
+                            ctx.save();
+                            ctx.globalAlpha = this.opacity;
+                            ctx.translate(this.x, this.y);
+                            ctx.fillStyle = "rgb(150,150,150)";
+                            ctx.roundRect(0, 0, 310, 75, 20);
+                            ctx.fill();
+
+                            for (var n = 0; n < this.options.length; n++) {
+                                var o = this.options[n];
+                                ctx.save();
+                                ctx.translate(n * 60 + 35, 37.5);
+                                ctx.scale(this.optionSizes[n], this.optionSizes[n]);
+                                this.drawOption(o);
+                                ctx.restore();
+                            }
+
+                            ctx.restore();
+                        },
+                        drawOption: function (o) {
+                            if (o == "clear") {
+                                ctx.fillStyle = "red";
+                                ctx.fillRect(-20, -20, 40, 40);
+                            } else if (o == "copy") {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 3;
+                                ctx.strokeRect(-20, -20, 40, 40);
+                            } else if (o == "move") {
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(-20, -20, 40, 40);
+                            } else if (o == "rotate clockwise") {
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(-20, -20, 40, 40);
+                                ctx.fillStyle = "white";
+                                ctx.fillRect(0, -20, 20, 20);
+                            } else if (o == "rotate counterclockwise") {
+                                ctx.fillStyle = "black";
+                                ctx.fillRect(-20, -20, 40, 40);
+                                ctx.fillStyle = "white";
+                                ctx.fillRect(-20, -20, 20, 20);
+                            }
+                        },
+                        performAction: function (o, clear) {
+                            if (o == "clear") {
+                                for (var n = 0; n < game.objects.objects.length; n++) {
+                                    var o = game.objects.objects[n];
+                                    if (!blocksColliding({ x: o.x, y: o.y, w: 100, h: 100 }, game.editing.selection.selection)) continue;
+                                    game.objects.objects.splice(n, 1);
+                                    n--;
+                                }
+                            } else if (o == "copy") {
+                                var data = {};
+                                data.objects = [];
+                                for (var n = 0; n < game.objects.objects.length; n++) {
+                                    var o = game.objects.objects[n];
+                                    if (!blocksColliding({ x: o.x, y: o.y, w: 100, h: 100 }, game.editing.selection.selection)) continue;
+                                    var copy = JSON.parse(JSON.stringify(o));
+                                    copy.x -= game.editing.selection.selection.x;
+                                    copy.y -= game.editing.selection.selection.y;
+                                    data.objects.push(copy);
+                                }
+                                data.type = "paste data";
+                                game.editing.creatingObject = data;
+                                game.editing.creatingObjectDimensions.w = game.editing.selection.selection.w;
+                                game.editing.creatingObjectDimensions.h = game.editing.selection.selection.h;
+                                var viewportCors = game.cam.viewport.translateFromViewportCoordinates(this.rootCors);
+                                game.editing.mouseOffset.x = viewportCors.x - game.cam.viewport.mouse.x;
+                                game.editing.mouseOffset.y = viewportCors.y - game.cam.viewport.mouse.y;
+                            } else if (o == "move") {
+                                this.performAction("copy", false);
+                                this.performAction("clear");
+                            } else if (o == "rotate clockwise") {
+                                this.performAction("move");
+                                game.editing.rotatePasteData(90);
+                            } else if (o == "rotate counterclockwise") {
+                                this.performAction("move");
+                                game.editing.rotatePasteData(-90);
+                            }
+                            if (clear !== false) game.editing.selection.clearSelection();
+                        },
+                        setPosition: function () {
+                            var x = game.editing.selection.selection.x;
+                            var y = game.editing.selection.selection.y;
+                            var cors = game.cam.viewport.translateToVieportCoordinates({ x: x, y: y });
+                            this.rootCors = cors;
+                            this.x = cors.x;
+                            this.y = cors.y - this.hitbox.h - 10;
+
+                            var buffer = 10;
+                            this.x = Math.max(this.x, buffer);
+                            this.y = Math.max(this.y, buffer);
+                            this.x = Math.min(this.x, 1500 - this.hitbox.w - buffer);
+                            this.y = Math.min(this.y, game.editing.ui.y + game.editing.ui.hitbox.y - this.hitbox.h - buffer);
+                        },
+                        updateOpacity: function () {
+                            if (this.mouseCloseToHitbox(50)) {
+                                this.opacity += game.editing.ui.opacityChange;
+                            } else {
+                                this.opacity -= game.editing.ui.opacityChange;
+                            }
+                            this.opacity = Math.max(Math.min(this.opacity, 1), game.editing.ui.opacityLowerBound);
+                        },
+                        mouseInHitbox: function () {
+                            return Mouse.inBox(this.x + this.hitbox.x, this.y + this.hitbox.y, this.hitbox.w, this.hitbox.h);
+                        },
+                        mouseCloseToHitbox: function (distance) {
+                            var hitbox = {};
+                            hitbox.x = this.hitbox.x - distance;
+                            hitbox.y = this.hitbox.y - distance;
+                            hitbox.w = this.hitbox.w + distance * 2;
+                            hitbox.h = this.hitbox.h + distance * 2;
+                            return Mouse.inBox(this.x + hitbox.x, this.y + hitbox.y, hitbox.w, hitbox.h);
+                        }
+                    }
+                },
+                ui: {
+                    x: 750,
+                    y: 925,
+                    opacity: 0,
+                    opacityLowerBound: 0.6,
+                    opacityChange: 0.02,
+                    hitbox: { x: -400, y: -50, w: 800, h: 100 },
+                    objectSelectedId: 0,
+                    objects: [
+                        {
+                            type: "selection"
+                        },
+                        {
+                            type: "piston"
+                        },
+                        {
+                            type: "element"
+                        }
+                    ],
+                    update: function () {
+                        this.updateOpacity();
+                        this.updateTool();
+                    },
+                    draw: function () {
+                        ctx.save();
+                        ctx.translate(this.x, this.y);
+                        ctx.globalAlpha = this.opacity;
+                        ctx.fillStyle = "rgb(150,150,150)";
+                        ctx.roundRect(-400, -50, 800, 100, 20);
+                        ctx.fill();
+
+                        for (var n = 0; n < this.objects.length; n++) {
+                            var o = this.objects[n];
+                            ctx.save();
+                            ctx.translate(-350 + n * 100, 0);
+                            ctx.scale(0.7, 0.7);
+                            if (o.type == "selection") {
+                                this.drawSelectionIcon();
+                            } else {
+                                game.objects.drawObjectInPosition(o);
+                            }
+                            if (this.objectSelectedId == n) {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 4;
+                                ctx.lineJoin = "round";
+                                ctx.strokeRect(-60, -60, 120, 120);
+                            }
+                            ctx.restore();
+                        }
+
+                        ctx.restore();
+
+                        game.editing.selection.tooltip.draw();
+                    },
+                    updateOpacity: function () {
+                        if (this.mouseCloseToHitbox(50) && !game.editing.selection.creatingSelection) {
+                            this.opacity += this.opacityChange;
+                        } else {
+                            this.opacity -= this.opacityChange;
+                        }
+                        this.opacity = Math.max(Math.min(this.opacity, 1), this.opacityLowerBound);
+                    },
+                    updateTool: function () {
+                        for (var n = 0; n < this.objects.length; n++) {
+                            var o = this.objects[n];
+                            var hitbox = {
+                                x: this.x - 350 + n * 100 - 60 * 0.7,
+                                y: this.y + 0 - 60 * 0.7,
+                                w: 120 * 0.7,
+                                h: 120 * 0.7
+                            };
+                            if (Mouse.clickInBox(hitbox.x, hitbox.y, hitbox.w, hitbox.h) || Keys.keys[49 + n]) {
+                                game.editing.setCreatingObject(n);
+                            }
+                        }
+                    },
+                    drawSelectionIcon: function () {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(-40, -40, 80, 80);
+                    },
+                    mouseInHitbox: function () {
+                        return Mouse.inBox(this.x + this.hitbox.x, this.y + this.hitbox.y, this.hitbox.w, this.hitbox.h);
+                    },
+                    mouseCloseToHitbox: function (distance) {
+                        var hitbox = {};
+                        hitbox.x = this.hitbox.x - distance;
+                        hitbox.y = this.hitbox.y - distance;
+                        hitbox.w = this.hitbox.w + distance * 2;
+                        hitbox.h = this.hitbox.h + distance * 2;
+                        return Mouse.inBox(this.x + hitbox.x, this.y + hitbox.y, hitbox.w, hitbox.h);
+                    }
+                }
+            },
+            level: {
+                update: function () {
+                },
+                boundary: {
+                    x: -1500,
+                    y: -1500,
+                    w: 3000,
+                    h: 3000,
+                    draw: function () {
+                        ctx.strokeStyle = "blue";
+                        ctx.lineWidth = 5;
+                        ctx.strokeRect(this.x, this.y, this.w, this.h);
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                realPosition: {
+                    x: 0,
+                    y: 0,
+                    zoom: 1,
+                },
+                viewport: {
+                    x: 0,
+                    y: 0,
+                    w: 0,
+                    h: 0,
+                    update: function () {
+                        this.normalizeViewportToLevelBoundary();
+                        this.setViewport();
+                        this.mouse.update();
+                    },
+                    normalizeViewportToLevelBoundary: function () {
+                        var zoomBuffer = 200;
+                        var maxWidth = game.level.boundary.w + zoomBuffer * 2;
+                        var maxHeight = game.level.boundary.h + zoomBuffer * 2;
+                        var maxZoom = Math.min(1500 / maxWidth, 1000 / maxHeight);
+                        game.cam.realPosition.zoom = Math.max(game.cam.realPosition.zoom, maxZoom);
+                        game.cam.realPosition.zoom = Math.min(game.cam.realPosition.zoom, 3);
+
+                        game.cam.realPosition.x = Math.max(game.cam.realPosition.x, game.level.boundary.x);
+                        game.cam.realPosition.y = Math.max(game.cam.realPosition.y, game.level.boundary.y);
+                        game.cam.realPosition.x = Math.min(game.cam.realPosition.x, game.level.boundary.x + game.level.boundary.w);
+                        game.cam.realPosition.y = Math.min(game.cam.realPosition.y, game.level.boundary.y + game.level.boundary.h);
+                    },
+                    setViewport: function () {
+                        var w = 1500 / game.cam.zoom;
+                        var h = 1000 / game.cam.zoom;
+                        var x = game.cam.x;
+                        var y = game.cam.y;
+                        this.x = x - w / 2;
+                        this.y = y - h / 2;
+                        this.w = w;
+                        this.h = h;
+                    },
+                    mouse: {
+                        x: 0,
+                        y: 0,
+                        update: function () {
+                            var cors = game.cam.viewport.translateFromViewportCoordinates({ x: Mouse.x, y: Mouse.y });
+                            this.x = cors.x;
+                            this.y = cors.y;
+                        }
+                    },
+                    translateFromViewportCoordinates: function ({ x: x, y: y }) {
+                        x = (x - 750) / game.cam.zoom + game.cam.x;
+                        y = (y - 500) / game.cam.zoom + game.cam.y;
+                        return { x: x, y: y };
+                    },
+                    translateToVieportCoordinates: function ({ x: x, y: y }) {
+                        x = (x - game.cam.x) * game.cam.zoom + 750;
+                        y = (y - game.cam.y) * game.cam.zoom + 500;
+                        return { x: x, y: y };
+                    },
+                    align: function () {
+                        ctx.translate(750, 500);
+                        ctx.scale(game.cam.zoom, game.cam.zoom);
+                        ctx.translate(-game.cam.x, -game.cam.y);
+                    }
+                },
+                update: function () {
+                    this.handleInput();
+                    this.viewport.update();
+                    this.animatePosition();
+                },
+                animatePosition: function () {
+                    var animateFactor = 0.1;
+                    this.x = this.x * (1 - animateFactor) + this.realPosition.x * animateFactor;
+                    this.y = this.y * (1 - animateFactor) + this.realPosition.y * animateFactor;
+                    this.zoom = this.zoom * (1 - animateFactor) + this.realPosition.zoom * animateFactor;
+                    if (Mouse.buttons[1]) {
+                        this.x = this.realPosition.x;
+                        this.y = this.realPosition.y;
+                    }
+                },
+                handleInput: function () {
+                    this.handleKeyboardInput();
+                    this.handleMouseInput();
+                },
+                handleKeyboardInput: function () {
+                    var movementSpeed = 15 / this.zoom;
+                    var zoomSpeed = 1.02;
+                    if (game.keys.action("panCamLeft", "keys")) {
+                        this.realPosition.x -= movementSpeed;
+                    }
+                    if (game.keys.action("panCamRight", "keys")) {
+                        this.realPosition.x += movementSpeed;
+                    }
+                    if (game.keys.action("panCamUp", "keys")) {
+                        this.realPosition.y -= movementSpeed;
+                    }
+                    if (game.keys.action("panCamDown", "keys")) {
+                        this.realPosition.y += movementSpeed;
+                    }
+                    if (game.keys.action("zoomCamIn", "keys")) {
+                        this.realPosition.zoom *= zoomSpeed;
+                    }
+                    if (game.keys.action("zoomCamOut", "keys")) {
+                        this.realPosition.zoom /= zoomSpeed;
+                    }
+                },
+                handleMouseInput: function () {
+                    this.realPosition.zoom -= Mouse.scrollY / 500 * this.realPosition.zoom;
+                    if (Mouse.buttons[1]) {
+                        this.realPosition.x -= Mouse.xmove / this.realPosition.zoom;
+                        this.realPosition.y -= Mouse.ymove / this.realPosition.zoom;
+                    }
+                }
+            }
+        }
+
+        game.reset();
+
+        /*
+        TODO:
+        Placement:
+            Placement Animation
+            Keybinds for actions
+            Clear Level
+            Undo
+        Movement:
+            Pause
+            Play
+            Step
+            Animations
+            Speed
+            Reset
+        Level:
+            Goal molecule
+            First Levels
+        Blocks:
+            Block Logic
+            Tileset
+        */
+    </script>
+</body>
+
+</html>

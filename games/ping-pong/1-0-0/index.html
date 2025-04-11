@@ -1,0 +1,481 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Ping Pong';
+            var dimensions = {width:1500,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=="menu") {
+                    menu.update();
+                } else if(page=="game") {
+                    game.tick();
+                }
+            }
+
+            function text(t,s,x,y) {
+                ctx.font = s+"px Courier New";
+                ctx.fillStyle = 'rgb(0,0,255)';
+                ctx.fillText(t,x-2,y+2);
+                ctx.fillStyle = 'rgb(255,0,0)';
+                ctx.fillText(t,x+2,y+2);
+                ctx.fillStyle = 'white';
+                ctx.fillText(t,x,y);
+            }
+
+            function fillRect(x,y,w,h) {
+                ctx.fillStyle = 'rgb(0,0,255)';
+                ctx.fillRect(x-2,y+2,w,h);
+                ctx.fillStyle = 'rgb(255,0,0)';
+                ctx.fillRect(x+2,y+2,w,h);
+                ctx.fillStyle = 'white';
+                ctx.fillRect(x,y,w,h);
+            }
+
+            function strokeRect(x,y,w,h) {
+                ctx.lineWidth = 10;
+                ctx.strokeStyle = 'rgb(0,0,255)';
+                ctx.strokeRect(x-2,y+2,w,h);
+                ctx.strokeStyle = 'rgb(255,0,0)';
+                ctx.strokeRect(x+2,y+2,w,h);
+                ctx.strokeStyle = 'white';
+                ctx.strokeRect(x,y,w,h);
+            }
+
+            var menu = {
+                page: "title screen",
+                update: function() {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,1500,1000);
+                    if(this.page=="title screen") {
+                        ctx.textAlign = 'center';
+                        text("PING PONG",120,750,200);
+                        text("By John Butler",60,750,950);
+                        strokeRect(620,400,260,130);
+                        text("Play",60,750,485);
+                        if(Mouse.inBox(620,400,260,130)&&Mouse.click) {
+                            this.page = "pick opponent";
+                            blip();
+                        }
+                    } else if(this.page=="pick opponent") {
+                        text("Pick Opponent:",120,750,200);
+                        strokeRect(620,350,260,130);
+                        text("Friend",60,750,435);
+                        if(Mouse.inBox(620,350,260,130)&&Mouse.click) {
+                            page = "game";
+                            game.reset();
+                            game.ai = [0,0];
+                            blip();
+                        }
+                        strokeRect(620,600,260,130);
+                        text("Robot",60,750,685);
+                        if(Mouse.inBox(620,600,260,130)&&Mouse.click) {
+                            page = "game";
+                            game.reset();
+                            game.ai = [1,0];
+                            blip();
+                        }
+                    }
+                }
+            }
+
+            var game = {
+                ai: [0,0],
+                scores: [0,0],
+                paddles: [500,500],
+                waitForMove: true,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    var wait = this.waitForMove;
+                    if(!this.ai[0]) {
+                        if(Keys.keys[87]) {
+                            this.paddles[0] -= 5;
+                            this.waitForMove = false;
+                        }
+                        if(Keys.keys[83]) {
+                            this.paddles[0] += 5;
+                            this.waitForMove = false;
+                        }
+                    } else {
+                        var target = 500;
+                        if(this.balls.balls.length>0) {
+                            var ball = this.balls.balls[0];
+                            if(ball.xmove<0) {
+                                var relevance = 1-Math.max(ball.x-300,0)/1200;
+                                target = ball.y*relevance+500*(1-relevance);
+                            }
+                        }
+                        if(Math.abs(this.paddles[0]+100-target)>5) {
+                            if(this.paddles[0]+100<target) {
+                                this.paddles[0] += 5;
+                            } else {
+                                this.paddles[0] -= 5;
+                            }
+                        }
+                    }
+                    if(!this.ai[1]) {
+                        if(Keys.keys[38]) {
+                            this.paddles[1] -= 5;
+                            this.waitForMove = false;
+                        }
+                        if(Keys.keys[40]) {
+                            this.paddles[1] += 5;
+                            this.waitForMove = false;
+                        }
+                    } else {
+                        var target = 500;
+                        if(this.balls.balls.length>0) {
+                            var ball = this.balls.balls[0];
+                            if(ball.xmove>0) {
+                                var relevance = 1-Math.max(1200-ball.x,0)/1200;
+                                target = ball.y*relevance+500*(1-relevance);
+                            }
+                        }
+                        if(Math.abs(this.paddles[1]+100-target)>5) {
+                            if(this.paddles[1]+100<target) {
+                                this.paddles[1] += 5;
+                            } else {
+                                this.paddles[1] -= 5;
+                            }
+                        }
+                    }
+                    this.paddles[0] = Math.min(Math.max(this.paddles[0],0),800);
+                    this.paddles[1] = Math.min(Math.max(this.paddles[1],0),800);
+                    //move paddles
+
+                    if(wait!=this.waitForMove) {
+                        this.balls.spawn();
+                    }
+                    //spawn when user moves
+
+                    this.balls.update();
+                },
+                draw: function() {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,1500,1000);
+                    var n = 0;
+                    while(n < 20) {
+                        fillRect(740,0+n*100+25,20,50);
+                        n++;
+                    }
+                    //middle line
+
+                    ctx.textAlign = 'left';
+                    text(this.scores[0],60,20,70);
+
+                    ctx.textAlign = 'right';
+                    text(this.scores[1],60,1480,70);
+                    //scores
+
+                    fillRect(100,this.paddles[0],20,200);
+                    fillRect(1380,this.paddles[1],20,200);
+                    //paddles
+
+                    if(this.waitForMove) {
+                        if(!this.ai[0]) {
+                            text('W',60,200,this.paddles[0]+60);
+                            text('S',60,200,this.paddles[0]+180);
+                        } else {
+                            text('🤖',60,230,this.paddles[0]+115);
+                        }
+                        if(!this.ai[1]) {
+                            text('↑',60,1330,this.paddles[1]+60);
+                            text('↓',60,1330,this.paddles[1]+180);
+                        } else {
+                            text('🤖',60,1340,this.paddles[1]+115);
+                        }
+                    }
+
+                    this.balls.draw();
+                    //balls
+                },
+                balls: {
+                    spawnTime: 0,
+                    balls: [],
+                    update: function() {
+                        if(this.spawnTime>0) {
+                            this.spawnTime--;
+                            if(this.spawnTime==0) {
+                                this.spawn();
+                                blip();
+                            }
+                        }
+                        var n = 0;
+                        while(n < this.balls.length) {
+                            var ball = this.balls[n];
+                            ball.x += ball.xmove;
+                            ball.y += ball.ymove;
+                            if(ball.y<0) {
+                                ball.ymove *= -1;
+                                ball.y = -ball.y;
+                            }
+                            if(ball.y>980) {
+                                ball.ymove *= -1;
+                                ball.y = 1960-ball.y;
+                            }
+                            if(ball.x<0) {
+                                game.scores[1]++;
+                                this.balls.splice(n,1);
+                                this.spawnTime = 100;
+                                blip();
+                                n--;
+                            }
+                            if(ball.x>1480) {
+                                game.scores[0]++;
+                                this.balls.splice(n,1);
+                                this.spawnTime = 100;
+                                blip();
+                                n--;
+                            }
+                            if(ball.x<120&&ball.x>100) {
+                                if(ball.y+20>game.paddles[0]&&ball.y<game.paddles[0]+200) {
+                                    ball.ymove *= 1.05;
+                                    ball.xmove *= -1.05;
+                                    ball.x = 120;
+                                    blip();
+                                }
+                            }
+                            if(ball.x<1400&&ball.x>1380) {
+                                if(ball.y+20>game.paddles[1]&&ball.y<game.paddles[1]+200) {
+                                    ball.ymove *= 1.05;
+                                    ball.xmove *= -1.05;
+                                    ball.x = 1380;
+                                    blip();
+                                }
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.balls.length) {
+                            var ball = this.balls[n];
+                            fillRect(ball.x,ball.y,20,20);
+                            n++;
+                        }
+                    },
+                    spawn: function() {
+                        this.balls.push({x:750,y:500,xmove:Math.floor(Math.random()*2)*10-5,ymove:Math.floor(Math.random()*2)*10-5});
+                    }
+                },
+                reset: function() {
+                    this.scores = [0,0];
+                    this.paddles = [400,400];
+                    this.balls.balls = [];
+                    this.waitForMove = true;
+                }
+            }
+
+            var context = new AudioContext();
+            function blip() {
+                playNote(600,20);
+            }
+            function playNote(frequency,length) {
+                var oscillator = context.createOscillator();
+                var gainNode = context.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                oscillator.connect(context.destination);
+                oscillator.start();
+                setTimeout(function(){
+                    gainNode.gain.setTargetAtTime(0, context.currentTime, 1);
+                    oscillator.stop();
+                },length);
+            }
+            
+            var page = "menu";
+        </script>
+    </body>
+</html>

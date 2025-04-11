@@ -1,0 +1,986 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Shoot Em Up!";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            Loading.loaded = true;
+            Loading.intro = 0;
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.mouseX = (Mouse.x-500)/this.cam.zoom+this.cam.x;
+                    this.mouseY = (Mouse.y-500)/this.cam.zoom+this.cam.y;
+
+                    this.player.update();
+                    this.enemies.update();
+                    this.bullets.update();
+                    this.cam.update();
+                    this.particles.update();
+                },
+                draw: function() {
+                    this.background.draw();
+
+                    ctx.save();
+                    ctx.translate(500,500);
+                    ctx.scale(this.cam.zoom,this.cam.zoom);
+                    ctx.translate(-this.cam.x,-this.cam.y);
+
+                    this.particles.draw();
+                    this.bullets.draw();
+                    if(!this.player.dead) this.player.draw();
+                    this.enemies.draw();
+
+                    ctx.restore();
+
+                    ctx.fillStyle = 'rgb(150,0,0)';
+                    ctx.fillRect(10,10,980,20);
+                    ctx.fillStyle = 'rgb(255,0,0)';
+                    ctx.fillRect(10,10,980*this.player.health/100,20);
+                    //player health
+
+                    var weapons = ["Pistol","Machine Gun","Sniper","Shotgun"];
+                    for(var n=0;n<4;n++) {
+                        ctx.fillStyle = "black";
+                        ctx.font = "25px Trebuchet MS";
+                        ctx.fillText((n+1)+": "+weapons[n],20,60+n*30);
+                        if(game.player.weapon.selected==weapons[n].toLowerCase()) {
+                            ctx.strokeStyle = "black";
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(10,35+n*30,200,30);
+                        }
+                    }
+                    //player weapon select
+                },
+                background: {
+                    objects: [],
+                    draw: function() {
+                        ctx.fillStyle = "rgb(240,240,240)";
+                        ctx.fillRect(0,0,1000,1000);
+
+                        for(var o of this.objects) {
+                            this.drawObject(o);
+                        }
+                    },
+                    drawObject: function(o) {
+                        ctx.fillStyle = "rgb(220,220,220)";
+                        ctx.save();
+                        ctx.translate(o.x-game.cam.x,o.y-game.cam.y);
+                        ctx.fillRect(-o.r,-o.r,o.r*2,o.r*2);
+                        ctx.restore();
+                    },
+                    reset: function() {
+                        this.objects = [];
+                        for(var n=0;n<40;n++) {
+                            var o = {};
+                            o.x = Math.random()*2000-1000;
+                            o.y = Math.random()*2000-1000;
+                            o.r = Math.random()*20+40;
+                            this.objects.push(o);
+                        }
+                    }
+                },
+                reset: function() {
+                    this.effects.reset();
+                    this.player.reset();
+                    this.enemies.reset();
+                    this.particles.reset();
+                    this.bullets.reset();
+                    this.cam.reset();
+                    this.background.reset();
+                },
+                effects: {
+                    objects: [],
+                    update: function() {
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                enemies: {
+                    objects: [],
+                    update: function() {
+                        this.updateEnemyCollisions();
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            this.updateEnemy(o);
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                        while(this.objects.length<10) {
+                            this.spawn();
+                        }
+                    },
+                    draw: function() {
+                        for(var enemy of this.objects) {
+                            this.drawEnemy(enemy);
+                        }
+                    },
+                    updateEnemy: function(o) {
+                        o.animatedHealth = o.animatedHealth*0.7+(o.health*0.9+o.maxHealth*0.1)*0.3;
+                        if(o.damaged>0) {
+                            o.damaged--;
+                            o.targetPlayer = true;
+                        }
+                        var playerIsTarget = false;
+                        var distToPlayer = distTo(o.x,o.y,game.player.x,game.player.y);
+                        if(o.behaviorType=="aggressive") {
+                            if(distToPlayer<o.sightRadius&&!game.player.dead) {
+                                playerIsTarget = true;
+                            }
+                            if(o.targetPlayer&&!game.player.dead) {
+                                playerIsTarget = true;
+                            }
+                        }
+                        if(o.behaviorType=="passive-aggressive") {
+                            if(o.targetPlayer&&!game.player.dead) {
+                                playerIsTarget = true;
+                            }
+                        }
+
+                        if(playerIsTarget) {
+                            if(o.attackPattern=="ram") {
+                                o.target.x = game.player.x;
+                                o.target.y = game.player.y;
+                            } else if(o.attackPattern=="shoot") {
+                                if(distToPlayer<o.stopDistance) {
+                                    o.target.x = game.player.x;
+                                    o.target.y = game.player.y;
+                                    o.stopped = true;
+                                } else {
+                                    o.target.x = game.player.x;
+                                    o.target.y = game.player.y;
+                                    o.stopped = false;
+                                }
+                            }
+                        }
+
+                        var dirToTarget = dirTo(o.x,o.y,o.target.x,o.target.y);
+                        var distToTarget = distTo(o.x,o.y,o.target.x,o.target.y);
+                        var t = turn(o.angle,dirToTarget);
+                        if(distToTarget>5) {
+                            o.angle += t/10;
+                        }
+                        var speed = Math.min(o.speed,distToTarget/300);
+                        if(playerIsTarget) speed = o.speed;
+                        var move = distToMove(speed,o.angle);
+                        if(!o.stopped) {
+                            o.xmove += move.x;
+                            o.ymove += move.y;
+                        }
+
+                        o.xmove *= 0.9;
+                        o.ymove *= 0.9;
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+
+                        if(playerIsTarget) {
+                            if(o.attackPattern=="ram") {
+                                if(distToTarget<o.r+game.player.r) {
+                                    var dir = dirTo(o.x,o.y,game.player.x,game.player.y);
+                                    var move = distToMove(Math.sqrt(o.damage)*2,dir);
+                                    game.player.xmove += move.x;
+                                    game.player.ymove += move.y;
+                                    game.player.damage(o.damage);
+                                }
+                            } else if(o.attackPattern=="shoot") {
+                                if(distToTarget<=o.shootDistance&&o.reload==0) {
+                                    o.reload = o.reloadReset;
+                                    o.shoot();
+                                }
+                            }
+                        } else if(Math.random()<0.001||o.type!=="peaceful") {
+                            if(distToTarget<o.r) {
+                                o.target.x = Math.random()*1000-500;
+                                o.target.y = Math.random()*1000-500;
+                            }
+                        }
+
+                        if(o.attackPattern=="shoot") {
+                            o.reload--;
+                            o.reload = Math.max(o.reload,0);
+                        }
+
+                        if(o.health<=0) {
+                            this.destroyEnemy(o);
+                            o.delete = true;
+                        }
+                    },
+                    updateEnemyCollisions: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            for(var n2=n+1;n2<this.objects.length;n2++) {
+                                var o2 = this.objects[n2];
+                                var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                if(dist>=o.r+o2.r) continue;
+                                var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                                var penetration = o.r+o2.r-dist;
+                                var move = distToMove(penetration,dir);
+                                o.x -= move.x/2;
+                                o.y -= move.y/2;
+                                o2.x += move.x/2;
+                                o2.y += move.y/2;
+                            }
+                        }
+
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            var dist = distTo(o.x,o.y,game.player.x,game.player.y);
+                            if(dist>=o.r+game.player.r) continue;
+                            var dir = dirTo(o.x,o.y,game.player.x,game.player.y);
+                            var penetration = o.r+game.player.r-dist;
+                            var move = distToMove(penetration,dir);
+                            o.x -= move.x/2;
+                            o.y -= move.y/2;
+                            game.player.x += move.x/2;
+                            game.player.y += move.y/2;
+                        }
+                    },
+                    drawEnemy: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        ctx.save();
+                        if(o.damaged) ctx.translate(Math.random()*2-1,Math.random()*2-1);
+                        ctx.rotate(o.angle*Math.PI/180);
+                        ctx.lineWidth = 3;
+                        if(o.type=="peaceful") {
+                            ctx.strokeStyle = "rgb(0,0,0)";
+                            ctx.strokeRect(-o.r,-o.r,o.r*2,o.r*2);
+                        } else if(o.type=="normal") {
+                            ctx.fillStyle = "rgb(0,0,0)";
+                            ctx.fillRect(-o.r,-o.r,o.r*2,o.r*2);
+                        } else if(o.type=="slime") {
+                            ctx.fillStyle = "rgba(0,255,0,0.5)";
+                            ctx.fillRect(-o.r,-o.r,o.r*2,o.r*2);
+                        } else if(o.type=="wizard") {
+                            ctx.strokeStyle = "rgb(0,0,0)";
+                            ctx.fillStyle = "rgb(100,0,150)";
+                            ctx.fillRect(-o.r,-o.r,o.r*2,o.r*2);
+                            ctx.strokeRect(-o.r,-o.r,o.r*2,o.r*2);
+                        }
+                        if(o.damaged) {
+                            ctx.fillStyle = "rgba(255,0,0,0.1)";
+                            ctx.fillRect(-o.r,-o.r,o.r*2,o.r*2);
+                        }
+                        ctx.restore();
+                        if(o.health!=o.maxHealth&&o.health>0) {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(-o.r,o.r+5,o.r*2,5);
+                            ctx.fillStyle = "red";
+                            ctx.fillRect(-o.r,o.r+5,o.r*2*o.animatedHealth/o.maxHealth,5);
+                        }
+                        ctx.restore();
+                    },
+                    destroyEnemy: function(o) {
+                        for(var n=0;n<10;n++) {
+                            var p = {};
+                            p.type = "enemy death particle";
+                            p.enemy = o;
+                            game.particles.create(p);
+                        }
+                        if(o.type=="slime"&&o.tier>1) {
+                            for(var n=0;n<4;n++) {
+                                var o2 = {};
+                                o2.type = "slime";
+                                o2.x = o.x;
+                                o2.y = o.y;
+                                o2.xmove = 0;
+                                o2.ymove = 0;
+                                o2.angle = n*90;
+                                o2.damaged = 10;
+                                o2.tier = o.tier-1;
+                                o2.target = {x:game.player.x,y:game.player.y};
+                                o2.targetPlayer = true;
+                                this.spawnEnemy(o2);
+                            }
+                        }
+                    },
+                    spawnEnemy: function(o2) {
+                        var type = o2.type;
+                        var tier = o2.tier;
+                        var o = new enemyStats[type](tier);
+                        var keys = Object.keys(o2);
+                        keys = keys.filter(e=>e!="type"&&e!="tier");
+                        for(var key of keys) {
+                            o[key] = o2[key];
+                        }
+                        o.health = o.maxHealth;
+                        o.animatedHealth = o.maxHealth;
+                        o.damaged = 0;
+                        o.xmove = 0;
+                        o.ymove = 0;
+                        o.angle = Math.random()*360;
+                        this.objects.push(o);
+                    },
+                    spawn: function() {
+                        var o = {};
+                        o.x = Math.random()*2000-1000;
+                        o.y = Math.random()*2000-1000;
+                        o.target = {};
+                        o.target.x = Math.random()*2000-1000;
+                        o.target.y = Math.random()*2000-1000;
+                        o.type = "normal";
+                        if(Math.random()<0.1) o.type = "peaceful";
+                        if(Math.random()<0.15) o.type = "slime";
+                        if(Math.random()<0.15) o.type = "wizard";
+                        if(o.type=="normal") {
+                            o.tier = 6-Math.floor(Math.pow(Math.random()*4000,0.2));
+                        } else if(o.type=="peaceful") {
+                            o.tier = 6-Math.floor(Math.pow(Math.random()*4000,0.2));
+                        } else if(o.type=="slime") {
+                            o.tier = Math.floor(Math.random()*3)+2;
+                        } else if(o.type=="wizard") {
+                            o.tier = 6-Math.floor(Math.pow(Math.random()*4000,0.2));
+                        }
+                        o.tier = Math.max(1,Math.min(5,o.tier));
+                        this.spawnEnemy(o);
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                bullets: {
+                    objects: [],
+                    update: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            o.x += o.xmove;
+                            o.y += o.ymove;
+                            if(o.origin.type=="player") {
+                                for(var enemy of game.enemies.objects) {
+                                    var dist = distTo(o.x,o.y,enemy.x,enemy.y);
+                                    if(dist<enemy.r+5) {
+                                        var dir = dirTo(0,0,o.xmove,o.ymove);
+                                        var knockback = o.knockback/enemy.knockbackResistance;
+                                        var move = distToMove(knockback,dir);
+                                        enemy.xmove += move.x;
+                                        enemy.ymove += move.y;
+                                        if(enemy.health<o.damage&&o.piercing) {
+                                            o.damage -= enemy.health;
+                                            enemy.health = 0;
+                                        } else {
+                                            enemy.health -= o.damage;
+                                            o.damage = 0;
+                                        }
+                                        enemy.damaged = 10;
+                                        for(var n2=0;n2<o.particles;n2++) {
+                                            var p = {type:"enemy damaged particle"};
+                                            p.enemy = enemy;
+                                            p.x = o.x;
+                                            p.y = o.y;
+                                            game.particles.create(p);
+                                        }
+                                    }
+                                }
+                            } else if(o.origin.type=="wizard") {
+                                var dist = distTo(o.x,o.y,game.player.x,game.player.y);
+                                if(dist<game.player.r) {
+                                    game.player.damage(o.damage);
+                                    o.delete = true;
+                                }
+                            }
+                            o.decay--;
+                            if(o.decay<=0) o.delete = true;
+                            if(o.damage<=0) o.delete = true;
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            if(o.origin.type=="player") {
+                                ctx.beginPath();
+                                ctx.strokeStyle = "rgb(200,0,0)";
+                                ctx.lineWidth = 3;
+                                ctx.lineCap = "round";
+                                ctx.moveTo(o.x,o.y);
+                                ctx.lineTo(o.x-o.xmove*2,o.y-o.ymove*2);
+                                ctx.stroke();
+                            } else if(o.type=="wizard bullet") {
+                                ctx.save();
+                                ctx.translate(o.x,o.y);
+                                ctx.fillStyle = "rgb(50,0,50)";
+                                ctx.beginPath();
+                                ctx.arc(0,0,5,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                player: {
+                    type: "player",
+                    dead: false,
+                    health: 100,
+                    x: 0,
+                    y: 0,
+                    xmove: 0,
+                    ymove: 0,
+                    angle: 0,
+                    speed: 0.2,
+                    shake: 0,
+                    r: 10,
+                    update: function() {
+                        if(this.dead) return;
+                        this.updateMovementControls();
+                        this.updateWeaponControls();
+                        this.updateMovement();
+                        this.weapon.update();
+                        if(this.shake>0) {
+                            this.shake--;
+                        }
+                        if(Mouse.down) {
+                            this.speed = 0.05;
+                        } else {
+                            this.speed = 0.2;
+                        }
+                        this.health = Math.max(this.health,0);
+                        if(this.health==0) {
+                            this.die();
+                        }
+                    },
+                    updateMovementControls: function() {
+                        var xmove = 0;
+                        var ymove = 0;
+                        if(Keys.keys[65]||Keys.keys[37]) {
+                            xmove -= 1;
+                        }
+                        if(Keys.keys[68]||Keys.keys[39]) {
+                            xmove += 1;
+                        }
+                        if(Keys.keys[87]||Keys.keys[38]) {
+                            ymove -= 1;
+                        }
+                        if(Keys.keys[83]||Keys.keys[40]) {
+                            ymove += 1;
+                        }
+                        if(distTo(0,0,xmove,ymove)==0) return;
+                        var dir = dirTo(0,0,xmove,ymove);
+                        this.move(dir);
+                    },
+                    move: function(dir) {
+                        var move = distToMove(this.speed,dir);
+                        this.xmove += move.x;
+                        this.ymove += move.y;
+                    },
+                    updateDirection: function() {
+                        this.angle = dirTo(this.x,this.y,game.mouseX,game.mouseY);
+                    },
+                    updateMovement: function() {
+                        this.updateDirection();
+                        this.x += this.xmove;
+                        this.y += this.ymove;
+                        this.xmove *= 0.9;
+                        this.ymove *= 0.9;
+                        this.x = Math.min(Math.max(this.x,-1000),1000);
+                        this.y = Math.min(Math.max(this.y,-1000),1000);
+                    },
+                    updateWeaponControls: function() {
+                        if(Keys.keys[49]) {
+                            this.weapon.selected = "pistol";
+                        }
+                        if(Keys.keys[50]) {
+                            this.weapon.selected = "machine gun";
+                        }
+                        if(Keys.keys[51]) {
+                            this.weapon.selected = "sniper";
+                        }
+                        if(Keys.keys[52]) {
+                            this.weapon.selected = "shotgun";
+                        }
+                    },
+                    damage: function(damage) {
+                        this.health -= damage;
+                        for(var n=0;n<3;n++) {
+                            game.particles.create({type:"player damaged particle"});
+                        }
+                    },
+                    draw: function() {
+                        ctx.save();
+                        ctx.translate(this.x,this.y);
+                        if(this.shake) ctx.translate(Math.random()*4-2,Math.random()*4-2);
+                        ctx.rotate(this.angle*Math.PI/180);
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(-this.r,-this.r,this.r*2,this.r*2);
+                        ctx.restore();
+                    },
+                    die: function() {
+                        this.dead = true;
+                        for(var n=0;n<10;n++) {
+                            game.particles.create({type:"player death particle"});
+                        }
+                    },
+                    weapon: {
+                        selected: "pistol",
+                        secondary: "none",
+                        reload: 0,
+                        reloadReset: 10,
+                        update: function() {
+                            this.reloadReset = weaponStats[this.selected].reload;
+                            if(this.reload>0) {
+                                this.reload--;
+                            }
+
+                            if(Mouse.down&&this.reload==0) {
+                                this.reload = this.reloadReset;
+                                this.shoot();
+                            }
+                        },
+                        shoot: function() {
+                            game.player.shake = 5;
+
+                            var stats = weaponStats[this.selected];
+                            var bullets;
+                            if(stats.getBulletsFromShot!==undefined) {
+                                bullets = stats.getBulletsFromShot();
+                            } else if(stats.bulletsInShot!==undefined) {
+                                bullets = [];
+                                for(var n=0;n<stats.bulletsInShot;n++) {
+                                    bullets.push(new stats.bullet());
+                                }
+                            } else {
+                                bullets = [new stats.bullet()];
+                            }
+
+                            for(var bullet of bullets) {
+                                var speed = bullet.speed+Math.random()*bullet.speedSpread-bullet.speedSpread/2;
+                                var angle = game.player.angle+Math.random()*bullet.angleSpread-bullet.angleSpread/2;
+                                var move = distToMove(speed,angle);
+                                bullet.xmove = move.x;
+                                bullet.ymove = move.y;
+                                bullet.x = game.player.x;
+                                bullet.y = game.player.y;
+                                bullet.decay = 100;
+                                game.bullets.objects.push(bullet);
+                            }
+
+                            game.particles.create({type:"gun cartridge particle"});
+                            for(var n=0;n<5;n++) {
+                                game.particles.create({type:"gun spark particle"});
+                            }
+                        }
+                    },
+                    reset: function() {
+                        this.health = 100;
+                        this.x = 0;
+                        this.y = 0;
+                        this.xmove = 0;
+                        this.ymove = 0;
+                        this.shake = 0;
+                    }
+                },
+                particles: {
+                    objects: [],
+                    update: function() {
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            o.x += o.xmove;
+                            o.y += o.ymove;
+                            o.xmove *= o.damping;
+                            o.ymove *= o.damping;
+                            o.alpha -= o.decay;
+                            if(o.alpha<=0) {
+                                o.delete = true;
+                            }
+                        }
+                        this.objects = this.objects.filter(e=>!e.delete);
+                    },
+                    draw: function() {
+                        for(var p of this.objects) {
+                            ctx.save();
+                            ctx.fillStyle = p.color;
+                            ctx.globalAlpha = p.alpha;
+                            ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+                            ctx.restore();
+                        }
+                    },
+                    create: function(o) {
+                        if(o.type=="player death particle") {
+                            o.r = game.player.r/3+Math.random()*game.player.r/3;
+                            o.x = game.player.x;
+                            o.y = game.player.y;
+                            o.color = 'rgba(255,0,0,0.5)';
+                            o.alpha = 10;
+                            o.decay = 0.05+Math.random()*0.05;
+                            o.damping = 0.9;
+                            var move = distToMove(1+Math.random()*3,Math.random()*360);
+                            o.xmove = move.x;
+                            o.ymove = move.y;
+                        } else if(o.type=="player damaged particle") {
+                            o.r = 1+Math.random();
+                            o.x = game.player.x;
+                            o.y = game.player.y;
+                            o.color = "rgb(255,0,0)";
+                            o.alpha = 3;
+                            o.decay = 0.05+Math.random()*0.05;
+                            o.damping = 0.9;
+                            var move = distToMove(1+Math.random()*3,Math.random()*360);
+                            o.xmove = move.x;
+                            o.ymove = move.y;
+                        } else if(o.type=="gun cartridge particle") {
+                            o.r = 2;
+                            o.x = game.player.x;
+                            o.y = game.player.y;
+                            o.color = "rgb(50,50,50)";
+                            o.alpha = 3;
+                            o.decay = 0.05;
+                            o.damping = 0.9;
+                            var move = distToMove(3+Math.random()*2,180+game.player.angle+Math.random()*60-30);
+                            o.xmove = move.x;
+                            o.ymove = move.y;
+                        } else if(o.type=="gun spark particle") {
+                            o.r = 2;
+                            o.x = game.player.x;
+                            o.y = game.player.y;
+                            o.color = "orange";
+                            o.alpha = 3;
+                            o.decay = 0.2;
+                            o.damping = 0.99;
+                            var move = distToMove(3+Math.random()*3,game.player.angle+Math.random()*10-5);
+                            o.xmove = move.x;
+                            o.ymove = move.y;
+                        } else if(o.type=="enemy damaged particle") {
+                            o.r = 1+Math.random();
+                            o.color = o.enemy.particleColor;
+                            o.alpha = 3;
+                            o.decay = 0.05+Math.random()*0.05;
+                            o.damping = 0.9;
+                            var move = distToMove(1+Math.random()*3,Math.random()*360);
+                            o.xmove = move.x;
+                            o.ymove = move.y;
+                        } else if(o.type=="enemy death particle") {
+                            o.r = o.enemy.r/3+Math.random()*o.enemy.r/3;
+                            if(o.enemy.type=="peaceful") o.r = 2;
+                            if(o.enemy.type=="slime") o.r = 2;
+                            o.x = o.enemy.x;
+                            o.y = o.enemy.y;
+                            o.color = o.enemy.particleColor;
+                            o.alpha = 10;
+                            o.decay = 0.05+Math.random()*0.05;
+                            o.damping = 0.9;
+                            var move = distToMove(1+Math.random()*3,Math.random()*360);
+                            o.xmove = move.x;
+                            o.ymove = move.y;
+                        }
+                        this.objects.push(o);
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                cam: {
+                    x: 0,
+                    y: 0,
+                    zoom: 1,
+                    update: function() {
+                        this.x = this.x*0.98+game.player.x*0.02;
+                        this.y = this.y*0.98+game.player.y*0.02;
+                        this.x = Math.max(Math.min(this.x,500),-500);
+                        this.y = Math.max(Math.min(this.y,500),-500);
+                    },
+                    reset: function() {
+                        this.x = 0;
+                        this.y = 0;
+                        this.zoom = 1;
+                    }
+                },
+                mouseX: 0,
+                mouseY: 0
+            }
+
+            var weaponStats = {
+                "pistol": {
+                    reload: 50,
+                    bullet: function() {
+                        this.particles = 3;
+                        this.damage = 4;
+                        this.speed = 12;
+                        this.angleSpread = 2;
+                        this.speedSpread = 0;
+                        this.knockback = 1;
+                        this.type = "pistol bullet";
+                        this.origin = game.player;
+                    }
+                },
+                "machine gun": {
+                    reload: 7,
+                    bullet: function() {
+                        this.particles = 2;
+                        this.damage = 1;
+                        this.speed = 10;
+                        this.angleSpread = 4;
+                        this.speedSpread = 0;
+                        this.knockback = 0.4;
+                        this.type = "machine gun bullet";
+                        this.origin = game.player;
+                    }
+                },
+                "sniper": {
+                    reload: 100,
+                    bullet: function() {
+                        this.particles = 3;
+                        this.damage = 20;
+                        this.speed = 15;
+                        this.angleSpread = 0;
+                        this.speedSpread = 0;
+                        this.knockback = 3;
+                        this.type = "sniper bullet";
+                        this.origin = game.player;
+                    }
+                },
+                "shotgun": {
+                    reload: 150,
+                    bulletsInShot: 10,
+                    bullet: function() {
+                        this.particles = 1;
+                        this.damage = 3;
+                        this.speed = 10;
+                        this.angleSpread = 5;
+                        this.speedSpread = 2;
+                        this.piercing = true;
+                        this.knockback = 0.3;
+                        this.type = "shotgun bullet";
+                        this.origin = game.player;
+                    }
+                }
+            };
+            var enemyStats = {
+                "normal": function(tier) {
+                    this.tier = tier;
+                    this.type = "normal";
+                    this.behaviorType = "aggressive";
+                    this.knockbackResistance = 1;
+                    this.particleColor = "rgba(0,0,0,0.7)";
+                    this.attackPattern = "ram";
+                    this.sightRadius = 400;
+                    var tieredStats = [
+                        {
+                            maxHealth: 5,
+                            speed: 0.2,
+                            damage: 3,
+                            r: 7
+                        },
+                        {
+                            maxHealth: 10,
+                            speed: 0.15,
+                            damage: 10,
+                            r: 10
+                        },
+                        {
+                            maxHealth: 50,
+                            speed: 0.1,
+                            damage: 20,
+                            r: 15
+                        },
+                        {
+                            maxHealth: 200,
+                            speed: 0.15,
+                            damage: 40,
+                            r: 30,
+                            knockbackResistance: 2
+                        },
+                        {
+                            maxHealth: 400,
+                            speed: 0.2,
+                            damage: 80,
+                            r: 60,
+                            knockbackResistance: 4,
+                            sightRadius: 600
+                        }
+                    ];
+                    var keys = Object.keys(tieredStats[tier-1]);
+                    for(var key of keys) {
+                        this[key] = tieredStats[tier-1][key];
+                    }
+                },
+                "slime": function(tier) {
+                    this.tier = tier;
+                    this.type = "slime";
+                    this.behaviorType = "passive-aggressive";
+                    this.knockbackResistance = 1;
+                    this.particleColor = "rgba(0,255,0,0.7)";
+                    this.attackPattern = "ram";
+                    this.sightRadius = 400;
+                    var tieredStats = [
+                        {
+                            maxHealth: 3,
+                            speed: 0.1,
+                            damage: 0.5,
+                            r: 5
+                        },
+                        {
+                            maxHealth: 8,
+                            speed: 0.08,
+                            damage: 3,
+                            r: 10
+                        },
+                        {
+                            maxHealth: 20,
+                            speed: 0.06,
+                            damage: 8,
+                            r: 20
+                        },
+                        {
+                            maxHealth: 100,
+                            speed: 0.05,
+                            damage: 20,
+                            r: 40,
+                            knockbackResistance: 2
+                        },
+                        {
+                            maxHealth: 200,
+                            speed: 0.04,
+                            damage: 50,
+                            r: 100,
+                            knockbackResistance: 4
+                        }
+                    ];
+                    var keys = Object.keys(tieredStats[tier-1]);
+                    for(var key of keys) {
+                        this[key] = tieredStats[tier-1][key];
+                    }
+                },
+                "peaceful": function(tier) {
+                    this.tier = tier;
+                    this.type = "peaceful";
+                    this.behaviorType = "passive";
+                    this.knockbackResistance = 1;
+                    this.particleColor = "rgba(0,0,0,0.7)";
+                    this.sightRadius = 400;
+                    var tieredStats = [
+                        {
+                            maxHealth: 5,
+                            speed: 0.25,
+                            damage: 0,
+                            r: 7
+                        },
+                        {
+                            maxHealth: 10,
+                            speed: 0.15,
+                            damage: 0,
+                            r: 10
+                        },
+                        {
+                            maxHealth: 50,
+                            speed: 0.1,
+                            damage: 0,
+                            r: 15
+                        },
+                        {
+                            maxHealth: 200,
+                            speed: 0.15,
+                            damage: 0,
+                            r: 30,
+                            knockbackResistance: 2
+                        },
+                        {
+                            maxHealth: 200,
+                            speed: 0.2,
+                            damage: 0,
+                            r: 60,
+                            knockbackResistance: 4
+                        }
+                    ];
+                    var keys = Object.keys(tieredStats[tier-1]);
+                    for(var key of keys) {
+                        this[key] = tieredStats[tier-1][key];
+                    }
+                },
+                "wizard": function(tier) {
+                    this.tier = tier;
+                    this.type = "wizard";
+                    this.behaviorType = "aggressive";
+                    this.knockbackResistance = 0.7;
+                    this.particleColor = "rgba(100,0,150,0.7)";
+                    this.attackPattern = "shoot";
+                    this.reload = 0;
+                    this.sightRadius = 600;
+                    this.shoot = function() {
+                        var o = {};
+                        o.x = this.x;
+                        o.y = this.y;
+                        o.origin = this;
+                        o.type = "wizard bullet";
+                        o.tier = this.tier;
+                        var move = distToMove(10,this.angle);
+                        o.xmove = move.x;
+                        o.ymove = move.y;
+                        o.damage = 10;
+                        o.decay = 200;
+                        game.bullets.objects.push(o);
+                    }
+                    var tieredStats = [
+                        {
+                            maxHealth: 1,
+                            speed: 0.25,
+                            damage: 0,
+                            r: 7,
+                            stopDistance: 150,
+                            shootDistance: 200,
+                            reloadReset: 400,
+                        },
+                        {
+                            maxHealth: 3,
+                            speed: 0.15,
+                            damage: 0,
+                            r: 10,
+                            stopDistance: 175,
+                            shootDistance: 250,
+                            reloadReset: 100,
+                        },
+                        {
+                            maxHealth: 10,
+                            speed: 0.1,
+                            damage: 0,
+                            r: 15,
+                            stopDistance: 200,
+                            shootDistance: 300,
+                            reloadReset: 50,
+                        },
+                        {
+                            maxHealth: 30,
+                            speed: 0.15,
+                            damage: 0,
+                            r: 30,
+                            stopDistance: 250,
+                            shootDistance: 400,
+                            reloadReset: 25
+                        },
+                        {
+                            maxHealth: 100,
+                            speed: 0.2,
+                            damage: 0,
+                            r: 60,
+                            stopDistance: 300,
+                            shootDistance: 600,
+                            reloadReset: 10,
+                            knockbackResistance: 1
+                        }
+                    ];
+                    var keys = Object.keys(tieredStats[tier-1]);
+                    for(var key of keys) {
+                        this[key] = tieredStats[tier-1][key];
+                    }
+                }
+            };
+
+            game.reset();
+        </script>
+    </body>
+</html>

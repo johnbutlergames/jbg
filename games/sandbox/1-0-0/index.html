@@ -1,0 +1,660 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            canvas#canvas {
+                background-color: white;
+                image-rendering: pixelated;
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <canvas id='canvas2'></canvas>
+        <script>
+            var title = 'Sandbox';
+            var dimensions = {width:50,height:50};
+            var imgs = [];
+            var audios = [];
+            var word = '';
+
+            document.title = title;
+            var canvas = document.getElementById('canvas');
+            var canvas2 = document.getElementById('canvas2');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+                canvas2.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas2.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+                canvas2.style.width = sizeText;
+                canvas2.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+                canvas2.style.width = sizeText;
+                canvas2.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas2.width = 1000;
+            canvas.height = dimensions.height;
+            canvas2.height = 1000;
+            var ctx = canvas.getContext('2d');
+            var ctx2 = canvas2.getContext('2d');
+            canvas2.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas2.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas2.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas2.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            canvas2.oncontextmenu = function(event) {
+                event.preventDefault();
+                Mouse.right = true;
+            }
+            canvas2.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                word += String.fromCharCode(event.keyCode);
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI);
+            }
+            function distToMove(dis,dir) {
+                return [dis*Math.sin(dir*Math.PI/180),-dis*Math.cos(dir*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function f(s) {
+                ctx2.font = s+"px Arial";
+            }
+            function update() {
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        ctx.clearRect(0,0,canvas.width,canvas.height);
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/500,s/500);
+                        ctx.translate(x,y);
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(logoImg,0,0,500,500);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/500,s/500);
+                    ctx.translate(x-500,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '30px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(47.5,272.5,405*percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%40;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',250,250);
+                    ctx.restore();
+                    loadAnimation += 0.5;
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(word.endsWith('JOHNBUTLERGAMES')) {
+                    word = '';
+                    johnbutlergames();
+                }
+                t++;
+                game.tick();
+            }
+
+            var game = {
+                placeTypes: ['stone','sand','water','lava','smoke'],
+                placeType: 0,
+                objects: [],
+                placeSize: 1,
+                paused: false,
+                instructions: true,
+                tick: function() {
+                    this.update();
+                    if(t%3==0) {
+                        this.draw();
+                    }
+                },
+                update: function() {
+                    for(var n=0;n<this.objects.length;n++) {
+                        this.objects[n].id = n;
+                    }
+                    if(Keys.down[67]) {
+                        this.objects = [];
+                    }
+                    if(Keys.down[32]) {
+                        this.paused = !this.paused;
+                    }
+                    if(Keys.down[73]) {
+                        this.instructions = !this.instructions;
+                    }
+                    if(t%3==0&&!this.paused) {
+                        this.updateObjects();
+                    } else if(this.paused&&Keys.down[70]) {
+                        this.updateObjects();
+                    }
+                    if(Keys.down[65]) {
+                        this.placeType++;
+                        this.placeType %= this.placeTypes.length;
+                    }
+                    if(Mouse.down&&!Keys.keys[88]) {
+                        var x = Math.round(Mouse.x-this.placeSize/2);
+                        var y = Math.round(Mouse.y-this.placeSize/2);
+                        var toDelete = [];
+                        for(var n=0;n<this.placeSize**2;n++) {
+                            var ox = x+n%this.placeSize;
+                            var oy = y+Math.floor(n/this.placeSize);
+                            var o = {};
+                            o.type = this.placeTypes[this.placeType];
+                            o.x = ox;
+                            o.y = oy;
+                            o.xmove = 0;
+                            if(o.type=='stone') {
+                                o.ymove = 0;
+                            } else if(o.type=='smoke') {
+                                o.ymove = -1;
+                            } else {
+                                o.ymove = 1;
+                            }
+                            o.stuck = false;
+                            var o2 = this.findObject(this.objects,o.x,o.y);
+                            if(o2) {
+                                toDelete.push(o2.id);
+                            }
+                            this.objects.push(o);
+                        }
+                        toDelete.sort(function(a,b){return b-a});
+                        for(var id of toDelete) {
+                            this.objects.splice(id,1);
+                        }
+                    }
+                    for(var n=0;n<9;n++) {
+                        if(Keys.down[n+49]) {
+                            game.objects = this.loadPreset(presets[n]);
+                        }
+                    }
+                    if(Keys.down[48]) {
+                        this.objects = this.loadPreset(presets[9]);
+                    }
+                    if(Keys.keys[88]) {
+                        var x = Math.round(Mouse.x-this.placeSize/2);
+                        var y = Math.round(Mouse.y-this.placeSize/2);
+                        var toDelete = [];
+                        for(var n=0;n<this.placeSize**2;n++) {
+                            var ox = x+n%this.placeSize;
+                            var oy = y+Math.floor(n/this.placeSize);
+                            var o = this.findObject(this.objects,ox,oy);
+                            if(o) {
+                                toDelete.push(o.id);
+                            }
+                        }
+                        toDelete.sort(function(a,b){return b-a});
+                        for(var id of toDelete) {
+                            this.objects.splice(id,1);
+                        }
+                    }
+                    if(Keys.down[90]) {
+                        this.placeSize++;
+                        if(this.placeSize==4) {
+                            this.placeSize = 1;
+                        }
+                    }
+                },
+                updateObjects: function() {
+                    for(var o of this.objects) {
+                        if(o.type=='stone') continue;
+                        var notStuckTypes = [];
+                        if(o.type=='sand') {
+                            notStuckTypes = ['water','smoke'];
+                        }
+                        if(o.type=='water') {
+                            notStuckTypes = ['smoke','lava'];
+                        }
+                        if(o.type=='lava') {
+                            notStuckTypes = ['smoke','water'];
+                        }
+                        var l = o.x==0;
+                        var r = o.x==49;
+                        var u = o.x==0;
+                        var d = o.x==49;
+                        if(!l&&this.findObject(this.objects,o.x-1,o.y)) {
+                            if(notStuckTypes.indexOf(this.findObject(this.objects,o.x-1,o.y).type)==-1) {
+                                l = true;
+                            }
+                        }
+                        if(!r&&this.findObject(this.objects,o.x+1,o.y)) {
+                            if(notStuckTypes.indexOf(this.findObject(this.objects,o.x+1,o.y).type)==-1) {
+                                r = true;
+                            }
+                        }
+                        if(!u&&this.findObject(this.objects,o.x,o.y-1)) {
+                            if(notStuckTypes.indexOf(this.findObject(this.objects,o.x,o.y-1).type)==-1) {
+                                u = true;
+                            }
+                        }
+                        if(!d&&this.findObject(this.objects,o.x,o.y+1)) {
+                            if(notStuckTypes.indexOf(this.findObject(this.objects,o.x,o.y+1).type)==-1) {
+                                d = true;
+                            }
+                        }
+                        /*if(o.type=='water') {
+                            if((d&&d.type=='lava')||(u&&u.type=='lava')) {
+                                o.stuck = false;
+                                continue;
+                            }
+                        }
+                        if(o.type=='lava') {
+                            if((d&&d.type=='water')||(u&&u.type=='water')) {
+                                o.stuck = false;
+                                continue;
+                            }
+                        }
+                        if(o.ymove==1) {
+                            u = true;
+                        }
+                        if(o.ymove==-1) {
+                            d = true;
+                        }*/
+                        if(l&&r&&u&&d) {
+                            o.stuck = true;
+                        } else {
+                            o.stuck = false;
+                        }
+                    }
+                    for(var o of this.objects) {
+                        if(o.stuck) continue;
+                        if(o.type=='smoke') {
+                            if(t%6==0) {
+                                o.ymove = -1;
+                            } else {
+                                o.ymove = 0;
+                            }
+                        }
+                        if(o.type=='sand') {
+                            var moveY = this.findObject(this.objects,o.x,o.y+o.ymove);
+                            if(moveY) {
+                                if(moveY.type=='water'||moveY.type=='smoke') {
+                                    o.xmove = 0;
+                                    moveY.stuck = false;
+                                    moveY.y--;
+                                    o.y++;
+                                } else {
+                                    var right = this.findObject(this.objects,o.x+1,o.y+o.ymove)||o.x==49;
+                                    var left = this.findObject(this.objects,o.x-1,o.y+o.ymove)||o.x==0;
+                                    if(right===false&&left===false) {
+                                        o.xmove = Math.floor(Math.random()*2)*2-1;
+                                    } else {
+                                        if(right===false) {
+                                            o.xmove = 1;
+                                        } else if(left===false) {
+                                            o.xmove = -1;
+                                        } else{
+                                            o.xmove = 0;
+                                        }
+                                    }
+                                }
+                            } else {
+                                o.xmove = 0;
+                            }
+                        }
+                        if(o.type=='lava') {
+                            var l = this.findObject(this.objects,o.x-1,o.y);
+                            var r = this.findObject(this.objects,o.x+1,o.y);
+                            var u = this.findObject(this.objects,o.x,o.y-1);
+                            var d = this.findObject(this.objects,o.x,o.y+1);
+                            if(l&&l.type=='water') {
+                                l.type = 'smoke';
+                                l.ymove = -1;
+                                o.type = 'sand';
+                                l.stuck = false;
+                                o.stuck = false;
+                            }
+                            if(r&&r.type=='water') {
+                                r.type = 'smoke';
+                                r.ymove = -1;
+                                o.type = 'sand';
+                                r.stuck = false;
+                                o.stuck = false;
+                            }
+                            if(u&&u.type=='water') {
+                                u.type = 'smoke';
+                                u.ymove = -1;
+                                o.type = 'sand';
+                                u.stuck = false;
+                                o.stuck = false;
+                            }
+                            if(d&&d.type=='water') {
+                                d.type = 'smoke';
+                                d.ymove = -1;
+                                o.type = 'sand';
+                                d.stuck = false;
+                                o.stuck = false;
+                            }
+                        }
+                        if(o.type=='water'||o.type=='smoke'||o.type=='lava') {
+                            var moveY = this.findObject(this.objects,o.x,o.y+o.ymove);
+                            if(moveY&&o.ymove!=0) {
+                                if((moveY.type=='smoke'&&o.type!=='smoke')||(moveY.type=='water'&&o.type=='lava')) {
+                                    moveY.y--;
+                                    o.y++;
+                                    moveY.stuck = false;
+                                } else {
+                                    var blockRight = false;
+                                    var blockLeft = false;
+                                    for(var n=1;(n<10&&o.type!='lava')||n<3;n++) {
+                                        var r = o.x+n>=50||blockRight;
+                                        var l = o.x-n<0||blockLeft;
+                                        if(!r) {
+                                            var r = this.findObject(this.objects,o.x+n,o.y+o.ymove);
+                                            var br = this.findObject(this.objects,o.x+n,o.y);
+                                            if(br&&br.type!='water') {
+                                                blockRight = true;
+                                            }
+                                        }
+                                        if(!l) {
+                                            var l = this.findObject(this.objects,o.x-n,o.y+o.ymove);
+                                            var bl = this.findObject(this.objects,o.x-n,o.y);
+                                            if(bl&&bl.type!='water') {
+                                                blockLeft = true;
+                                            }
+                                        }
+                                        o.xmove = 0;
+                                        if(!r&&!blockRight&&!l&&!blockLeft) {
+                                            o.xmove = Math.floor(Math.random()*2)*2-1;
+                                            break;
+                                        }
+                                        if(!r&&!blockRight) {
+                                            o.xmove = 1;
+                                            break;
+                                        }
+                                        if(!l&&!blockLeft) {
+                                            o.xmove = -1;
+                                            break;
+                                        }
+                                    }
+                                }
+                            } else {
+                                o.xmove = 0;
+                                if(o.type=='smoke') {
+                                    o.xmove = 1*(Math.floor(Math.random()*2)*2-1);
+                                }
+                            }
+                        }
+                    }
+
+                    for(var o of this.objects) {
+                        var o2 = this.findObject(this.objects,o.x+o.xmove,o.y);
+                        if(o2===false||o2.id===o.id) {
+                            o.x += o.xmove;
+                            o.x = Math.min(Math.max(o.x,0),49);
+                        }
+                    }
+                    for(var o of this.objects) {
+                        var o2 = this.findObject(this.objects,o.x,o.y+o.ymove);
+                        if(o2===false||o2.id===o.id) {
+                            o.y += o.ymove;
+                            o.y = Math.min(Math.max(o.y,0),49);
+                        }
+                    }
+                },
+                findObject: function(objects,x,y) {
+                    for(var o of objects) {
+                        if(o.x==x&&o.y==y) {
+                            return o;
+                        }
+                    }
+                    return false;
+                },
+                draw: function() {
+                    ctx.clearRect(0,0,50,50);
+                    for(var o of this.objects) {
+                        ctx.fillStyle = this.findColor(o.type);
+                        ctx.fillRect(o.x,o.y,1,1);
+                    }
+
+                    ctx2.clearRect(0,0,1000,1000);
+                    var x = Math.round(Mouse.x-this.placeSize/2);
+                    var y = Math.round(Mouse.y-this.placeSize/2);
+                    ctx2.save();
+                    ctx2.scale(20,20);
+                    ctx2.globalAlpha = 0.5;
+                    ctx2.strokeStyle = 'black';
+                    if(Keys.keys[88]) {
+                        ctx2.strokeStyle = 'red';
+                    }
+                    ctx2.lineWidth = 0.2;
+                    if(!Keys.keys[88]) {
+                        ctx2.fillStyle = this.findColor(this.placeTypes[this.placeType]);
+                        ctx2.fillRect(x,y,this.placeSize,this.placeSize);
+                    }
+                    ctx.globalAlpha = 1;
+                    ctx2.strokeRect(x,y,this.placeSize,this.placeSize);
+                    ctx2.restore();
+                    //place preview
+
+                    if(this.instructions) {
+                        ctx2.fillStyle = 'rgba(240,240,240,0.7)';
+                        if(this.paused) {
+                            ctx2.fillRect(0,0,330,380);
+                        } else {
+                            ctx2.fillRect(0,0,330,340);
+                        }
+                        f(30);
+                        ctx2.fillStyle = 'black';
+                        ctx2.textAlign = 'left';
+                        var placeType = this.placeTypes[this.placeType];
+                        placeType = placeType[0].toUpperCase()+placeType.slice(1);
+                        ctx2.fillText("I: Toggle Instructions",20,40);
+                        ctx2.fillText("Mouse: Place "+placeType,20,80);
+                        ctx2.fillText("A: Change Place Type",20,120);
+                        ctx2.fillText("Z: Change Place Size",20,160);
+                        ctx2.fillText("C: Clear",20,200);
+                        ctx2.fillText("X: Delete",20,240);
+                        ctx2.fillText("0-9: Presets",20,280);
+                        if(this.paused) {
+                            ctx2.fillText("Space: Unpause",20,320);
+                            ctx2.fillText("F: Next Frame",20,360);
+                        } else {
+                            ctx2.fillText("Space: Pause",20,320);
+                        }
+                    }
+                    //instructions
+                },
+                findColor: function(type) {
+                    if(type=='stone') return 'rgb(75,75,75)';
+                    if(type=='sand') return 'rgb(200,150,25)';
+                    if(type=='water') return 'blue';
+                    if(type=='smoke') return 'rgb(200,200,200)';
+                    if(type=='lava') return 'red';
+                },
+                loadPreset: function(preset) {
+                    var objects = [];
+                    var types = ["stone","sand","water","lava","smoke"];
+                    for(var n=0;n<preset.length;n+=5) {
+                        var currentString = preset.slice(n,n+5);
+                        var x = Number(currentString.slice(0,2));
+                        var y = Number(currentString.slice(2,4));
+                        var type = types[currentString.slice(4)];
+                        var o = {};
+                        o.x = x;
+                        o.y = y;
+                        o.type = type;
+                        o.ymove = 1;
+                        if(type=='stone') o.ymove = 0;
+                        if(type=='smoke') o.ymove = -1;
+                        o.xmove = 0;
+                        o.stuck = false;
+                        objects.push(o);
+                    }
+                    return objects;
+                },
+                createPreset: function(objects) {
+                    var types = ["stone","sand","water","lava","smoke"];
+                    var data = [];
+                    for(var o of objects) {
+                        var x = String(o.x);
+                        var y = String(o.y);
+                        if(x<10) {
+                            x = '0'+x;
+                        }
+                        if(y<10) {
+                            y = '0'+y;
+                        }
+                        data += x;
+                        data += y;
+                        data += types.indexOf(o.type);
+                    }
+                    return data;
+                }
+            }
+
+            var presets = [
+                '0721006210052100522004220042300323003240022500325003260042600427005270062700628006290063000631005310053200432003320023200832009310093001028010270102601025011240112301122011210122101222012230122401225012260132701328013290133001331013320092901029011290122901532015310153001529015280152701526015250162401623015210152201523015240162501626017260172701728018280182901932019310193001929019280192701926019250192401923019220192102121021220212302124021250212602127021280212902130021310213202232023320243202431024300253002529025280252702526025250252402523025220242202421023210222102821028220282302824028250282602827028280282902830028310283202932031310313003129031280312703026036210352203523034230342403425034260342703428034290353003531036320373203831039300402904028041270412604125040240402304022040210432204424042320423104331043300432904428045260452504524045230462304622047210483203032029260292103021031220312303124031250392103821037210442304323042220422104527046270462804728047290483104830047300490014901149021480014801147001470114600146011450014501144001440114402143001430114302142001420114202141001410114102140001400114002139001390113902136001370013800138011380213701137021360113602135001350113502134001340113402133001330113302132001320113100131011300013001129001290112800128011270012701126001260112500125011240012401124021230012301123021220012201122021210012101121021200012001120021190011901119021180011801118021170011701117021160011601116021150011501115021140011401114021130011301113021120011201112021110011101111021100011001110021090010901109021080010801108021070010701107021060010601106021050010501105021040010401104021030010301103021000010100102001000110101102011000210102102021000310004100051010310104101051020310204102051030310304103051040310404104051050310504105051060310604106051070310704107051080310804108051090310904109051100311004110051110311104111051120311204112051130311304113051140311404114051150311504115051160311604116051170311704117051180311804118051190311904119051200312004120051210312104121051220312204122051230312304123051240312404124051250512605125021250312504126021260312604127021270312704127051280512905128021280312804129021290312904130021310213202130031300413005131031310413105132031320413205133031330413305134031340413405135031350413505136031360413605137031370413705138031380413805139031390413905140031400414005141031410414105142031420414205143031430414305144031440414405145051450214503145041460214702148021460314604146051470314803149031470414804149041470514805149051',
+                '16040170401804021040220402304024040250402604027040280402904030040310403204036040330403404035040370403705037060370703708037090371003711036120361303514035150341603417033180321903220031210302202923015040150501506015070150801509015100151101612016130171401715018160181701918020190202002121022220232302424028240272502525024260232702228021290203002826029270302803129032300323102031019320183301834017350173601637016380153901540015410154201543015440154501546033320343303434035350353603637036380373903740037410374203743037440374503746016460174601846019460204602146022460234602446025460264602746028460294603046031460324603346034460354603646016071170711807119071200712107122071230712907130081310813208130071310713207136071360813609133071340713507133081340813508135091351013511134091341013309133101300913109132091321013110128141281512920130201291913019131191291813018131181291512916129171301713117132171301513016131161321613316131151321513315133141341413411134121341313311133121331313211132121321313214129141301413114131111311213113128131291313013130101301112812129121301212811129111290812909129101261012710128101280712808128091270712708127091240712507126071260812609125081250912510124081240912410123081230912310122081220912210121081210912110120081190811608117081180811609116101161111709118091190912009120101171011810119101171111712117131181111911120111181211912120121181311814118151191312013119141201411915119161191712015120161201712018121151211612216121171221712317121181211912120122181221912220122211231812319123201232112322124201242112422124231252112522125231252412624127241262312723128231262212722128221262112721128211281612817127161231612215123151211412214123141211112112121131221112212122131231112312123131241112412124131251112611127111251212612127121251312613127131271412715124141251412614124151251512615124161251612616124171241812419125171261712717125181251912520126181271812818126191271912819126201272012820129221292113021131201321813317134151351313512136111361012004019040',
+                '00050010500205002060030600406005060060600607007070080700907010070100801108012080130801408015080160801609017090180901909020090210902209022100231002410025100261002611027110281102911030110311103112032120331203412035120351303613037130381303913040130411304917048170471704718046180451804519044190431904320042200422104121040210392103821038220372203622035220342203423033230322303123031240302402924028240272402725026250252502425024260232602226021260202602027019270182701727016270152801428013280122801128010290092900829008300073000035000360013600236003370043700537005380063800738008380093801038010390113901239012400134001440015400154101641017410174201842019420204202043021430224302343023440244402544026440264502745028450284602946030460314603147032470334703348034480344903549000002000120100201012020020201203002030120400204012050020501206002060120700207012080020801209002100020901210012100620706208062090620705206052030520405205052000220003200042010220103201042020220203202042030220303203042040220403204042050220503205042060220603206042070220703207042080220902208032080420805209032090420905210052100221003210042110021101212002130021201213012110221202211032110421203212042110521205211062120621107212072130721400215002160021401215012160121602216032130221402215022130321403215032130421305213062140421504216042140521505216052140621506216062140721507216072',
+                '22060210022101222002220122300224002230122401221022220222302223062231103045030460304703048030490224502246022470224802249025450254602547025480254901745017460174701748017490104901048010470104601045036450364603647036480364904945048450474504645046460464904648046470004500145002450034500346003470034800349024110221102212023120241202016021160221602017021170221702416025160261602417025170261702621027210282102622027220282202221023210242102222023220242201821019210202101822019220202201626017260182601627017270182702026021260222602027021270222702426025260262602427025270262702826029260302602827029270302703031031310323103032031320323202631027310283102632027320283202231023310243102232023320243201831019310203101832019320203201431015310163101432015320163201236013360143601237013370143701636017360183601637017370183702036021360223602037021370223702436025360263602437025370263702836029360303602837029370303703236033360343603237033370343702406025060260602705028050290503004031040320403303034030350303602037020380203901040010410104200043000440002106020060190501805017050160401504014040130301203011030100200902008020070100601005010040000300002000200022001219002190121800218012170021701216002150021400211002120021300211012120121301211022120221302214012150121601214022150221602214032150321603220022170221802219022170321803219032170421804219042200322004220052210322104221052220322204222052230322304223052240522505226052240222403224042250322504226032260422703228032290322704228042290422500225012250222600226012260222700227012270222800228012280222900229012290223000231002320023001231012320123002231022320223003231032320323300234002350023301234012350123302234022350223601237012380123600222440231602317023260232703800239002400024100210012090120801210002090020800207002060020500237002254402341024410',
+                '354822049224492214922249223492194922549220482224823649218482394921849217492264921649230492214822347227492324922047224472284923749219482234822949235492214722448240492334923148222472314923449226482294824249244492434924149219462224624949238492244623048227482254822647227472304721746215492184721947216482174821846228482294721747225472164621446214492154821647215462134921448215472124621346212492134821447211462114921248213472104921148212472114720947209462094921048210472074920849207482084821046206492084720948207462044920549206482074720548205472084620148203492024820647202492054620646200492014920448201472034820347200472004820346202452024720447201462044620046201442024620045200442044420544201452034520244202432054520344204452064520644207442074520343208442084520443209442094520543210442104520643210432114421244211452124521143213442134521443216432144421544214452154521843216442164523044217442174521844219442184522944219452204622044220452214622444221442214522244228442224522344223452234622544227442244522644225452254622645227452264622845227462284623045229452284722946230462314723247233482324823347234482484823547247482394824549234472464923648247492364724849246482384823748239462364623747237462384623847239472404824047241482454824147242482444824947249482424724348243472444724547246472474724847249442494524946248442484524846247442474524746246442464524646245442454524546244442444524446243442434524346240462414624246242432424424245241432414424145240432404424045239432394423945238432384423845237432374423745236432364423645232432334323443235432354423545235462344423445234462314423244233442314523245233452314623246233462101531017310193102131023310253122531425317253172331821319203191832016321173221832220323233232532616327183281932821329223302433123331213322033319333173341633625336233372033818339173401934120342233422533922341223372232022322223',
+                '04452034920049201492024920449200482014821049205482024820649205492074920047201472114820648200462044621048208492034620448211492124920348202472144920145202462044420342203472094820144202452014620447202442034520949201432014220344200452114220141213422034320647205472074621549200442024320242204432054621349200432004220543206432054520745205422064221442206442074421649208412074320843209422074820848216432124420842205442124820747208472094721147206462084620946213432084521047210422044220645210432164421144214482194920742212472094521046217492084420943209442104521146211452124621849211432124221044215432124321344213482154821345213472144721648212452184521346215452154721647215422174421546214452164621748217452144421446214432174321544216452174721848218442204621846217462184722049219442204421946222472194721948221492194522045221462204822548224482224622249220432204722145217422214422147223482234922248222452244921943221432214821843225472234522347225492224322244223462244721842221422234422446228472264921942223432244522748227492204222546228492304722342225452224221642226482264722949225442264622444230482314722747230492264523848227462294822443228432374723348236482284823349231492274523647229452294723249233462344924649236492314823549235472324823849240492284622946249492394924549237492364623046241492384723548248482434924449226442284424749223412274322141234472424922241228452274423748241462434822240224422274222941242482264123347234482314621941221402254324147247482484922039218412184022340229442394822041233452264321741213412384624648226422254222441216412174022239232442204021541225402194024148214412193922139233412304321141209412183920739216402173920639228412133922739201402024020239213402153920541229432124121639202412104122640203402074122339204402034122539203392093921140205402064020441200412064120940211392004021540214402084020740231392104021439208392303921039233382123922939212402324023340233392323922940230402284022440230412274122942232472314023440227402374122541228422364023241231412364123541232462304223245233442314323441230452314523243234462314223144230442374223242233432344423746233422354323443235462374523442235452364524045236422384223544238412364323445238432364423744240442354223845241422374323844239442404323945239472404823943239422394624047242452454824143241452404624344242472444824243242442414424141244432424624347244472434324346244462494824042243422434524747245452454724647245422484724445245462464624242244422444424645247462394124943248442454424744249472434124946245432474324846240402494524041248452484324441249442454124742247452424124839241402464424842246402474124841249422444024738245402464324840249402453924642247402494124838247392493924639246412413924439245382493824437246382463724837242402434024438243372423924339247362453724238243382384024039240382493724237241372473723839239402393824037239372413823836237402383823939238372373723540236392363724536237362373923439235392363823636235372373823536232382343823538239362343623437241362323623337232372293823138231372313622936230372303623038227382283922837233362293722836226392263722838240362273722338224392253822638226362243822537227362253622436222382233722437222362233622137222372213622138218382193822038218352193521936220362193722037217372163821738218372183621635217362153721637205392143821538215362163620038202382123821338214372043921535203382103821137201392083821237214362043720438213372023720138207382003620537200392083721138205382093721236213362073720938206382173520436205362013721037200372063720136203372133522035202362493524336242362463624436249362483524836247352463524535242352443524035243352393524135229352283522735226352253522435221352223522335214352113621235203362103620936206362073620836211352093521035208352073520635202322003220032200322013220033200342003320034200352003320034200352003320034200352013320134201352023320234202352033520435205352033220432203332043320334204342053220533205342063220633206342073220733207342083220833208342093220933209342103221033210342113221133211342123221233212342133221432213332143321334214342153221533215342163221732216332173321634217342183221932218332193321834219342203222033220342213222133221342223222233222342233222333223342243222433224342253222533225342263222633226342273222733227342283222833228342303523135238352373523635235352323523335234352293222933229342303223033230342313223133231342323223332232332333323234233342343223532234332353323434235342363223633236342373223733237342383223833238342393223933239342403224033240342413224133241342423224233242342433224333243342443224433244342453224533245342463224633246342473224832249322473324833249332473424834249342260612507124061250612504125051240412405123051230612307124071230812408124091250812509126071260812605126041250312001121021190212002119031200312004120051180411904118051190511806118071190612006119071200711908120081190911910120091201012011121111211212212123121241212609127091270812707127051270612902129031280112502124021240312202123021230312304121031220312104122041210512205121061220612107122071210812208121091211012209123091221012211123101231112410124111251012610125111251212611126121271212710127111281112911128101291012809129091280812908130081280712806127041280212803126031270312602127021270012701126001260112500125011240012401123001230112100122001210112201128041280512904130041290513005129061300612907130071',
+                '304732449328493254932649327493234932949325483264832748322493304932049326473294832149331493254732646327473244832848325463264532746323483324932545326443324832847325443264332745333493304833449324473254332947331483284533046319493224832446318493234732445323463244433549312493174932148323453244331948320483234432744321473224732846320473224632343333483164932245329463214632244331473184832145334483154931747336493194733247317483374932046329453144931448316483184731548313493274332844322433334733548338493194631149331463214433447320453364831547313483124731647332463284333045317463394931846329443204433145310493314431248337483194533647309493354731447341493184534049321433324531148333463304433948338483344633747326423164631347317453154631944308493104833546333453074931446329433234232442325423131121615217152181622310222102221122110221112201022011219102191121810218112141321514220122211222713228122281322913232102291223012231102311122911230112301022607225072250822407224082240922209223092230622307223082220622207222082210722108221092200722008220092190721908219092180721808218092170721708217092171021508216082140921509216092141021510216102141121412215112161121711215122151321612216132161421712218122191221713217142181321814218152191322013219142251422415225152241622516226142261522714227152281423316234152351523414235142361423714235132361323713236122371223711232052310523106230042300523006229042290522906228042280522806227042270522706226042260522406225062260622503225042250522403224042240522303223042230522003221032220322204222052210422105221062200422005220062190421905219062180421805218062170421705217062140421504216042160521606216072130521405215052150621507214062140721408211062120621306211072120721307213082130921310210082110821208210092110921209210102111021210210112111121211210122101321014211122121221312211132121321313211142111521116212142131421414212152121621217213152141521515213162131721416214172141821516216162171621517215182151921617216182161921717218172171821719217202181821819218202191921920220192211922020221202221922220223192232022420225202241722418224192251722518225192261922719228192261622617226182271622717227182281822918230182281522816228172291723017231172291422915229162301623116232162301323014230152311523215233152311223113231142321423314232112321223213233132341323312234122351223309233102331123411235112361123410235102361023710237072370823709236072360823409235092360923506235072350823206233062340623307234072330823408232072320823209231072310823109230072300823009227072280722907229082290922910226082270822808228092281022811225092260922709227102271122712224102251022610226112261222613223112241122511225122251322212223122241222413224142211322213223132231422315220142211422214222152191522015221152191621917219182201622017220182211622216223162211722217223172211822218223182',
+                '1434014330153201531015300152901528016270162601726017250182501824019240192302023021230222202422025220272202822030220302303123032230322403225033250332603426034270342803429034300343103432034330343401610016110161201613016140161501716017170181701818019180191902019021190212002220022210242102521027210282103021031210322103220033200341903519035180361703616037160371503814038130381203811038100201823218223202272022420225202262022219228202241922519229192231822718223192241822920222182311922517228192302022117228182241722619231202191723219221182261823118220172301922719233192301823318234182221722518229182331722317227172261723217228172201622116222162291723517231172191623017218162341623417225162321623316223162241623516221152221522315226162271622816236152291623016231162351523415233152241522515226152271522815229152301523115232152301323014231132311423213232142331323314234132341423513236132371323514236142371422223425234272342423428234222442923419254252442323426254282443124430244242442124420244222542724428254322642324431254272742924429254302743026420254262342425430254262442725427264292641826421254172741827425254232542427419264262642826425264242843126420264242642627421264222642326416294202742227423274252742827423284252843227416284192742127422284172842028431274262842927418284212841729419284332742828417304163041631418294183041731419294193041831419314322843128427284292843328430284332943330433314322943230432314312943130431314302943030430314292942930429314282942830428314272942730427314262942630426314252942530425314242942430424314232942330423314202942129422294203042130422304203142131422314291322914228132281422713227142261322614225132251422413224142231322314222132221422113221142201322014220152171521815219152171321813219132171421814219142',
+                '232102322023230232402325023260232702328023290233002331023320233302621026220262302624026250262602627026280262902630026310263202633027200281902220021190201802918028140211402013019120181101710017090170801707017060170501704017030170201701017000291303012031110310003101031020310303104031050310603107031080310903110030170311603215033140341303512036110371003809039080420504403045020460101917018160171501614015130141201311012100110901008009070080600705006040050300402003010020004007041060430404700032002330023400232012330123401232022330223402232032330323403232042320523206233042330523306234042340523406235042350523506236042360523606237042370523706238062390624006238052390524005238042390424004240002390023800235002360023700235012350223503236012360223603237012370223703238012380223803239012390223903240012400224003241032420324303241002420024300241012420124301241022420224302241052410424204244022440124400245002460024501216003160131500315013140031401313003130131200312013110031101310003100131002309003090130800308013050030600307003050130601307013050230602307023080230902307033070430803309033100330804308053090431004309053100530906310063110531205313053110631206313063140631506316063140531505316053160231603316043150231503315043140231403314043110231202313023110331203313033110431204313043060330401304003030032015029150',
+                '06040070400804009040100401104012050130501405015050160501705018050110501106012060120701208013090131001311013120131301314013150131601216012170111701017009170081700717006170051600415005140051300612007110081000909010090210602006020070190801909018100181101812019120191301914020140211402214023140241402514025130261302612027120271102810028090280802807028060270602705026050250502405023040220402205021050200503005030060300703109032090330903409034050340603407035080350903510035110351203513035140351503814038130381203810038090380803807038060380503905039060400704008041080410904210042110431104312043130441404413044110440504406044070440804409044100381103008030090301003011030120301303014030150032000321003220032300324003250032600327003280042800528006280072800828009270102701126011250102400924009230082300723004230052300623006220062100620005200042001321013220132301324013250132601327013280142801528016280162701727018260182501924019230192201822018210172002020021200222002420025200262002320023210232202323023240232502326023270232802820028210282202823028240282502826028270282802928030280312803228033280352003521035220352303524035250352603527035280362803728038280362403620037200382003920037240412804127041260412504224042230422204221042200432004420045200452104621046220462304624045240452504425042250432504326044260442704527045280462801132010320093200933008330073300633006340053400535004350043600437003370033800339003400034100442004430054400545006450074600846009460104601145012450124401343013420144201441013410134001240011400113901039009390094001641018350183301834019350203602037020380203902141021420214302144022450224601840019400204002140017360173701738017390174001741016420164301644016450244502444024430244102440024390243802437024360253602535025340253302633026340273402735028350283602936029370303803037030360313603135031340323403233033330333403335033360333703438034390344003441034420344303444024420363303634036350363603637036380363903640036410364203643036440364503745038450394504044041440373903738038380393804038041380373403733038330393304733046330463404534045350443604437044380453904639046400474004741047420474304744046440464504545044450000020100202002030020400205002060020700208002090021000211002120021300214002150021600217002180021900220002210022200223002240022500226002270022800229002300023100232002330023400235002360024900248002470024600245002440024300242002410024000239002380023700200023010230202303023040230502306023070230802309023100231102312023130231402315023160231702318023190232002321023220232302324023250232602327023280233502336023370233802339023400234102342023430234402345023460234702348023490230001101011020110301104011050110601107011080110901110011110111201113011140111501116011170111801119011200112101122011230112401125011260112701128011290113001131011320113301134011350113601137011380113901140011410114201143011440114501146011470114801149011340233302332023310233002329023',
+                '18292183021929219302202922030221292213022230223302243022930221212222122918229192261822718228182251822418223182221822219222202211822119221202201821718218182191821719217202172121722218222192221723218232192321824219242182521925218262182721828219262192721928220282202222122222222202322123222232202422124222242202522125222252202622027221262212722128222262222722228222292232722328223292242922529224272242822528226262252722627223192241922519223202242022520223212242122521223222242222522223232242322324224242232522425223262242622526225232252422525226252262222623226242292022921227222282222922227232282322923227242282422924227252282522925227262282622926227272282722927229282292922628227282282822629227292282921732217332183121832218332193121932219332203122032220332213122132221332223122232222332233122332223332243122432224332253322633225302253122532226302273022830226312263222731227322273322831228322283322931229322293323033231332323323032231322323223031231312323123030231302323023029231292322923028231282322823027231272322723026231262322623025231252322523024231242322423023231232322323022231222322223021231212322123020231202322023019231192321923018231182321823215232162321723115231162311723015230162301722915229162291722815228162281722715227162271722615226162261722515225162251722415224162241722315223162231722215222162221722115221162211722015220162201721915219162191721815218162181721715217162171721415215152161521416215162161621417215172161721418215182161821419215192161921420215202162021421215212162121422215222162221423215232162321424214252142621524216242172421525216252172521526216262172621727217282172921730217312142721527216272142821528216282142921529216292143021530216302143121531216312143221532216322143321533216332181901919020190182001920020200182101921020210261902719028190262002720028200262102721028210'
+            ];
+
+            var t = 0;
+
+            game.objects = game.loadPreset(presets[0]);
+
+            function johnbutlergames() {
+                game.objects = game.loadPreset(presets[10]);
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Growth";
+            var dimensions = {width:2000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            Loading.loaded = true;
+            Loading.intro = 0;
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+            }
+
+            var menu = {
+                page: "game",
+                switchPage: "game",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 100,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        //switch page animation
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                }
+            }
+
+            var game = {
+                update: function() {
+                    this.plants.update();
+                    this.menu.update();
+                },
+                updateEffects: function() {
+                },
+                draw: function() {
+                    this.plants.draw();
+                    this.menu.draw();
+                },
+                reset: function() {
+                    this.plants.reset();
+                },
+                menu: {
+                    update: function() {
+                        if(Keys.down[82]) {
+                            game.reset();
+                        }
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "black";
+                        ctx.font = "100px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Growth",500,150);
+                        ctx.font = "50px Arial";
+                        ctx.fillText("Click on a plant to make it",500,330);
+                        ctx.fillText("the seed for the next generation.",500,400);
+                        ctx.fillText("Press R to restart.",500,550);
+                        ctx.fillText("By John Butler",500,930);
+                    }
+                },
+                plants: {
+                    gridSize: 5,
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                        var cellSize = 1000/this.gridSize;
+                        for(var x=0;x<this.gridSize;x++) {
+                            for(var y=0;y<this.gridSize;y++) {
+                                var o = this.objects.find(e=>e.x==x&&e.y==y);
+                                if(!Mouse.clickInBox(x*cellSize+1000,y*cellSize,cellSize,cellSize)) continue;
+                                this.createNewPlants(o.DNA);
+                                break;
+                            }
+                        }
+                    },
+                    draw: function() {
+                        var cellSize = 1000/this.gridSize;
+                        for(var n=0;n<this.objects.length;n++) {
+                            var o = this.objects[n];
+                            ctx.save();
+                            ctx.translate(o.x*cellSize+1000+cellSize/2,o.y*cellSize+cellSize/2);
+                            ctx.scale(cellSize/100,cellSize/100);
+                            ctx.beginPath();
+                            ctx.rect(-50,-50,100,100);
+                            ctx.clip();
+                            this.drawBackground();
+                            this.drawObject(this.plantStateAtTime(o,o.time));
+                            ctx.restore();
+                        }
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 5;
+                        for(var x=0;x<this.gridSize;x++) {
+                            for(var y=0;y<this.gridSize;y++) {
+                                ctx.strokeRect(x*cellSize+1000,y*cellSize,cellSize,cellSize);
+                            }
+                        }
+                    },
+                    updateObject: function(o) {
+                        o.time += 0.02;
+                    },
+                    drawBackground: function() {
+                        ctx.fillStyle = "rgb(200,247,255)";
+                        ctx.fillRect(-50,-50,100,100);
+                        ctx.fillStyle = "rgb(100,50,0)";
+                        ctx.fillRect(-50,40,100,10);
+                    },
+                    drawObject: function(o) {
+                        for(var o2 of o.objects) {
+                            if(o2.hide) continue;
+                            if(o2.type=="branch") {
+                                ctx.strokeStyle = o2.color;
+                                ctx.lineCap = "round";
+                                ctx.lineWidth = o2.width;
+                                ctx.beginPath();
+                                ctx.moveTo(o2.x1,o2.y1);
+                                ctx.lineTo(o2.x2,o2.y2);
+                                ctx.stroke();
+                            }
+                            if(o2.type=="leaf") {
+                                ctx.save();
+                                ctx.translate(o2.x,o2.y);
+                                var s = o2.scale/100;
+                                ctx.scale(s,s);
+                                ctx.globalAlpha = 0.8;
+                                ctx.fillStyle = o2.color;
+                                ctx.beginPath();
+                                ctx.arc(o2.x,o2.y,100,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                        }
+                    },
+                    generatePlant: function(o) {
+                        var numbers = this.readDNA(o.DNA);
+                        var stemHeight = numbers[0]/5+10;
+                        var stemWidth = numbers[1]/30+5;
+                        var primaryOffshootsNumber = numbers[2]/50;
+                        var primaryOffshootAngle = numbers[3]*0.35+15;
+                        var primaryOffshootAngleVariation = numbers[4]*0.1;
+                        var primaryOffshootLength = numbers[5]/10+10;
+                        var secondaryOffshootAngleVariation = numbers[6]*0.2+5;
+                        var secondaryOffshootsNumber = numbers[7]/25;
+                        var secondaryOffshootLength = numbers[8]/15+5;
+                        var finalOffshootsNumber = numbers[9]/70;
+                        var finalOffshootAngleVariation = numbers[10]*0.3+5;
+                        var finalOffshootLength = numbers[11]/20+5;
+                        var maxOffshootDepth = 3;
+                        var p = numbers[12]/255;
+                        var branchColor1 = [75,40,0];
+                        var branchColor2 = [0,255,0];
+                        var branchColorBlend = [0,0,0].map((e,i)=>branchColor1[i]*p+branchColor2[i]*(1-p));
+                        var leafSize = numbers[13]/100;
+                        var leafSizeVariation = numbers[14]/100;
+                        var hasLeaves = numbers[15]>50;
+                        var leafColorBlendFactor = numbers[16]/255;
+                        var leafColorVariation = numbers[17]/1000;
+                        var leafColor1 = [0,255,0];
+                        var leafColor2 = [0,100,0];
+                        var leafColorBlend = function(v) {
+                            var blend = [0,0,0].map((e,i)=>leafColor1[i]*(leafColorBlendFactor+v)+leafColor2[i]*(1-(leafColorBlendFactor+v)));
+                            return `rgb(${blend[0]},${blend[1]},${blend[2]})`;
+                        }
+                        o.objects = [];
+                        var stem = {};
+                        stem.x1 = 0;
+                        stem.y1 = 40;
+                        stem.x2 = 0;
+                        stem.y2 = 40-stemHeight;
+                        stem.width = stemWidth;
+                        stem.type = "branch";
+                        stem.branchNumber = 0;
+                        stem.childBranches = 0;
+                        stem.tipBranches = 0;
+                        stem.attachmentPoint = 0;
+                        o.objects.push(stem);
+                        while(primaryOffshootsNumber>0) {
+                            primaryOffshootsNumber--;
+                            var o2 = {};
+                            var parent = o.objects[0];
+                            o2.width = parent.width/2;
+                            o2.branchNumber = 1;
+                            o2.childBranches = 0;
+                            o2.tipBranches = 0;
+                            o2.parent = parent;
+                            parent.childBranches++;
+                            var p = Math.random()*0.9+0.1;
+                            var x = parent.x1*p+parent.x2*(1-p);
+                            var y = parent.y1*p+parent.y2*(1-p);
+                            o2.x1 = x;
+                            o2.y1 = y;
+                            o2.attachmentPoint = 1-p+parent.attachmentPoint;
+                            var angle = dirTo(parent.x1,parent.y1,parent.x2,parent.y2);
+                            angle += primaryOffshootAngle*(Math.floor(Math.random()*2)*2-1);
+                            var angleVariation = primaryOffshootAngleVariation*(Math.random()*2-1);
+                            var move = distToMove(primaryOffshootLength,angle+angleVariation);
+                            o2.x2 = x+move.x;
+                            o2.y2 = y+move.y;
+                            o2.type = "branch";
+                            o.objects.push(o2);
+                        }
+                        while(secondaryOffshootsNumber>0) {
+                            secondaryOffshootsNumber--;
+                            var o2 = {};
+                            var possibleParents = o.objects.filter(e=>e.branchNumber>0&&e.branchNumber<maxOffshootDepth);
+                            if(possibleParents.length==0) break;
+                            var parent = possibleParents[Math.floor(Math.random()*possibleParents.length)];
+                            o2.width = parent.width*0.75;
+                            o2.branchNumber = parent.branchNumber+1;
+                            o2.childBranches = 0;
+                            o2.tipBranches = 0;
+                            o2.parent = parent;
+                            parent.childBranches++;
+                            var p = Math.random()*0.9+0.1;
+                            var x = parent.x1*p+parent.x2*(1-p);
+                            var y = parent.y1*p+parent.y2*(1-p);
+                            o2.x1 = x;
+                            o2.y1 = y;
+                            o2.attachmentPoint = 1-p+parent.attachmentPoint;
+                            var angle = dirTo(parent.x1,parent.y1,parent.x2,parent.y2);
+                            var angleVariation = secondaryOffshootAngleVariation*(Math.floor(Math.random()*2)*2-1);
+                            angleVariation = 0;
+                            var move = distToMove(secondaryOffshootLength,angle+angleVariation);
+                            o2.x2 = x+move.x;
+                            o2.y2 = y+move.y;
+                            o2.type = "branch";
+                            o.objects.push(o2);
+                        }
+                        var possibleParents = o.objects.filter(e=>e.tipBranches==0);
+                        for(var n=0;n<possibleParents.length;n++) {
+                            var parent = possibleParents[n];
+                            for(var n2=0;n2<finalOffshootsNumber;n2++) {
+                                var o2 = {};
+                                o2.width = parent.width*0.75;
+                                o2.branchNumber = parent.branchNumber+1;
+                                o2.childBranches = 0;
+                                o2.tipBranches = 0;
+                                o2.parent = parent;
+                                parent.childBranches++;
+                                parent.tipBranches++;
+                                o2.x1 = parent.x2;
+                                o2.y1 = parent.y2;
+                                o2.attachmentPoint = parent.attachmentPoint+1;
+                                var angle = dirTo(parent.x1,parent.y1,parent.x2,parent.y2);
+                                var angleVariation = finalOffshootAngleVariation*(Math.random()*2-1);
+                                var move = distToMove(finalOffshootLength,angle+angleVariation);
+                                o2.x2 = o2.x1+move.x;
+                                o2.y2 = o2.y1+move.y;
+                                o2.type = "branch";
+                                o.objects.push(o2);
+                            }
+                        }
+                        for(var o2 of o.objects) {
+                            var finalBlend = [branchColorBlend[0],branchColorBlend[1],branchColorBlend[2]];
+                            finalBlend[0] *= (0.8+o2.branchNumber/10);
+                            finalBlend[1] *= (0.8+o2.branchNumber/10);
+                            finalBlend[2] *= (0.8+o2.branchNumber/10);
+                            o2.color = `rgb(${finalBlend[0]},${finalBlend[1]},${finalBlend[2]})`;
+                            o2.stableWidth = o2.width;
+                            o2.stableX1 = o2.x1;
+                            o2.stableY1 = o2.y1;
+                            o2.stableX2 = o2.x2;
+                            o2.stableY2 = o2.y2;
+                        }
+                        o.objects.sort((a,b)=>b.branchNumber-a.branchNumber);
+                        o.maxBranchSize = Math.max(...o.objects.filter(e=>e.type=="branch").map(e=>e.width));
+                        if(hasLeaves) {
+                            var leaves = [];
+                            var possibleParents = o.objects.filter(e=>e.tipBranches==0);
+                            for(var o2 of possibleParents) {
+                                var o3 = {};
+                                o3.type = "leaf";
+                                var sizeVariation = (Math.random()*2-1)*leafSizeVariation;
+                                o3.scale = Math.max(leafSize+sizeVariation,0)+o.maxBranchSize/2;
+                                var colorVariation = (Math.random()*2-1)*leafColorVariation;
+                                o3.color = leafColorBlend(colorVariation);
+                                o3.x = o2.x2;
+                                o3.y = o2.y2;
+                                o3.parent = o2;
+                                o3.stableX = o3.x;
+                                o3.stableY = o3.y;
+                                o3.stableScale = o3.scale;
+                                o3.attachmentPoint = o2.attachmentPoint+1;
+                                leaves.push(o3);
+                            }
+                            o.objects = o.objects.concat(leaves);
+                        }
+                        this.objects.push(o);
+                    },
+                    plantStateAtTime: function(o,t) {
+                        for(var o2 of o.objects) {
+                            if(o2.type!="branch") continue;
+                            var branchTime = easeInOut(Math.min(Math.max(t-o2.attachmentPoint,0),1));
+                            o2.x1 = o2.stableX1;
+                            o2.y1 = o2.stableY1;
+                            o2.x2 = o2.stableX1*(1-branchTime)+o2.stableX2*branchTime;
+                            o2.y2 = o2.stableY1*(1-branchTime)+o2.stableY2*branchTime;
+                            o2.width = o2.stableWidth*branchTime;
+                            if(branchTime==0) {
+                                o2.hide = true;
+                            } else {
+                                o2.hide = false;
+                            }
+                        }
+                        for(var o2 of o.objects) {
+                            if(o2.type!="leaf") continue;
+                            var leafTime = easeInOut(Math.min(Math.max(t-o2.attachmentPoint,0),1));
+                            if(leafTime==0) {
+                                o2.hide = true;
+                            } else {
+                                o2.hide = false;
+                            }
+                            o2.scale = o2.stableScale*leafTime;
+                        }
+                        return o;
+                    },
+                    createRandomDNA: function() {
+                        var DNA = "";
+                        var letters = "ACGT";
+                        for(var n=0;n<80;n++) {
+                            DNA += letters[Math.floor(Math.random()*4)];
+                        }
+                        return DNA;
+                    },
+                    readDNA: function(DNA) {
+                        var numbers = [];
+                        var letters = "ACGT";
+                        while(DNA.length>0) {
+                            var current = DNA.slice(0,4);
+                            DNA = DNA.slice(4);
+                            while(current.length<4) {
+                                current += "A";
+                            }
+                            current = current.split("").map(e=>letters.indexOf(e));
+                            current[2] *= 4;
+                            current[1] *= 16;
+                            current[0] *= 64;
+                            var sum = current.reduce((a,b)=>a+b);
+                            numbers.push(sum);
+                        }
+                        return numbers;
+                    },
+                    writeDNA: function(numbers) {
+                        var DNA = "";
+                        var letters = "ACGT";
+                        for(var n of numbers) {
+                            n = Math.min(Math.max(n,0),255);
+                            var values = [0,0,0,0];
+                            while(n>=64) {
+                                n -= 64;
+                                values[0]++;
+                            }
+                            while(n>=16) {
+                                n -= 16;
+                                values[1]++;
+                            }
+                            while(n>=4) {
+                                n -= 4;
+                                values[2]++;
+                            }
+                            values[3] = n;
+                            DNA += letters[values[0]];
+                            DNA += letters[values[1]];
+                            DNA += letters[values[2]];
+                            DNA += letters[values[3]];
+                        }
+                        return DNA;
+                    },
+                    mutateDNA: function(DNA) {
+                        var numbers = this.readDNA(DNA);
+                        for(var n=0;n<numbers.length;n++) {
+                            numbers[n] += Math.floor(Math.random()*100)-50;
+                            numbers[n] = Math.min(Math.max(numbers[n],0),255);
+                        }
+                        var newDNA = this.writeDNA(numbers);
+                        return newDNA;
+                    },
+                    createNewPlants: function(DNA) {
+                        this.objects = [];
+                        for(var x=0;x<this.gridSize;x++) {
+                            for(var y=0;y<this.gridSize;y++) {
+                                var o = {};
+                                o.x = x;
+                                o.y = y;
+                                o.DNA = this.mutateDNA(DNA);
+                                o.time = 0;
+                                this.generatePlant(o);
+                            }
+                        }
+                    },
+                    reset: function() {
+                        this.objects = [];
+                        for(var x=0;x<this.gridSize;x++) {
+                            for(var y=0;y<this.gridSize;y++) {
+                                var o = {};
+                                o.x = x;
+                                o.y = y;
+                                o.DNA = this.createRandomDNA();
+                                o.time = 0;
+                                this.generatePlant(o);
+                            }
+                        }
+                    }
+                }
+            }
+
+            game.reset();
+        </script>
+    </body>
+</html>

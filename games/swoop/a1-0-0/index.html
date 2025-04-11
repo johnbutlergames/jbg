@@ -1,0 +1,756 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0;
+            }
+        </style>
+        <canvas id="canvas"></canvas>
+        <script>
+            var word = "";
+            var title = "Swoop";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            var canvas,ctx;
+
+            function initialize() {
+                document.title = title;
+
+                canvas = document.getElementById("canvas");
+                var ratio = dimensions.width/dimensions.height;
+                var sizeText = "min(100vw,100vh)";
+                if(ratio>1) {
+                    sizeText = `min(${100/ratio}vw,100vh)`;
+                    canvas.style.width = `calc(${sizeText} * ${ratio})`;
+                    canvas.style.height = sizeText;
+                } else if(ratio<1) {
+                    sizeText = `min(100vw,${100*ratio}vh)`;
+                    canvas.style.width = sizeText;
+                    canvas.style.height = `calc(${sizeText} * ${1/ratio})`;
+                } else {
+                    canvas.style.width = sizeText;
+                    canvas.style.height = sizeText;
+                }
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
+
+                ctx = canvas.getContext("2d");
+                canvas.onmousemove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchmove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.onclick = function(event) {
+                    Mouse.click = true;
+                }
+                canvas.onmousedown = function(event) {
+                    Mouse.down = true;
+                }
+                canvas.ontouchstart = function(event) {
+                    Mouse.down = true;
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchend = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onmouseup = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onwheel = function(event) {
+                    Mouse.scrollX = event.deltaX;
+                    Mouse.scrollY = event.deltaY;
+                    event.preventDefault();
+                }
+                window.onkeydown = function(event) {
+                    Keys.keys[event.keyCode] = true;
+                    Keys.down[event.keyCode] = true;
+                    word += String.fromCharCode(event.keyCode);
+                }
+                window.onkeyup = function(event) {
+                    Keys.keys[event.keyCode] = false;
+                    Keys.up[event.keyCode] = true;
+                }
+
+                Loading.loadLogoImage();
+                Loading.loadImages();
+                Loading.loadAudios();
+
+                for(var key of Object.keys(Physics)) {
+                    this[key] = Physics[key];
+                }
+
+                ctx.roundRect=(x,y,w,h,r)=>{
+                    ctx.beginPath();
+                    ctx.moveTo(x+r,y);
+                    ctx.lineTo(x+w-r,y);
+                    ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                    ctx.lineTo(x+w,y+h-r);
+                    ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                    ctx.lineTo(x+r,y+h);
+                    ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                    ctx.lineTo(x,y+r);
+                    ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                }
+            }
+            var Loading = {
+                animation: 0,
+                loads: 0,
+                loaded: true,
+                intro: 0,
+                logoImage: false,
+                percent: 0,
+                loadImages: function() {
+                    var keys = Object.keys(images);
+                    for(var key of keys) {
+                        var image = document.createElement("img");
+                        image.src = images[key];
+                        image.onload = function() {
+                            Loading.loads++;
+                        }
+                        images[key] = image;
+                    }
+                },
+                loadAudios: function() {
+                    var keys = Object.keys(images);
+                    for(var key of keys) {
+                        var audio = document.createElement("audio");
+                        audio.src = audios[key];
+                        audio.oncanplaythrough = function() {
+                            Loading.loads++;
+                        }
+                        audios[key] = audio;
+                    }
+                },
+                loadLogoImage: function() {
+                    this.logoImage = document.createElement("img");
+                    this.logoImage.src = "https://johnbutlergames.com/logoLarge.png";
+                    this.logoImage.onload = function() {
+                        Loading.loads++;
+                    }
+                },
+                updateLoadingScreen: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var percent = this.loads/(images.length+audios.length+1);
+                    this.percent = this.percent*0.9+percent*0.1;
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s,s);
+                    ctx.translate(-250,-250);
+                    if(percent==1) {
+                        var a = 1-this.percent*(images.length+audios.length+1)+this.loads-1;
+                        ctx.globalAlpha = a;
+                    }
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(47.5,272.5,405*this.percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*this.percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = "rgb(255,100,0)";
+                    var a = this.animation/2%40;
+                    for(var n=0;n<40;n++) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Loading...",250,250);
+                    ctx.restore();
+
+                    this.animation++;
+                    if(percent==1&&this.percent>0.99) this.loaded = true;
+                },
+                updateIntro: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var i = Math.min(Physics.easeInOut(this.intro/100),Physics.easeInOut((250-this.intro)/100));
+                    var i2 = Math.min(Physics.easeInOut(this.intro/50),Physics.easeInOut((250-this.intro)/50));
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s*i2,s*i2);
+                    ctx.translate(-250,-250);
+                    ctx.globalAlpha = i;
+                    ctx.drawImage(this.logoImage,0,0,500,500);
+                    ctx.restore();
+
+                    this.intro++;
+                    if(this.intro==300) this.intro = 0;
+                }
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h){return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h},
+                clickInBox: function(x,y,w,h){return this.inBox(x,y,w,h)&&this.click}
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            var Physics = {
+                dirTo: (x1,y1,x2,y2)=>90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI),
+                distToMove: (distance,direction)=>({x:distance*Math.sin(direction*Math.PI/180),y:-distance*Math.cos(direction*Math.PI/180)}),
+                distTo: (x1,y1,x2,y2)=>Math.sqrt((x2-x1)**2+(y2-y1)**2),
+                rotate:(cx,cy,x,y,a)=>([a=Math.PI/180*a,{x:(Math.cos(a)*(x-cx))+(Math.sin(a)*(y-cy))+cx,y:(Math.cos(a)*(y-cy))-(Math.sin(a)*(x-cx))+cy}][1]),
+                easeInOut:a=>1/(1+2.71828**(-10*(a-0.5))),
+                blocksColliding:(b1,b2)=>r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h),
+                blocksCollidingEdge:(b1,b2)=>r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h),
+                r:n=>Math.round(n*10000)/10000
+            }
+            function updateBlocks(blocks,data={}) {
+                data.gravity = data.gravity||{x:0,y:0};
+                data.damping = data.damping||{x:1,y:1};
+                data.maxCollisions = data.maxCollisions||100;
+
+                function initBlock(block) {
+                    if(!block.initialized) {
+                        block.density = block.density||1;
+                        block.mass = block.mass||block.w*block.h*block.density;
+                        block.bounce = {x:1,y:1};
+                        block.move = block.move||{x:0,y:0};
+                        block.static = block.static||false;
+                        block.resting = block.resting||{x:0,y:0};
+                        block.last = block.last||{x:0,y:0}
+                        block.initialized = true;
+                    }
+
+                    block.collided = false;
+                    if(!block.static) {
+                        if(!block.resting.x) {
+                            block.move.x *= data.damping.x;
+                            block.move.x += data.gravity.x;
+                        }
+                        if(!block.resting.y) {
+                            block.move.y *= data.damping.y;
+                            block.move.y += data.gravity.y;
+                        }
+                    }
+
+                    block.resting.x = false;
+                    block.resting.y = false;
+                    block.last.x = block.x;
+                    block.last.y = block.y;
+                }
+
+                function initialize() {
+                    for(var n in blocks) {
+                        blocks[n].id = n;
+                    }
+                    for(var block of blocks) {
+                        initBlock(block);
+                    }
+                }
+
+                function resolveCollision(b1,b2,a) {
+                    if((b1.static||b1.resting[a])&&(b2.static||b2.resting[a])) return false;
+                    if(!(b2.static||b2.resting[a])&&(b1.static||b1.resting[a])) return resolveCollision(b2,b1,a);
+
+                    b1.collided = true;
+                    b2.collided = true;
+                    //blocks have collided
+
+                    var c1 = {x:b1.last.x+b1.w/2,y:b1.last.y+b1.h/2};
+                    var c2 = {x:b2.last.x+b2.w/2,y:b2.last.y+b2.h/2};
+                    //find centers
+
+                    var c = a;
+                    var dim = a=='x'?'w':'h';
+
+                    if(b2.static||b2.resting[a]) {
+                        //static-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            b1[a] = b2[a]+b2[dim];
+                        } else {
+                            b1[a] = b2[a]-b1[dim];
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b1.resting[a] = true;
+                    } else {
+                        //dynamic-dynamic collision
+                        if(c1[a]>c2[a]) {
+                            var dist = b2[a]+b2[dim]-b1[a];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        } else {
+                            var dist = b2[a]-b1[a]-b1[dim];
+                            b1[a] += dist/2;
+                            b2[a] -= dist/2;
+                        }
+                        var avg = (b1.move[a]+b2.move[a])/2;
+                        b1.move[a] = avg;
+                        b2.move[a] = avg;
+                    }
+                    return true;
+                }
+
+                function updateStaticAxis(a) {
+                    for(var block of blocks) {
+                        if(!block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                }
+
+                function updateAxis(a) {
+                    for(var block of blocks) {
+                        if(block.static) continue;
+                        block[a] += block.move[a];
+                    }
+                    var n3 = 0;
+                    while(n3<data.maxCollisions) {
+                        var collisions = false;
+                        for(var n=0;n<blocks.length;n++) {
+                            var block = blocks[n];
+                            for(var n2=n+1;n2<blocks.length;n2++) {
+                                var block2 = blocks[n2];
+                                if(blocksColliding(block,block2)) {
+                                    var x = resolveCollision(block2,block,a);
+                                    var y = resolveCollision(block,block2,a);
+                                    collisions = collisions||x||y;
+                                }
+                            }
+                        }
+                        if(!collisions) break;
+                        n3++;
+                    }
+                }
+
+                initialize();
+                updateStaticAxis("x");
+                updateAxis("x");
+                updateStaticAxis("y");
+                updateAxis("y");
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        Loading.updateIntro();
+                    } else {
+                        main();
+                    }
+                } else {
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+
+                t++;
+            }
+
+            function f(s) {
+                ctx.font = s+"px Arial";
+            }
+
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+
+            function drawPlane() {
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+
+                ctx.fillStyle = "rgb(150,0,0)";
+                ctx.beginPath();
+                ctx.arc(-20,-3,7,0,2*Math.PI);
+                ctx.fill();
+                //rear rudder
+
+                ctx.strokeStyle = "rgb(150,0,0)";
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(-20,0);
+                ctx.lineTo(20,0);
+                ctx.lineTo(20,10);
+                ctx.quadraticCurveTo(0,7,-20,0);
+                ctx.fill();
+                ctx.stroke();
+                //hull
+
+                ctx.strokeStyle = "rgb(200,200,200)";
+                ctx.beginPath();
+                ctx.moveTo(20,0);
+                ctx.lineTo(20,10);
+                ctx.stroke();
+                //grey plane front
+
+                var w = Math.sin(t/3)*6;
+                ctx.strokeStyle = "rgb(100,100,100)";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(30,5-w);
+                ctx.lineTo(30,5+w);
+                ctx.stroke();
+                //propeller
+
+                ctx.fillRect(15,-5,5,20);
+                ctx.strokeStyle = "red";
+                //clip grey
+
+                ctx.lineWidth = 7;
+                ctx.beginPath();
+                ctx.moveTo(0,2);
+                ctx.lineTo(10,2);
+                ctx.stroke();
+                //wing
+
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.arc(7,15,3,0,2*Math.PI);
+                ctx.fill();
+                //wheel
+            }
+
+            var menu = {
+                page: "game",
+                switchPage: "game",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 100,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                }
+            }
+
+            var game = {
+                update: function() {
+                    this.player.update();
+                },
+                updateEffects: function() {
+                    this.cam.update();
+                    this.particles.update();
+                    this.objects.update();
+                },
+                draw: function() {
+                    this.background.draw();
+
+                    ctx.save();
+                    ctx.translate(500-this.cam.x,500-this.cam.y);
+
+                    this.particles.draw();
+                    this.player.draw();
+                    this.objects.draw();
+
+                    ctx.restore();
+                },
+                background: {
+                    objects: [],
+                    update: function() {
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "rgb(180,245,255)";
+                        ctx.fillRect(0,0,1000,1000);
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                player: {
+                    x: 0,
+                    y: 0,
+                    angle: 90,
+                    xmove: 0,
+                    ymove: 0,
+                    damping: 0.5,
+                    speed: 2,
+                    turnSpeed: 1.3,
+                    drawAngle: 90,
+                    gravity: 0,
+                    update: function() {
+                        var move = distToMove(this.speed,this.angle);
+                        this.xmove += move.x;
+                        this.ymove += move.y;
+                        this.ymove += this.gravity;
+
+                        this.x += this.xmove;
+                        this.y += this.ymove;
+                        this.xmove *= this.damping;
+                        this.ymove *= this.damping;
+
+                        if(Keys.keys[32]) {
+                            this.angle -= this.turnSpeed;
+                            var _turn = turn(this.angle,180);
+                            this.angle += easeInOut(_turn/200)/3;
+                        } else {
+                            var _turn = turn(this.angle,180);
+                            this.angle += _turn/100;
+                        }
+
+                        if(t%2==0) {
+                            game.particles.create({type:"plane trail particle"});
+                        }
+
+                        this.drawAngle = this.drawAngle*0.9+this.angle*0.1;
+                    },
+                    draw: function() {
+                        ctx.save();
+                        ctx.translate(this.x,this.y);
+                        ctx.rotate((-90+this.drawAngle)*Math.PI/180);
+
+                        drawPlane();
+
+                        ctx.restore();
+                    },
+                    reset: function() {
+                        this.x = 0;
+                        this.y = 0;
+                        this.angle = 90;
+                        this.drawAngle = 90;
+                        this.xmove = 0;
+                        this.ymove = 0;
+                    }
+                },
+                objects: {
+                    chunks: [],
+                    chunkId: 0,
+                    chunkX: 0,
+                    objects: [],
+                    update: function() {
+                        if(game.cam.x+500>this.chunkX) this.newChunk();
+                        for(var chunk of this.chunks) {
+                            if(chunk.x+chunk.w<game.cam.x-1500) chunk.delete = true;
+                        }
+                        this.chunks = this.chunks.filter(e=>!e.delete);
+
+                        for(var o of this.objects) {
+                            o.onScreen = o.x+o.w>game.cam.x-500&&o.x<game.cam.x+500&&o.y+o.h>game.cam.y-500&&o.y<game.cam.y+500;
+                            if(!this.chunks.find(e=>e.id==o.chunkId)) o.delete = true;
+                            if(o.onScreen) o.delete = false;
+                        }
+                        this.objects = this.objects.filter(e=>!o.delete);
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            if(!o.onScreen) continue;
+                            this.drawObject(o);
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.type=="block") {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(o.x,o.y,o.w,o.h);
+                        } else if(o.type=="coin") {
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.fillStyle = "yellow";
+                            ctx.beginPath();
+                            ctx.arc(0,0,25,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    },
+                    reset: function() {
+                        this.chunks = [];
+                        this.objects = [];
+                        this.chunkId = 0;
+                        this.newChunk();
+                    },
+                    newChunk: function() {
+                        var chunk = {};
+                        chunk.x = this.chunkX;
+                        chunk.y = 0;
+                        chunk.w = 1000;
+                        chunk.h = 1000;
+                        this.chunkX += chunk.w;
+                        chunk.id = this.chunkId;
+                        this.chunkId++;
+                        this.chunks.push(chunk);
+                        var objectsToAdd = this.createChunk();
+                        for(var o of objectsToAdd) {
+                            o.x += chunk.x;
+                            o.y += chunk.y;
+                            o.w = o.w||0;
+                            o.h = o.h||0;
+                            o.chunkId = chunk.id;
+                        }
+                        this.objects = [...this.objects,...objectsToAdd]
+                    },
+                    createChunk: function() {
+                        var chunk = [];
+                        chunk.push({x:0,y:0,w:100,h:100,type:"block"});
+                        chunk.push({x:200,y:200,type:"coin"});
+                        return chunk;
+                    }
+                },
+                particles: {
+                    particles: [],
+                    update: function() {
+                        for(var o of this.particles) {
+                            o.update();
+                        }
+                        this.particles = this.particles.filter(e=>!e.delete);
+                    },
+                    draw: function() {
+                        for(var o of this.particles) {
+                            this.drawParticle(o);
+                        }
+                    },
+                    drawParticle: function(o) {
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        if(o.angle) ctx.rotate(o.angle*Math.PI/180);
+                        if(o.alpha) ctx.globalAlpha = Math.min(Math.max(o.alpha,0),1);
+                        if(o.r) ctx.scale(o.r/100,o.r/100);
+
+                        if(o.type=="plane trail particle") {
+                            ctx.beginPath();
+                            ctx.fillStyle = "rgba(255,255,255,0.7)";
+                            ctx.arc(0,0,5,0,2*Math.PI);
+                            ctx.fill();
+                        }
+
+                        ctx.restore();
+                    },
+                    create: function(o) {
+                        if(o.type=="plane trail particle") {
+                            o.x = game.player.x;
+                            o.y = game.player.y;
+                            o.alpha = 1.5;
+                            o.update = function() {
+                                this.alpha -= 0.015;
+                                if(this.alpha<=0) this.delete = true;
+                            }
+                        }
+                        this.particles.push(o);
+                    },
+                    reset: function() {
+                        this.particles = [];
+                    }
+                },
+                cam: {
+                    x: 0,
+                    y: 0,
+                    update: function() {
+                        var angle = game.player.angle;
+                        var move = distToMove(200,angle);
+                        if(move.x>0) move.x = 100;
+                        if(move.x<0) move.x += 100;
+                        this.x = (game.player.x+move.x+100)*0.1+this.x*0.9;
+                    },
+                    reset: function() {
+                        this.x = 0;
+                        this.y = 0;
+                    }
+                },
+                reset: function() {
+                    this.background.reset();
+                    this.particles.reset();
+                    this.objects.reset();
+                    this.cam.reset();
+                }
+            }
+
+            var t = 0;
+
+            game.reset();
+        </script>
+    </body>
+</html>

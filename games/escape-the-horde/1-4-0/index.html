@@ -1,0 +1,1431 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script src="merge-blocks.js"></script>
+    <canvas id="canvas"></canvas>
+    <script>
+        var t = 0;
+        var title = "Escape the Horde";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        window.setInterval(update, 10);
+
+        function resolveBlockCollision(dynamicBlock, staticBlock, axis) {
+            var c1 = { x: dynamicBlock.x + dynamicBlock.w / 2, y: dynamicBlock.y + dynamicBlock.h / 2 };
+            var c2 = { x: staticBlock.x + staticBlock.w / 2, y: staticBlock.y + staticBlock.h / 2 };
+            var dimension = axis == "x" ? "w" : "h";
+            if (c1[axis] < c2[axis]) {
+                dynamicBlock[axis] = staticBlock[axis] - dynamicBlock[dimension];
+            } else {
+                dynamicBlock[axis] = staticBlock[axis] + staticBlock[dimension];
+            }
+        }
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var menu = {
+            page: "title screen",
+            switchPage: "title screen",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            titleScreenZombies: [],
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.page == "game") this.switchPageAnimation = 0;
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = easeInOut(this.switchPageAnimation / this.switchPageAnimationThreshold);
+                    ctx.fillStyle = "black";
+                    if (this.switchPage == this.page) {
+                        ctx.fillRect(-100 + 1400 * (1 - a), 0, 1400, 1000);
+                    } else {
+                        ctx.fillRect(-100 - 1400 * (1 - a), 0, 1400, 1000);
+                    }
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+                var titleAnimations = [easeInOut((a - 0) / 30), easeInOut((a - 20) / 30), easeInOut((a - 40) / 30)];
+                var positions = [{ x: 360, y: 180 }, { x: 529, y: 280 }, { x: 640, y: 390 }];
+                var texts = "Escape the Horde".split(" ");
+                var sizes = [130, 50, 130];
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(-width / 2 - 50, -height / 2 - 50, width + 100, height + 100);
+                    ctx.restore();
+                }
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(-width / 2 - 40, -height / 2 - 40, width + 80, height + 80);
+                    ctx.restore();
+                }
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    ctx.fillText(texts[n], 0, 0);
+                    ctx.restore();
+                }
+
+                var a2 = easeInOut((a - 70) / 30)
+                ctx.save();
+                ctx.translate(500, 680);
+                ctx.scale(a2, a2);
+                ctx.fillStyle = "black";
+                ctx.fillRect(-150, -75, 300, 150);
+                ctx.fillStyle = "white";
+                if (Mouse.inBox(-140 + 500, -65 + 680, 280, 130)) ctx.fillStyle = "rgb(235,235,235)";
+                ctx.fillRect(-140, -65, 280, 130);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 80px Trebuchet MS";
+                ctx.fillText("Play", 0, 0);
+                ctx.restore();
+
+                var a3 = easeInOut((a - 80) / 30)
+                ctx.save();
+                ctx.translate(500, 870);
+                ctx.scale(a3, a3);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 40px Trebuchet MS";
+                ctx.fillText("Highscore: " + highscore, 0, 0);
+                ctx.restore();
+
+                var a4 = easeInOut((a - 90) / 30)
+                ctx.save();
+                ctx.translate(500, 940);
+                ctx.scale(a4, a4);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 40px Trebuchet MS";
+                ctx.fillText("By John Butler", 0, 0);
+                ctx.restore();
+
+                for (var o of this.titleScreenZombies) {
+                    game.objects.drawObject(o);
+                }
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+                var positions = [{ x: 360, y: 180 }, { x: 529, y: 280 }, { x: 640, y: 390 }];
+                var texts = "Escape the Horde".split(" ");
+                var sizes = [130, 50, 130];
+                var blocks = [{ x: -150 + 500, y: -75 + 680, w: 300, h: 150 }];
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    blocks.push({
+                        x: position.x - width / 2 - 50,
+                        y: position.y - height / 2 - 50,
+                        w: width + 100,
+                        h: height + 100
+                    });
+                }
+                for (var o of this.titleScreenZombies) {
+                    o.cx = o.x + o.w / 2;
+                    o.cy = o.y + o.h / 2;
+                    var dir = dirTo(o.x, o.y, o.target.x, o.target.y);
+                    var move = distToMove(o.speed, dir);
+                    o.move = move;
+                    o.timeToSwitchTarget--;
+                    if (o.timeToSwitchTarget <= 0) {
+                        o.timeToSwitchTarget = Math.random() * 500 + 100;
+                        var dist = 200 + Math.random() * 500;
+                        var move = distToMove(dist, Math.random() * 360);
+                        o.target.x += move.x;
+                        o.target.y += move.y;
+                        o.target.x = Math.max(Math.min(o.target.x, 985), 0);
+                        o.target.y = Math.max(Math.min(o.target.y, 985), 0);
+                    }
+                }
+                for (var n = 0; n < this.titleScreenZombies.length; n++) {
+                    var o = this.titleScreenZombies[n];
+                    for (var n2 = n + 1; n2 < this.titleScreenZombies.length; n2++) {
+                        var o2 = this.titleScreenZombies[n2];
+                        var dist = distTo(o.x, o.y, o2.x, o2.y);
+                        if (dist > o.r + o2.r) continue;
+                        var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                        var move = distToMove(o.r + o2.r - dist, dir);
+                        o.move.x -= move.x / 2;
+                        o.move.y -= move.y / 2;
+                        o2.move.x += move.x / 2;
+                        o2.move.y += move.y / 2;
+                    }
+                }
+                for (var o of this.titleScreenZombies) {
+                    if (o.timeToWait >= 0) {
+                        o.timeToWait--;
+                        continue;
+                    }
+                    o.x += o.move.x;
+                    for (var o2 of blocks) {
+                        if (!blocksColliding(o, o2)) continue;
+                        resolveBlockCollision(o, o2, "x");
+                    }
+                    o.y += o.move.y;
+                    for (var o2 of blocks) {
+                        if (!blocksColliding(o, o2)) continue;
+                        resolveBlockCollision(o, o2, "y");
+                    }
+                }
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+                if (a < 40) return;
+                if (Mouse.clickInBox(-140 + 500, -65 + 680, 280, 130)) {
+                    this.switchPage = "new game";
+                }
+            },
+            resetTitleScreen: function () {
+                this.titleScreenZombies = [];
+                for (var n = 0; n < 25; n++) {
+                    var o = {};
+                    if (Math.random() < 0.5) {
+                        o.x = Math.random() * 985;
+                        if (Math.random() < 0.5) {
+                            o.y = -15;
+                        } else {
+                            o.y = 1000;
+                        }
+                    } else {
+                        o.y = Math.random() * 985;
+                        if (Math.random() < 0.5) {
+                            o.x = -15;
+                        } else {
+                            o.x = 1000;
+                        }
+                    }
+                    o.timeToWait = Math.random() * 300;
+                    o.w = 15;
+                    o.h = 15;
+                    o.r = 8;
+                    o.speed = 0.6;
+                    o.type = "zombie";
+                    o.timeToSwitchTarget = Math.random() * 500 + 500;
+                    o.target = {};
+                    o.target.x = Math.random() * 985;
+                    o.target.y = Math.random() * 985;
+                    this.titleScreenZombies.push(o);
+                }
+            }
+        }
+        menu.resetTitleScreen();
+
+        var game = {
+            score: 0,
+            newHighscore: false,
+            oldHighscoreValue: 0,
+            update: function () {
+                this.level.update();
+            },
+            updateEffects: function () {
+                var groups = this.objects.generateGroups();
+
+                this.objects.update(groups);
+                this.player.update();
+                this.player.updateObjectCollisions(groups);
+                this.cam.update();
+            },
+            draw: function () {
+                ctx.save();
+                this.level.clipGameArea();
+
+                this.drawBackground();
+
+                ctx.save();
+                this.cam.alignViewport();
+
+                this.drawExit();
+                this.objects.draw();
+                this.player.draw();
+
+                ctx.restore();
+
+                this.level.draw();
+
+                ctx.restore();
+
+                this.level.drawLevelIntroAnimation();
+            },
+            reset: function () {
+                this.level.reset();
+                this.player.reset();
+                this.cam.reset();
+                this.score = 0;
+            },
+            drawExit: function () {
+                var d = this.level.dimensions, x = d.x, y = d.y, w = d.w, h = d.h;
+
+                var a = Math.min(this.level.levelCompleteAnimation / this.level.levelCompleteAnimationCap * 4, 1);
+                ctx.fillStyle = "rgba(150,200,150,0.2)";
+                ctx.fillStyle = `rgba(${150 - 20 * a},${200 + 20 * a},${150 - 20 * a},${0.2 + 0.2 * a})`;
+                ctx.fillRect(x - 2000, y - 2000, w + 4000, 2000);
+                ctx.fillRect(x - 2000, y + h, w + 4000, 2000);
+                ctx.fillRect(x - 2000, y - 0.1, 2000, h + 0.2);
+                ctx.fillRect(x + w, y - 0.1, 2000, h + 0.2);
+
+                ctx.strokeStyle = "lime";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, w, h);
+                var gradientWidth = 20;
+                var grd = ctx.createLinearGradient(x, y, x, y - gradientWidth);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.fillRect(x, y - gradientWidth, w, gradientWidth);
+                var grd = ctx.createLinearGradient(x, y + h, x, y + h + gradientWidth);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.fillRect(x, y + h, w, gradientWidth);
+                var grd = ctx.createLinearGradient(x, y, x - gradientWidth, y);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.fillRect(x - gradientWidth, y, gradientWidth, h);
+                var grd = ctx.createLinearGradient(x + w, y, x + w + gradientWidth, y);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.fillRect(x + w, y, gradientWidth, h);
+                var grd = ctx.createRadialGradient(x, y, 0, x, y, gradientWidth);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(x, y, gradientWidth, Math.PI, 1.5 * Math.PI);
+                ctx.lineTo(x, y);
+                ctx.closePath();
+                ctx.fill();
+                var grd = ctx.createRadialGradient(x + w, y, 0, x + w, y, gradientWidth);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(x + w, y, gradientWidth, Math.PI * 1.5, 2 * Math.PI);
+                ctx.lineTo(x + w, y);
+                ctx.closePath();
+                ctx.fill();
+                var grd = ctx.createRadialGradient(x + w, y + h, 0, x + w, y + h, gradientWidth);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(x + w, y + h, gradientWidth, 0, 0.5 * Math.PI);
+                ctx.lineTo(x + w, y + h);
+                ctx.closePath();
+                ctx.fill();
+                var grd = ctx.createRadialGradient(x, y + h, 0, x, y + h, gradientWidth);
+                grd.addColorStop(0, "rgba(0,255,0,0.5)");
+                grd.addColorStop(1, "rgba(0,255,0,0)");
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(x, y + h, gradientWidth, 0.5 * Math.PI, Math.PI);
+                ctx.lineTo(x, y + h);
+                ctx.closePath();
+                ctx.fill();
+            },
+            endGame: function () {
+                if (this.score > highscore) {
+                    this.oldHighscoreValue = highscore;
+                    highscore = this.score;
+                    updateHighscore();
+                    this.newHighscore = true;
+                }
+            },
+            drawBackground: function () {
+                ctx.save();
+                this.cam.alignViewport();
+                var tileSize = 200;
+                var xCount = (1000 / tileSize) / this.cam.zoom;
+                var yCount = (1000 / tileSize) / this.cam.zoom;
+                var xOffset = Math.floor(this.cam.x / (tileSize * 2)) * (tileSize * 2);
+                var yOffset = Math.floor(this.cam.y / (tileSize * 2)) * (tileSize * 2);
+                for (var x = Math.floor(-xCount / 2 - 2), xNum = 0; x < xCount + 2; x++, xNum++) {
+                    for (var y = Math.floor(-yCount / 2 - 2), yNum = 0; y < yCount + 2; y++, yNum++) {
+                        if ((xNum + yNum) % 2 == 0) {
+                            continue;
+                            ctx.fillStyle = "white";
+                        } else {
+                            ctx.fillStyle = "rgb(240,240,240)";
+                        }
+                        ctx.fillRect(x * tileSize + xOffset, y * tileSize + yOffset, tileSize, tileSize);
+                    }
+                }
+                ctx.restore();
+            },
+            level: {
+                level: 0,
+                levelComplete: false,
+                levelCompleteAnimation: 0,
+                levelCompleteAnimationCap: 100,
+                levelIntro: false,
+                levelIntroAnimation: 0,
+                levelIntroAnimationCap: 100,
+                levelTransition: 0,
+                levelTransitionCap: 100,
+                zoomedOut: 100,
+                playerSpawnCoordinates: { x: 0, y: 0 },
+                playerCanMove: true,
+                playerZombifiedAnimation: 0,
+                dimensions: { x: 0, y: 0, w: 0, h: 0 },
+                update: function () {
+                    this.updateIntro();
+                    this.updateOutro();
+                    this.updateGameOverMenu();
+
+                    this.playerCanMove = true;
+                    if (this.levelIntroAnimation > 0) this.playerCanMove = false;
+                    if (this.levelTransition > this.levelTransitionCap * 0.6 && !this.levelComplete) this.playerCanMove = false;
+                    if (game.player.zombified && !this.playerZombifiedAnimation) {
+                        game.endGame();
+                    }
+                    if (game.player.zombified) this.playerZombifiedAnimation++;
+                },
+                draw: function () {
+                    this.drawNavigation();
+                    this.drawGameOverMenu();
+                },
+                reset: function () {
+                    this.level = 0;
+                    this.levelComplete = false;
+                    this.levelCompleteAnimation = 0;
+                    this.levelIntro = true;
+                    this.levelTransition = this.levelTransitionCap;
+                    this.levelIntroAnimation = 1;
+                    this.playerZombifiedAnimation = 0;
+                    this.zoomedOut = 100;
+                    this.generateNewLevel();
+                },
+                updateGameOverMenu: function () {
+                    if (this.playerZombifiedAnimation < 140) return;
+                    if (Mouse.clickInBox(200, 830, 270, 110)) {
+                        menu.switchPage = "new game";
+                    }
+                    if (Mouse.clickInBox(530, 830, 270, 110)) {
+                        menu.switchPage = "title screen";
+                    }
+                },
+                drawNavigation: function () {
+                    ctx.save();
+                    var a = 1 - easeInOut(this.playerZombifiedAnimation / 100);
+                    ctx.globalAlpha = a;
+
+                    this.drawScore();
+                    this.drawMap();
+
+                    ctx.restore();
+                },
+                drawScore: function () {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, 1000, 50);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 40px Trebuchet MS";
+                    ctx.fillText(`Score: ${game.score}`, 985, 30);
+                },
+                drawMap: function () {
+                    var x = 805;
+                    var y = 805;
+                    var w = 150;
+                    var h = 150;
+                    ctx.strokeStyle = "black";
+                    ctx.fillStyle = "rgb(200,240,200)";
+                    ctx.lineWidth = 10;
+                    ctx.strokeRect(x, y, w, h);
+                    ctx.fillRect(x, y, w, h);
+                    var mapDimensions = { x: this.dimensions.x - 500, y: this.dimensions.y - 500, w: this.dimensions.w + 1000, h: this.dimensions.h + 1000 };
+                    var scale = Math.min(w / mapDimensions.w, h / mapDimensions.h);
+                    var xOffset = -(mapDimensions.w * scale - w) / 2 - mapDimensions.x * scale;
+                    var yOffset = -(mapDimensions.h * scale - h) / 2 - mapDimensions.y * scale;
+                    ctx.save();
+                    ctx.translate(x + xOffset, y + yOffset);
+                    ctx.scale(scale, scale);
+                    ctx.fillStyle = "rgb(240,240,240)";
+                    ctx.fillRect(this.dimensions.x, this.dimensions.y, this.dimensions.w, this.dimensions.h);
+                    for (var o of game.objects.objects) {
+                        if (o.type == "block") {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(o.x, o.y, o.w, o.h);
+                        }
+                    }
+                    ctx.fillStyle = "red";
+                    ctx.fillRect(game.player.cx - 60, game.player.cy - 60, 120, 120);
+                    ctx.restore();
+                },
+                drawGameOverMenu: function () {
+                    if (!this.playerZombifiedAnimation) return;
+
+                    var a = easeInOut((this.playerZombifiedAnimation - 70) / 20);
+                    ctx.save();
+                    ctx.globalAlpha = a;
+
+                    ctx.fillStyle = "green";
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 2;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 80px Trebuchet MS";
+                    ctx.fillText("You got zombified!", 500, 200);
+                    ctx.strokeText("You got zombified!", 500, 200);
+
+                    var a2 = easeInOut((this.playerZombifiedAnimation - 120) / 20);
+                    ctx.globalAlpha = a2;
+
+                    ctx.fillStyle = "rgba(255,255,255,0.7)";
+                    ctx.fillRect(0, 590, 1000, 410);
+
+                    var score = game.score;
+                    ctx.font = "bold 50px Trebuchet MS";
+                    var width = ctx.measureText(`Score: ${score}`).width;
+                    var animatedScore = Math.ceil(score * easeInOut((this.playerZombifiedAnimation - 140) / 100));
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(`Score: ${animatedScore}`, 500 - width / 2, 680);
+
+                    ctx.save();
+                    ctx.translate(500, 750);
+                    var a3 = easeInBack((this.playerZombifiedAnimation - 260) / 20);
+                    if (game.newHighscore) ctx.scale(1 + 0.1 * a3, 1 + 0.1 * a3);
+                    ctx.textAlign = "left";
+                    var width = ctx.measureText(`Highscore: ${highscore}`).width;
+                    var highscoreText = game.oldHighscoreValue;
+                    if (this.playerZombifiedAnimation > 260 || !game.newHighscore) highscoreText = highscore;
+                    ctx.fillText(`Highscore: ${highscoreText}`, -width / 2, 0);
+                    ctx.restore();
+
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(200, 830, 270, 110)) {
+                        ctx.fillStyle = "rgb(235,235,235)";
+                    }
+                    ctx.roundRect(200, 830, 270, 110, 25);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(530, 830, 270, 110)) {
+                        ctx.fillStyle = "rgb(235,235,235)";
+                    }
+                    ctx.roundRect(530, 830, 270, 110, 25);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "60px Trebuchet MS";
+                    ctx.fillText("Retry", 200 + 270 / 2, 830 + 110 / 2);
+                    ctx.fillText("Quit", 530 + 270 / 2, 830 + 110 / 2);
+
+                    ctx.restore();
+                },
+                updateIntro: function () {
+                    if (this.levelComplete) return;
+                    if (this.levelIntroAnimation) {
+                        this.levelIntroAnimation++;
+                        if (this.levelIntroAnimation == this.levelIntroAnimationCap) this.levelIntroAnimation = 0;
+                        return;
+                    }
+                    this.levelTransition--;
+                    this.levelTransition = Math.max(this.levelTransition, 0);
+                    if (!this.playerCanMove) return;
+                    var pressedKey = false;
+                    var movementKeys = [37, 38, 39, 40, 65, 68, 83, 87];
+                    for (var key of movementKeys) {
+                        if (Keys.keys[key]) {
+                            pressedKey = true;
+                            break;
+                        }
+                    }
+                    if (this.levelIntro) this.levelIntro = !pressedKey;
+                    if (!this.levelIntro) {
+                        if (this.zoomedOut) this.zoomedOut--;
+                    }
+                },
+                updateOutro: function () {
+                    if (!this.levelComplete) return;
+                    this.levelCompleteAnimation++;
+                    if (this.levelCompleteAnimation < this.levelCompleteAnimationCap) return;
+                    this.levelTransition++;
+                    if (this.levelTransition >= this.levelTransitionCap) {
+                        this.newLevel();
+                    }
+                },
+                clipGameArea: function () {
+                    if (!this.levelTransition) return;
+                    var a = this.levelTransition / this.levelTransitionCap;
+
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0, 0, 1000, 1000);
+
+                    var radius = easeInOut(1 - a) * 1500;
+                    ctx.translate(500 - game.cam.x * game.cam.zoom, 500 - game.cam.y * game.cam.zoom);
+                    var x = game.player.x + game.player.w / 2;
+                    var y = game.player.y + game.player.h / 2;
+                    ctx.translate(x * game.cam.zoom, y * game.cam.zoom);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                    ctx.clip();
+                    ctx.translate(-x * game.cam.zoom, -y * game.cam.zoom);
+                    ctx.translate(game.cam.x * game.cam.zoom - 500, game.cam.y * game.cam.zoom - 500);
+
+                    ctx.clearRect(0, 0, 1000, 1000);
+                },
+                drawLevelIntroAnimation: function () {
+                    if (!this.levelIntroAnimation) return;
+
+                    var a = this.levelIntroAnimation / this.levelIntroAnimationCap;
+                    ctx.save();
+                    ctx.globalAlpha = easeInOut(a * 4) * easeInOut((1 - a) * 4);
+
+                    this.drawLevelText(a);
+                    this.drawScoreText(a);
+
+                    ctx.restore();
+                },
+                drawLevelText: function (a) {
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 120px Trebuchet MS";
+                    ctx.fillText(`Level ${this.level + 1}`, 500, 300);
+                },
+                drawScoreText: function (a) {
+                    ctx.save();
+                    ctx.translate(500, 350);
+                    if (this.level != 0) {
+                        var a2 = easeInBack((a - 0.35) * 10);
+                        ctx.scale(1 + 0.1 * a2, 1 + 0.1 * a2);
+                    }
+                    ctx.textAlign = "left";
+                    ctx.font = "bold 60px Trebuchet MS";
+                    var width = ctx.measureText(`Score: ${game.score}`).width;
+                    var score = game.score - 1000;
+                    if (a > 0.35 || this.level == 0) score = game.score;
+                    ctx.fillText(`Score: ${score}`, -width / 2, 50);
+                    ctx.restore();
+                },
+                generateNewLevel: function () {
+                    game.objects.objects = [];
+                    var mapSize;
+                    if (this.level < 3) {
+                        mapSize = 550 + this.level * 150;
+                    } else {
+                        mapSize = 1000 + this.level * 50;
+                    }
+                    mapSize = Math.round(mapSize / 100) * 100;
+                    game.level.dimensions = {
+                        x: -mapSize / 2,
+                        y: -mapSize / 2,
+                        w: mapSize,
+                        h: mapSize
+                    }
+
+                    var rounding = 50;
+
+                    var nodeCount = Math.max(this.level - 3, 0);
+                    var nodes = [];
+                    for (var n = 0; n < nodeCount; n++) {
+                        var node = {};
+                        node.type = "cluster";
+                        if (this.level > 10 && Math.random() < 0.15) node.type = "room cluster";
+                        if (this.level > 10 && Math.random() < 0.15) node.type = "room";
+                        if (this.level > 10 && Math.random() < 0.2) node.type = "snake delete";
+                        if (this.level > 15 && Math.random() < 0.2) node.type = "snake";
+                        if (node.type == "cluster") {
+                            node.x = Math.random() * mapSize - mapSize / 2;
+                            node.y = Math.random() * mapSize - mapSize / 2;
+                            node.count = Math.random() * 5 + 5;
+                            node.range = 1000 + Math.random() * 1000;
+                        }
+                        if (node.type == "room cluster") {
+                            node.x = Math.random() * mapSize - mapSize / 2;
+                            node.y = Math.random() * mapSize - mapSize / 2;
+                            node.count = Math.random() * 5 + 5;
+                            node.range = 1000 + Math.random() * 1000;
+                        }
+                        if (node.type == "room") {
+                            node.width = 250 + Math.random() * 100;
+                            node.height = 250 + Math.random() * 100;
+                            node.x = Math.random() * (mapSize - node.width) - mapSize / 2;
+                            node.y = Math.random() * (mapSize - node.height) - mapSize / 2;
+                        }
+                        if (node.type == "snake" || node.type == "snake delete") {
+                            node.x = Math.random() * mapSize - mapSize / 2;
+                            node.y = Math.random() * mapSize - mapSize / 2;
+                            var dir = dirTo(node.x, node.y, 0, 0);
+                            node.direction = Math.round(dir / 90) * 90;
+                            node.lengthLeft = Math.random() * 3000 + 3000;
+                            node.width = 50 + Math.random() * 100;
+                        }
+                        nodes.push(node);
+                    }
+                    if (this.level > 4 && Math.random() < 0.4 && false) {
+                        var node = {};
+                        node.type = "cluster";
+                        node.x = -125;
+                        node.y = -125;
+                        node.count = 10;
+                        node.range = 500;
+                        nodes.push(node);
+                    }
+
+                    var blocks = [];
+                    for (var node of nodes) {
+                        if (node.type == "cluster") {
+                            for (var n = 0; n < node.count; n++) {
+                                var size = 50 + n * 25;
+                                var w = Math.random() * size / 2 + size / 2;
+                                var h = Math.random() * size / 2 + size / 2;
+                                var moveX = node.range - w * 2;
+                                var moveY = node.range - h * 2;
+                                var x = node.x + Math.random() * moveX - moveX / 2;
+                                var y = node.y + Math.random() * moveY - moveY / 2;
+                                x = Math.round(x / rounding) * rounding;
+                                y = Math.round(y / rounding) * rounding;
+                                w = Math.round(w / rounding) * rounding;
+                                h = Math.round(h / rounding) * rounding;
+                                blocks.push({ x: x, y: y, w: w, h: h });
+                            }
+                        } else if (node.type == "room cluster") {
+                            for (var n = 0; n < node.count; n++) {
+                                var size = 200 + n * 25;
+                                var w = Math.random() * size / 2 + size / 2;
+                                var h = Math.random() * size / 2 + size / 2;
+                                var moveX = node.range - w * 2;
+                                var moveY = node.range - h * 2;
+                                var x = node.x + Math.random() * moveX - moveX / 2;
+                                var y = node.y + Math.random() * moveY - moveY / 2;
+                                x = Math.round(x / rounding) * rounding;
+                                y = Math.round(y / rounding) * rounding;
+                                w = Math.round(w / rounding) * rounding;
+                                h = Math.round(h / rounding) * rounding;
+                                blocks.push({ x: x, y: y, w: w, h: h });
+                            }
+                            for (var n = 0; n < node.count / 3; n++) {
+                                var size = 200;
+                                var w = Math.random() * size / 2 + size / 2;
+                                var h = Math.random() * size / 2 + size / 2;
+                                var moveX = node.range - w * 2;
+                                var moveY = node.range - h * 2;
+                                var x = node.x + Math.random() * moveX - moveX / 2;
+                                var y = node.y + Math.random() * moveY - moveY / 2;
+                                x = Math.round(x / rounding) * rounding;
+                                y = Math.round(y / rounding) * rounding;
+                                w = Math.round(w / rounding) * rounding;
+                                h = Math.round(h / rounding) * rounding;
+                                blocks.push({ x: x, y: y, w: w, h: h, delete: true });
+                            }
+                        } else if (node.type == "snake" || node.type == "snake delete") {
+                            while (node.lengthLeft > 0) {
+                                var distance = Math.random() * 500 + 50;
+                                var block = {};
+                                if (node.direction == 0) {
+                                    block.x = node.x;
+                                    block.y = node.y - distance + node.width;
+                                    block.w = node.width;
+                                    block.h = distance;
+                                } else if (node.direction == 90) {
+                                    block.x = node.x;
+                                    block.y = node.y;
+                                    block.w = distance;
+                                    block.h = node.width;
+                                } else if (node.direction == 180) {
+                                    block.x = node.x;
+                                    block.y = node.y;
+                                    block.w = node.width;
+                                    block.h = distance;
+                                } else if (node.direction == 270) {
+                                    block.x = node.x - distance + node.width;
+                                    block.y = node.y;
+                                    block.w = distance;
+                                    block.h = node.width;
+                                }
+                                var move = distToMove(distance, node.direction);
+                                node.x += move.x;
+                                node.y += move.y;
+                                node.direction += Math.floor(Math.random() * 3 - 1) * 90;
+                                if (node.direction >= 360) node.direction -= 360;
+                                if (node.direction < 0) node.direction += 360;
+                                if (node.type == "snake delete") block.delete = true;
+                                block.x = Math.round(block.x / rounding) * rounding;
+                                block.y = Math.round(block.y / rounding) * rounding;
+                                block.w = Math.round(block.w / rounding) * rounding;
+                                block.h = Math.round(block.h / rounding) * rounding;
+                                blocks.push(block);
+                                node.lengthLeft -= distance;
+                            }
+                        } else if (node.type == "room") {
+                            blocks.push({ x: node.x, y: node.y, w: node.w, h: node.h });
+                            blocks.push({ x: node.x + 50, y: node.y + 50, w: node.w - 100, h: node.h - 100, delete: true });
+                        }
+                    }
+                    blocks.push({ x: -100, y: -100, w: 200, h: 200, delete: true });
+                    var clearance = 10000;
+                    blocks.push({ x: -mapSize / 2 - clearance, y: -mapSize / 2 - clearance, w: clearance, h: mapSize + clearance * 2, delete: true });
+                    blocks.push({ x: mapSize / 2, y: -mapSize / 2 - clearance, w: clearance, h: mapSize + clearance * 2, delete: true });
+                    blocks.push({ x: -mapSize / 2 - clearance, y: -mapSize / 2 - clearance, w: mapSize + clearance * 2, h: clearance, delete: true });
+                    blocks.push({ x: -mapSize / 2 - clearance, y: mapSize / 2, w: mapSize + clearance * 2, h: clearance, delete: true });
+                    mergeBlocks(blocks);
+                    blocks = blocks.filter(e => !e.delete);
+
+                    var width = mapSize / 50;
+                    var height = mapSize / 50;
+                    function calculateBlockArr() {
+                        game.objects.blockArr = [];
+                        for (var y = 0; y < height; y++) {
+                            game.objects.blockArr.push([]);
+                            for (var x = 0; x < width; x++) {
+                                var box = {};
+                                box.x = -mapSize / 2 + x * 50;
+                                box.y = -mapSize / 2 + y * 50;
+                                box.w = 50;
+                                box.h = 50;
+                                if (!blocks.some(e => blocksColliding(e, box))) {
+                                    game.objects.blockArr[y].push(0);
+                                } else {
+                                    game.objects.blockArr[y].push(1);
+                                }
+                            }
+                        }
+                    }
+                    calculateBlockArr();
+                    var groupMap = structuredClone(game.objects.blockArr);
+
+                    var count = 2;
+                    var sizes = [];
+                    while (groupMap.some(e => e.includes(0))) {
+                        var y = groupMap.findIndex(e => e.includes(0));
+                        var x = groupMap[y].indexOf(0);
+                        sizes.push({ id: count, amount: 0 });
+                        var search = [{ x: x, y: y }];
+                        var n = 0;
+                        while (search.length > 0) {
+                            var node = search.shift();
+                            groupMap[node.y][node.x] = count;
+                            var neighbors = [];
+                            neighbors.push({ x: node.x - 1, y: node.y });
+                            neighbors.push({ x: node.x + 1, y: node.y });
+                            neighbors.push({ x: node.x, y: node.y - 1 });
+                            neighbors.push({ x: node.x, y: node.y + 1 });
+                            neighbors = neighbors.filter(function (e) {
+                                if (e.x < 0) return false;
+                                if (e.x >= width) return false;
+                                if (e.y < 0) return false;
+                                if (e.y >= height) return false;
+                                if (groupMap[e.y][e.x] !== 0) return false;
+                                if (search.find(e2 => e2.x == e.x && e2.y == e.y)) return false;
+                                return true;
+                            });
+                            search.push(...neighbors);
+                            n++;
+                        }
+                        sizes[sizes.length - 1].amount = n;
+                        count++;
+                    }
+                    sizes = sizes.sort((a, b) => a.amount - b.amount);
+
+                    for (var n = 0; n < sizes.length - 1; n++) {
+                        var id = sizes[n].id;
+                        var pathAmount = 1;
+                        var pathWidth = 1;
+                        if (sizes[n].count > 40) pathAmount = 2;
+                        if (sizes[n].count > 200) {
+                            pathAmount = 3;
+                            pathWidth = 2;
+                        }
+                        var searched = [];
+                        var nodes = [];
+                        for (var y = 0; y < groupMap.length; y++) {
+                            for (var x = 0; x < groupMap.length; x++) {
+                                if (groupMap[y][x] != id) continue;
+                                nodes.push({ x: x, y: y, parent: { x: x, y: y } });
+                            }
+                        }
+                        while (nodes.length > 0) {
+                            var node = nodes.shift();
+                            searched.push(node);
+                            if (node.reachedGoal) {
+                                var reachedGoals = searched.filter(e => e.reachedGoal);
+                                if (reachedGoals.length > pathAmount) break;
+                                continue;
+                            }
+                            var neighbors = [];
+                            neighbors.push({ x: node.x - 1, y: node.y });
+                            neighbors.push({ x: node.x + 1, y: node.y });
+                            neighbors.push({ x: node.x, y: node.y - 1 });
+                            neighbors.push({ x: node.x, y: node.y + 1 });
+                            neighbors = neighbors.filter(function (e) {
+                                if (e.x < 0) return false;
+                                if (e.x >= width) return false;
+                                if (e.y < 0) return false;
+                                if (e.y >= height) return false;
+                                if (groupMap[e.y][e.x] === id) return false;
+                                if (groupMap[e.y][e.x] !== 1) {
+                                    var index = sizes.findIndex(e2 => e2.id == groupMap[e.y][e.x]);
+                                    if (index <= n) return false;
+                                    e.reachedGoal = true;
+                                }
+                                if (nodes.find(e2 => e2.x == e.x && e2.y == e.y)) return false;
+                                if (searched.find(e2 => e2.x == e.x && e2.y == e.y)) return false;
+                                return true;
+                            });
+                            neighbors.forEach(function (e) {
+                                e.parent = { x: node.x, y: node.y };
+                            });
+                            nodes.push(...neighbors);
+                            if (pathAmount == 1 && neighbors.find(e => e.reachedGoal)) {
+                                searched.push(...nodes);
+                                searched.push(...neighbors);
+                                break;
+                            }
+                        }
+                        var reachedGoals = searched.filter(e => e.reachedGoal);
+                        var paths = [];
+                        while (pathAmount > 0) {
+                            pathAmount--;
+                            var index = Math.floor(Math.random() * reachedGoals.length);
+                            paths.push(reachedGoals.splice(index, 1));
+                        }
+                        for (var path of paths) {
+                            while (true) {
+                                var node = path[path.length - 1];
+                                if (node.x == node.parent.x && node.y == node.parent.y) break;
+                                var parent = searched.find(e => e.x == node.parent.x && e.y == node.parent.y);
+                                path.push(parent);
+                            }
+                        }
+                        for (var path of paths) {
+                            for (var o of path) {
+                                var block = {};
+                                block.x = o.x * 50 - mapSize / 2;
+                                block.y = o.y * 50 - mapSize / 2;
+                                block.w = 50;
+                                block.h = 50;
+                                block.delete = true;
+                                blocks.push(block);
+                                if (pathWidth == 2) {
+                                    var block = {};
+                                    block.x = o.x * 50 - mapSize / 2 + 50;
+                                    block.y = o.y * 50 - mapSize / 2 + 50;
+                                    block.w = 50;
+                                    block.h = 50;
+                                    block.delete = true;
+                                    blocks.push(block);
+                                }
+                            }
+                        }
+                    }
+                    mergeBlocks(blocks);
+                    blocks = blocks.filter(e => !e.delete);
+
+                    blocks.forEach(function (o) {
+                        o.type = "block";
+                    });
+                    game.objects.objects.push(...blocks);
+
+                    var zombieCount = mapSize * (5 + this.level * 4) * 0.001;
+                    var startAngle = Math.random() * 360;
+                    for (var n = 0; n < zombieCount; n++) {
+                        var angle = n / zombieCount * 360 + Math.random() * 20 - 10 + startAngle;
+                        var maxDist = mapSize / 2 - 15 / 2 + Math.max(Math.sin((angle - 23) * 4 * Math.PI / 180), 0) * mapSize * 0.12;
+                        var dist = 200 + (maxDist - 200) * Math.random();
+                        var move = distToMove(dist, angle);
+                        var o = this.createZombie(move.x, move.y);
+                        if (game.objects.objects.filter(e => e.type == "block").some(e => blocksColliding(e, o))) continue;
+                        game.objects.objects.push(o);
+                    }
+
+                    game.player.x = 0;
+                    game.player.y = 0;
+                },
+                createZombie: function (x, y) {
+                    var o = {};
+                    o.type = "zombie";
+                    o.w = 15;
+                    o.h = 15;
+                    o.canLunge = false;
+                    if (game.level.level >= 19) {
+                        o.canLunge = Math.random() < Math.min(0.2, 0.1 + (game.level.level - 19) * 0.01);
+                    }
+                    if (o.canLunge) {
+                        o.w = 10;
+                        o.h = 10;
+                        o.lungeTime = 0;
+                        o.lungeDuration = 50;
+                        o.lungeReload = 0;
+                        o.lungeReloadReset = 300;
+                    }
+                    o.x = x - o.w / 2;
+                    o.y = y - o.h / 2;
+                    o.cx = o.x + o.w / 2;
+                    o.cy = o.y + o.h / 2;
+                    o.originalPosition = { x: o.x, y: o.y };
+                    o.target = { x: o.x, y: o.y };
+                    o.move = { x: 0, y: 0 };
+                    o.speed = Math.min(0.4 + game.level.level / 200, 0.8);
+                    o.r = Math.sqrt(o.w ** 2 + o.h ** 2) / 2 * 0.76;
+                    return o;
+                },
+                newLevel: function () {
+                    this.level++;
+                    this.levelComplete = false;
+                    this.levelCompleteAnimation = 0;
+                    this.levelIntro = true;
+                    this.levelIntroAnimation = 1;
+                    this.zoomedOut = 100;
+                    game.score += 1000;
+                    game.player.reset();
+                    this.generateNewLevel();
+                }
+            },
+            objects: {
+                objects: [],
+                blockArr: [],
+                update: function (groups) {
+                    this.updateZombies(groups);
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                generateGroups: function () {
+                    var groups = { zombie: [], block: [], collectable: [], lava: [] };
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        groups[o.type].push(o);
+                    }
+                    return groups;
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+
+                    if (o.type == "zombie") {
+                        if (o.canLunge) {
+                            ctx.fillStyle = "rgb(0,150,0)";
+                            ctx.fillRect(0, 0, o.w, o.h);
+                        } else {
+                            ctx.fillStyle = "rgb(0,130,0)";
+                            ctx.fillRect(0, 0, o.w, o.h);
+                            ctx.strokeStyle = "rgb(0,100,0)";
+                            ctx.lineWidth = 4;
+                            ctx.strokeRect(2, 2, o.w - 4, o.h - 4);
+                        }
+                    } else if (o.type == "block") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(0, 0, o.w, o.h);
+                    } else if (o.type == "collectable") {
+                        ctx.fillStyle = "yellow";
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 4, 0, 2 * Math.PI);
+                        ctx.fill();
+                    } else if (o.type == "lava") {
+                        ctx.fillStyle = "red";
+                        ctx.fillRect(0, 0, o.w, o.h);
+                    }
+
+                    ctx.restore();
+                },
+                updateZombies: function (groups) {
+                    if (game.level.levelIntro) return;
+                    for (var o of groups.zombie) {
+                        o.cx = o.x + o.w / 2;
+                        o.cy = o.y + o.h / 2;
+                        var dist = distTo(o.cx, o.cy, game.player.cx, game.player.cy);
+                        o.distToPlayer = dist;
+                        if (dist < 500) {
+                            o.active = true;
+                        } else {
+                            o.active = false;
+                        }
+                        if (game.player.zombified) {
+                            if (o.zombifiedPlayer) {
+                                o.target = { x: game.player.cx, y: game.player.cy };
+                            } else {
+                                if (!o.retargeted) {
+                                    var percent = 0.8 + Math.random() * 0.1;
+                                    if (!o.target) o.target = { x: o.cx, y: o.cy };
+                                    o.target = {
+                                        x: o.x * percent + o.target.x * (1 - percent),
+                                        y: o.y * percent + o.target.y * (1 - percent)
+                                    }
+                                    o.retargeted = true;
+                                } else {
+                                    var dist = distTo(o.x, o.y, o.target.x, o.target.y);
+                                    var chanceToMove = 0.001 * 100 / groups.zombie.length;
+                                    if (dist < 100 && Math.random() < chanceToMove) {
+                                        var x = Math.random() * game.level.dimensions.w + game.level.dimensions.x;
+                                        var y = Math.random() * game.level.dimensions.h + game.level.dimensions.y;
+                                        o.target = { x: x, y: y };
+                                    }
+                                }
+                            }
+                        } else {
+                            if (!o.active) {
+                                o.target = false;
+                            } else {
+                                o.target = { x: game.player.cx, y: game.player.cy };
+                                if (dist < 300 && game.level.level >= 14) {
+                                    var location = this.predictLocation(game.player.cx, game.player.cy, game.player.move.x, game.player.move.y, o.x, o.y);
+                                    o.target = { x: location.x, y: location.y };
+                                }
+                            }
+                        }
+                        if (o.target) {
+                            var dir = dirTo(o.cx, o.cy, o.target.x, o.target.y);
+                            var dist = distTo(o.cx, o.cy, o.target.x, o.target.y);
+                            var move = distToMove(Math.min(dist, o.speed), dir);
+                            if (o.lungeTime) {
+                                var dirToPlayer = dirTo(o.cx, o.cy, game.player.cx, game.player.cy);
+                                if (turn(dir, dirToPlayer) > 90) dir = dirToPlayer;
+                                move = distToMove(Math.min(dist, o.speed * 4), dir);
+                                o.lungeTime--;
+                                o.lungeReload = o.lungeReloadReset;
+                            } else if (o.canLunge && !game.player.zombified) {
+                                if (o.lungeReload) {
+                                    o.lungeReload--;
+                                } else {
+                                    if (o.distToPlayer < 150) {
+                                        o.lungeTime = o.lungeDuration;
+                                    }
+                                }
+                            }
+                            o.move.x += move.x;
+                            o.move.y += move.y;
+                        }
+                    }
+                    for (var n = 0; n < groups.zombie.length; n++) {
+                        if (game.player.zombified) break;
+                        if (game.level.level < 14) break;
+                        var o = groups.zombie[n];
+                        if (!o.active) continue;
+                        if (o.lungeTime) continue;
+                        for (var n2 = n + 1; n2 < groups.zombie.length; n2++) {
+                            var o2 = groups.zombie[n2];
+                            if (!o2.active) continue;
+                            if (o2.lungeTime) continue;
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            var maxSpaceRequired = 100;
+                            var spaceScaling = 0.2;
+                            var spaceRequired = Math.min(o.distToPlayer * spaceScaling + o2.distToPlayer * spaceScaling, maxSpaceRequired);
+                            if (dist > spaceRequired) continue;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(spaceRequired - dist, dir);
+                            o.direction = dir + 180;
+                            o2.direction = dir;
+                            var move1 = distToMove(o.speed, o.direction);
+                            var move2 = distToMove(o2.speed, o2.direction);
+                            var percent = 1 - dist / maxSpaceRequired;
+                            o.move.x = o.move.x * (1 - percent) + move1.x * percent;
+                            o.move.y = o.move.y * (1 - percent) + move1.y * percent;
+                            o2.move.x = o2.move.x * (1 - percent) + move2.x * percent;
+                            o2.move.y = o2.move.y * (1 - percent) + move2.y * percent;
+                        }
+                    }
+                    for (var n = 0; n < groups.zombie.length; n++) {
+                        var o = groups.zombie[n];
+                        for (var n2 = n + 1; n2 < groups.zombie.length; n2++) {
+                            var o2 = groups.zombie[n2];
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            if (dist > o.r + o2.r) continue;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(o.r + o2.r - dist, dir);
+                            o.move.x -= move.x / 2;
+                            o.move.y -= move.y / 2;
+                            o2.move.x += move.x / 2;
+                            o2.move.y += move.y / 2;
+                        }
+                    }
+                    for (var o of groups.zombie) {
+                        if (!o.active) continue;
+                        o.x += o.move.x;
+                        for (var o2 of groups.block) {
+                            if (!blocksColliding(o, o2)) continue;
+                            resolveBlockCollision(o, o2, "x");
+                        }
+                        if (o.x < game.level.dimensions.x) {
+                            o.x = game.level.dimensions.x;
+                        }
+                        if (o.x + o.w > game.level.dimensions.x + game.level.dimensions.w) {
+                            o.x = game.level.dimensions.x + game.level.dimensions.w - o.w;
+                        }
+                    }
+                    for (var o of groups.zombie) {
+                        if (!o.active) continue;
+                        o.y += o.move.y;
+                        for (var o2 of groups.block) {
+                            if (!blocksColliding(o, o2)) continue;
+                            resolveBlockCollision(o, o2, "y");
+                        }
+                        if (o.y < game.level.dimensions.y) {
+                            o.y = game.level.dimensions.y;
+                        }
+                        if (o.y + o.h > game.level.dimensions.y + game.level.dimensions.h) {
+                            o.y = game.level.dimensions.y + game.level.dimensions.h - o.h;
+                        }
+                    }
+                    for (var o of groups.zombie) {
+                        o.move = { x: 0, y: 0 };
+                        o.cx = o.x + o.w / 2;
+                        o.cy = o.y + o.h / 2;
+                    }
+                },
+                predictLocation: function (x, y, xmove, ymove, x2, y2) {
+                    if (xmove == 0 && ymove == 0) return { x: x, y: y };
+                    var lastDistance = distTo(x, y, x2, y2);
+                    for (var n = 0; n < 100; n++) {
+                        x += xmove;
+                        y += ymove;
+                        var dist = distTo(x, y, x2, y2);
+                        if (dist > lastDistance) return { x: x - xmove, y: y - ymove };
+                        lastDistance = dist;
+                    }
+                    return { x: x, y: y }
+                }
+            },
+            player: {
+                x: 0,
+                y: 0,
+                r: 10,
+                move: { x: 0, y: 0 },
+                lastMove: { x: 0, y: 0 },
+                w: 20,
+                h: 20,
+                cx: 0,
+                cy: 0,
+                regularSpeed: 3,
+                currentSpeed: 0,
+                zombified: false,
+                direction: 0,
+                update: function () {
+                    if (!game.level.playerCanMove) return;
+                    this.updateSpeed();
+                    this.handleInput();
+                    if (this.checkExit()) game.level.levelComplete = true;
+                    this.cx = this.x + this.w / 2;
+                    this.cy = this.y + this.h / 2;
+                },
+                draw: function () {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+
+                    ctx.fillStyle = "red";
+                    if (this.zombified) ctx.fillStyle = "rgb(0,100,0)";
+                    ctx.fillRect(0, 0, this.w, this.h);
+
+                    ctx.restore();
+                },
+                reset: function () {
+                    this.zombified = false;
+                },
+                handleInput: function () {
+                    this.move = { x: 0, y: 0 };
+                    if (this.zombified) return;
+                    this.handleMovementInput();
+                },
+                handleMovementInput: function () {
+                    if (Keys.keys[37] || Keys.keys[65]) {
+                        this.move.x--;
+                    }
+                    if (Keys.keys[39] || Keys.keys[68]) {
+                        this.move.x++;
+                    }
+                    if (Keys.keys[38] || Keys.keys[87]) {
+                        this.move.y--;
+                    }
+                    if (Keys.keys[40] || Keys.keys[83]) {
+                        this.move.y++;
+                    }
+                    if (this.move.x == 0 && this.move.y == 0 && !game.level.levelComplete) return;
+                    var dir = dirTo(0, 0, this.move.x, this.move.y);
+                    if (game.level.levelComplete) dir = dirTo(0, 0, this.lastMove.x, this.lastMove.y);
+                    this.direction = dir;
+                    this.move = distToMove(this.currentSpeed, this.direction);
+                    this.lastMove = this.move;
+                },
+                updateSpeed: function () {
+                    if (game.level.levelComplete) {
+                        this.currentSpeed = this.regularSpeed / (1 + game.level.levelCompleteAnimation / 40);
+                        return;
+                    }
+                    this.currentSpeed = this.regularSpeed;
+                },
+                checkExit: function () {
+                    if (this.zombified) return false;
+                    return !blocksColliding(game.level.dimensions, this);
+                },
+                updateObjectCollisions: function (groups) {
+                    if (!game.level.playerCanMove) return;
+                    if (!game.level.levelComplete) {
+                        for (var o of groups.zombie) {
+                            var dist = distTo(o.cx, o.cy, this.cx, this.cy);
+                            if (dist > this.r + o.r) continue;
+                            var dir = dirTo(this.cx, this.cy, o.cx, o.cy);
+                            var move = distToMove(this.r + o.r - dist, dir);
+                            this.move.x -= move.x / 2;
+                            this.move.y -= move.y / 2;
+                            o.move.x += move.x / 2;
+                            o.move.y += move.y / 2;
+                            if (this.zombified) continue;
+                            this.zombified = true;
+                            o.zombifiedPlayer = true;
+                        }
+                    }
+
+                    this.x += this.move.x;
+                    for (var o of groups.block) {
+                        if (!blocksColliding(this, o)) continue;
+                        resolveBlockCollision(this, o, "x");
+                    }
+                    this.y += this.move.y;
+                    for (var o of groups.block) {
+                        if (!blocksColliding(this, o)) continue;
+                        resolveBlockCollision(this, o, "y");
+                    }
+
+                    if (this.zombified) {
+                        if (this.x < game.level.dimensions.x) {
+                            this.x = game.level.dimensions.x;
+                        }
+                        if (this.x + this.w > game.level.dimensions.x + game.level.dimensions.w) {
+                            this.x = game.level.dimensions.x + game.level.dimensions.w - this.w;
+                        }
+                        if (this.y < game.level.dimensions.y) {
+                            this.y = game.level.dimensions.y;
+                        }
+                        if (this.y + this.h > game.level.dimensions.y + game.level.dimensions.h) {
+                            this.y = game.level.dimensions.y + game.level.dimensions.h - this.h;
+                        }
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                angle: 0,
+                update: function () {
+                    this.x = this.x * 0.97 + game.player.x * 0.03;
+                    this.y = this.y * 0.97 + game.player.y * 0.03;
+                    var a0 = easeInOut(game.level.playerZombifiedAnimation / 120 - 0.15);
+                    var a1 = easeInOut(game.level.playerZombifiedAnimation / 50 - 0.5);
+                    var a2 = easeInOut(game.level.playerZombifiedAnimation / 50);
+                    var a3 = easeInOut(game.level.zoomedOut / 100);
+                    var a = a1 * 0.9 + a2 * 0.1;
+                    this.zoom = 1 + 1 * a;
+                    var fullViewZoom = Math.min(800 / Math.max(game.level.dimensions.w, game.level.dimensions.h), 1);
+                    this.zoom = this.zoom * (1 - a3) + fullViewZoom * a3;
+                    this.x = this.x * (1 - a * 0.5) + game.player.x * a * 0.5;
+                    this.y = this.y * (1 - a * 0.5) + (game.player.y + 50) * a * 0.5;
+                    this.angle = this.angle * (1 - a0) + 5 * a0;
+                },
+                alignViewport: function () {
+                    ctx.translate(500, 500);
+                    ctx.rotate(this.angle * Math.PI / 180);
+                    ctx.scale(this.zoom, this.zoom);
+                    ctx.translate(-this.x, -this.y);
+                },
+                reset: function () {
+                    this.x = 0;
+                    this.y = 0;
+                    this.zoom = 1;
+                    this.angle = 0;
+                }
+            }
+        }
+        var highscore = 0;
+        if (localStorage.getItem("escapethehordehighscore") !== null) {
+            highscore = localStorage.getItem("escapethehordehighscore");
+        }
+        function updateHighscore() {
+            localStorage.setItem("escapethehordehighscore", highscore);
+        }
+    </script>
+</body>
+
+</html>

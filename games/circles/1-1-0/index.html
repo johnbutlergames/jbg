@@ -1,0 +1,840 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = "Circles";
+            var dimensions = {width:1000,height:1000};
+            var images = [];
+            var audios = [];
+            var word = "";
+
+            var canvas,ctx;
+
+            function initialize() {
+                document.title = title;
+
+                canvas = document.getElementById("canvas");
+                var ratio = dimensions.width/dimensions.height;
+                var sizeText = "min(100vw,100vh)";
+                if(ratio>1) {
+                    sizeText = `min(${100/ratio}vw,100vh)`;
+                    canvas.style.width = `calc(${sizeText} * ${ratio})`;
+                    canvas.style.height = sizeText;
+                } else if(ratio<1) {
+                    sizeText = `min(100vw,${100*ratio}vh)`;
+                    canvas.style.width = sizeText;
+                    canvas.style.height = `calc(${sizeText} * ${1/ratio})`;
+                } else {
+                    canvas.style.width = sizeText;
+                    canvas.style.height = sizeText;
+                }
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
+
+                ctx = canvas.getContext("2d");
+                canvas.onmousemove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchmove = function(event) {
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.onclick = function(event) {
+                    Mouse.click = true;
+                }
+                canvas.onmousedown = function(event) {
+                    Mouse.down = true;
+                }
+                canvas.ontouchstart = function(event) {
+                    Mouse.down = true;
+                    var rect = canvas.getBoundingClientRect();
+                    Mouse.x = (event.touches[0].pageX-rect.x)*canvas.width/rect.width;
+                    Mouse.y = (event.touches[0].pageY-rect.y)*canvas.height/rect.height;
+                }
+                canvas.ontouchend = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onmouseup = function(event) {
+                    Mouse.down = false;
+                }
+                canvas.onwheel = function(event) {
+                    Mouse.scrollX = event.deltaX;
+                    Mouse.scrollY = event.deltaY;
+                    event.preventDefault();
+                }
+                window.onkeydown = function(event) {
+                    Keys.keys[event.keyCode] = true;
+                    Keys.down[event.keyCode] = true;
+                    word += String.fromCharCode(event.keyCode);
+                }
+                window.onkeyup = function(event) {
+                    Keys.keys[event.keyCode] = false;
+                    Keys.up[event.keyCode] = true;
+                }
+
+                Loading.loadLogoImage();
+                Loading.loadImages();
+                Loading.loadAudios();
+
+                ctx.roundRect=(x,y,w,h,r)=>{
+                    ctx.beginPath();
+                    ctx.moveTo(x+r,y);
+                    ctx.lineTo(x+w-r,y);
+                    ctx.arc(x+w-r,y+r,r,1.5*Math.PI,2*Math.PI);
+                    ctx.lineTo(x+w,y+h-r);
+                    ctx.arc(x+w-r,y+h-r,r,0*Math.PI,0.5*Math.PI);
+                    ctx.lineTo(x+r,y+h);
+                    ctx.arc(x+r,y+h-r,r,0.5*Math.PI,Math.PI);
+                    ctx.lineTo(x,y+r);
+                    ctx.arc(x+r,y+r,r,Math.PI,1.5*Math.PI);
+                }
+            }
+            var Loading = {
+                animation: 0,
+                loads: 0,
+                loaded: false,
+                intro: 1,
+                logoImage: false,
+                percent: 0,
+                loadImages: function() {
+                    for(var n in images) {
+                        var image = document.createElement("img");
+                        image.src = images[n];
+                        image.onload = function() {
+                            Loading.loads++;
+                        }
+                        images[n] = image;
+                    }
+                },
+                loadAudios: function() {
+                    for(var n in audios) {
+                        var audio = document.createElement("audio");
+                        audio.src = audios[n];
+                        audio.oncanplaythrough = function() {
+                            Loading.loads++;
+                        }
+                        audios[n] = audio;
+                    }
+                },
+                loadLogoImage: function() {
+                    this.logoImage = document.createElement("img");
+                    this.logoImage.src = "https://johnbutlergames.com/logoLarge.png";
+                    this.logoImage.onload = function() {
+                        Loading.loads++;
+                    }
+                },
+                updateLoadingScreen: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var percent = this.loads/(images.length+audios.length+1);
+                    this.percent = this.percent*0.9+percent*0.1;
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s,s);
+                    ctx.translate(-250,-250);
+                    if(percent==1) {
+                        var a = 1-this.percent*(images.length+audios.length+1)+this.loads-1;
+                        ctx.globalAlpha = a;
+                    }
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(47.5,272.5,405*this.percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*this.percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = "rgb(255,100,0)";
+                    var a = this.animation/2%40;
+                    for(var n=0;n<40;n++) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.font = "30px Arial";
+                    ctx.fillText("Loading...",250,250);
+                    ctx.restore();
+
+                    this.animation++;
+                    if(percent==1&&this.percent>0.99) this.loaded = true;
+                },
+                updateIntro: function() {
+                    var s = Math.min(dimensions.width,dimensions.height)/500;
+                    var i = Math.min(easeInOut(this.intro/100),easeInOut((250-this.intro)/100));
+                    var i2 = Math.min(easeInOut(this.intro/50),easeInOut((250-this.intro)/50));
+                    ctx.save();
+                    ctx.translate(dimensions.width/2,dimensions.height/2);
+                    ctx.scale(s*i2,s*i2);
+                    ctx.translate(-250,-250);
+                    ctx.globalAlpha = i;
+                    ctx.drawImage(this.logoImage,0,0,500,500);
+                    ctx.restore();
+
+                    this.intro++;
+                    if(this.intro==300) this.intro = 0;
+                }
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h){return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h},
+                clickInBox: function(x,y,w,h){return this.inBox(x,y,w,h)&&this.click}
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function blocksColliding(b1,b2) {
+                return b1.x+b1.w>b2.x&&b1.x<b2.x+b2.w&&b1.y+b1.h>b2.y&&b1.y<b2.y+b2.h;
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function roundRect(x, y, width, height, radius) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+            }
+            var easeInOut=a=>1/(1+2.71828**(-10*(a-0.5)))
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(Loading.loaded) {
+                    if(Loading.intro) {
+                        Loading.updateIntro();
+                    } else {
+                        main();
+                    }
+                } else {
+                    Loading.updateLoadingScreen();
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+
+            initialize();
+            window.setInterval(update,15);
+
+            function main() {
+                game.update();
+                if(word.endsWith("JOHNBUTLERGAMES")) word = "";
+            }
+
+            var game = {
+                fade: 0,
+                loadedChunks: [],
+                chunks: [],
+                update: function() {
+                    ctx.save();
+                    ctx.translate(500,500);
+                    ctx.scale(cam.zoom,cam.zoom);
+                    this.drawGrid();
+                    this.chunks.draw();
+                    player.draw();
+                    ctx.restore();
+                    //draw
+
+                    if(startAnimation>250) player.update();
+                    //update player
+
+                    this.chunks.update();
+                    //update circles
+
+                    cam.update();
+
+                    ctx.fillStyle = 'rgba(0,0,0,'+(this.fade/100)+')';
+                    ctx.fillRect(0,0,1000,1000);
+                    if(this.fade>0) {
+                        this.fade -= 1.2;
+                    }
+                    //fade
+
+                    if(startAnimation<250) {
+                        var s = Math.max(0,startAnimation-150);
+                        var a = easeInOut(Math.max(1-s/100,0));
+                        var a2 = easeInOut(Math.max(1-s/50,0));
+                        var extra = easeInOut(Math.max(0,1-startAnimation/50));
+                        ctx.beginPath();
+                        ctx.fillStyle = "black";
+                        ctx.arc(500,500,400*a+extra*350,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.fillStyle = "white";
+                        ctx.globalAlpha = a2*(1-extra);
+                        ctx.font = "150px Comic Sans MS";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("Circles",500,400);
+                        ctx.font = "75px Comic Sans MS";
+                        ctx.fillText("A Pointless Game",500,550);
+                        ctx.globalAlpha = 1;
+                    }
+                    startAnimation++;
+                },
+                drawGrid: function() {
+                    ctx.strokeStyle = 'rgb(200,200,200)';
+                    ctx.lineWidth = 1;
+                    var xoff = (-cam.x*0.8)%25;
+                    var yoff = (-cam.y*0.8)%25;
+                    var n = -20;
+                    while(n < 70) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*25+xoff,-1500);
+                        ctx.lineTo(n*25+xoff,1500);
+                        ctx.stroke();
+                        n++;
+                    }
+                    n = -20;
+                    while(n < 70) {
+                        ctx.beginPath();
+                        ctx.moveTo(-1500,n*25+yoff);
+                        ctx.lineTo(1500,n*25+yoff);
+                        ctx.stroke();
+                        n++;
+                    }
+                },
+                chunks: {
+                    loaded: [],
+                    chunks: [],
+                    draw: function() {
+                        var screen = {x:cam.x-500,y:cam.y-500,w:1000,h:1000};
+                        var n = 0;
+                        while(n < this.loaded.length) {
+                            var chunk = this.loaded[n];
+                            var n2 = 0;
+                            while(n2 < chunk.objects.length) {
+                                var c = chunk.objects[n2];
+                                var boundingRect = {x:c.x-c.radius,y:c.y-c.radius,w:c.radius*2,h:c.radius*2}
+                                if(blocksColliding(screen,boundingRect)) {
+                                    ctx.lineWidth = 5;
+                                    ctx.strokeStyle = 'black';
+                                    ctx.beginPath();
+                                    ctx.arc(c.x-cam.x,c.y-cam.y,c.radius-2.5,0,2*Math.PI);
+                                    if(c.type=='collectable') {
+                                        ctx.strokeStyle = "rgba(100,100,200,0.3)";
+                                        ctx.fillStyle = "rgba(100,100,200,0.3)";
+                                        if(c.gold) {
+                                            ctx.strokeStyle = "rgba(200,200,100,0.3)";
+                                            ctx.fillStyle = "rgba(200,200,100,0.3)";
+                                        }
+                                        ctx.arc(c.x-cam.x,c.y-cam.y,c.radius-2.5,0,2*Math.PI);
+                                        ctx.stroke();
+                                        if(!c.collected) ctx.fill();
+                                    }
+                                    if(c.type=='color') {
+                                        ctx.fillStyle = c.color;
+                                        ctx.fill();
+                                    }
+                                    if(c.type=='gradient') {
+                                        var move = distToMove(c.radius,c.angle);
+                                        var grd = ctx.createLinearGradient(c.x-cam.x+move[0],c.y-cam.y+move[1],c.x-cam.x-move[0],c.y-cam.y-move[1]);
+                                        grd.addColorStop(0,c.start);
+                                        grd.addColorStop(1,c.end);
+                                        ctx.fillStyle = grd;
+                                        ctx.fill();
+                                    }
+                                    if(c.type=='image') {
+                                        ctx.save();
+                                        ctx.clip();
+                                        ctx.drawImage(c.img,c.x-c.radius+2.5-cam.x,c.y-c.radius+2.5-cam.y,c.radius*2-5,c.radius*2-5);
+                                        ctx.restore();
+                                    }
+                                    if(c.type=='eye') {
+                                        ctx.fillStyle = 'white';
+                                        ctx.fill();
+                                        var move = distToMove(c.radius/2,c.angle);
+                                        ctx.beginPath();
+                                        ctx.arc(c.x-cam.x+move[0],c.y-cam.y+move[1],c.radius*0.4,0,2*Math.PI);
+                                        ctx.fillStyle = 'black';
+                                        ctx.fill();
+                                        ctx.beginPath();
+                                        ctx.arc(c.x-cam.x,c.y-cam.y,c.radius-2.5,0,2*Math.PI);
+                                        ctx.save();
+                                        ctx.clip();
+                                        var blink = Math.min(c.blink,20);
+                                        blink = Math.abs(blink-10)/10;
+                                        blink = easeInOut(blink);
+                                        ctx.fillRect(c.x-cam.x-c.radius,c.y-cam.y-c.radius-blink*c.radius,c.radius*2,c.radius);
+                                        ctx.fillRect(c.x-cam.x-c.radius,c.y-cam.y+blink*c.radius,c.radius*2,c.radius);
+                                        ctx.restore();
+                                    }
+                                    ctx.stroke();
+                                }
+                                n2 += 1;
+                            }
+                            n++;
+                        }
+                    },
+                    update: function() {
+                        var n = 0;
+                        while(n < this.loaded.length) {
+                            var chunk = this.loaded[n];
+                            var n2 = 0;
+                            while(n2 < chunk.objects.length) {
+                                var c = chunk.objects[n2];
+                                if(c.active||word.endsWith("JOHNBUTLERGAMES")) {
+                                    this.updateCircle(c);
+                                }
+                                n2 += 1;
+                            }
+                            n++;
+                        }
+                    },
+                    updateCircle: function(c) {
+                        if(c.type=="collectable") return;
+                        if(c.type=='eye') {
+                            var a = dirTo(c.x,c.y,player.x,player.y);
+                            c.angle += turn(c.angle,a)/50;
+                            c.blink--;
+                            if(c.blink<0) {
+                                c.blink = Math.random()*400+100;
+                            }
+                        }
+                        if(word.endsWith("JOHNBUTLERGAMES")) {
+                            c.type = "color";
+                            c.color = "blue";
+                        }
+                    },
+                    add: function(x,y,theme) {
+                        var chunk = {x:x,y:y,objects:[]}
+                        if(x==0&&y==0) return chunk;
+                        var types = [];
+                        var n = 0;
+                        while(n < 15) {
+                            var type = 'solid-color';
+                            if(Math.random()<0.2) {
+                                type = 'opace-color';
+                            } else if(Math.random()<0.01) {
+                                type = 'shade';
+                            }
+                            if(Math.random()<0.04) {
+                                type = 'gradient';
+                            }
+                            if(Math.random()<0.01) {
+                                type = 'eye';
+                            }
+                            if(n>10) {
+                                type = 'collectable';
+                            }
+                            if(type=='eye') {
+                                types.push(type);
+                            } else {
+                                types.unshift(type);
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < 15) {
+                            var circle = {};
+                            var type = types[n];
+                            if(type=='solid-color'||type=='opace-color'||type=='shade') {
+                                circle.type = 'color';
+                                if(type=='solid-color') {
+                                    circle.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                                } else if(type=='opace-color') {
+                                    circle.color = 'hsla('+(Math.random()*360)+',100%,50%,0.4)';
+                                } else if(type=='shade') {
+                                    var s = Math.random()*255;
+                                    circle.color = 'rgb('+s+','+s+','+s+')';
+                                }
+                            }
+                            if(type=='gradient') {
+                                circle.type = 'gradient';
+                                circle.angle = Math.random()*360;
+                                var hue = Math.random()*360;
+                                circle.start = 'hsl('+hue+',100%,50%)';
+                                circle.end = 'hsl('+(hue+60+Math.random()*30)+',100%,50%)';
+                            }
+                            if(type=='eye') {
+                                circle.type = 'eye';
+                                circle.active = true;
+                                circle.angle = 0;
+                                circle.blink = Math.random()*500;
+                            }
+                            if(type=='image') {
+                                circle.type = 'image';
+                                circle.img = imgs[Math.floor(Math.random()*imgs.length)];
+                            }
+                            circle.x = x+Math.random()*500;
+                            circle.y = y+Math.random()*500;
+                            circle.radius = Math.random()*70+30;
+                            if(type=='collectable') {
+                                circle.type = 'collectable';
+                                circle.radius = 15;
+                                if(n==0&&Math.random()<0.5) {
+                                    circle.gold = true;
+                                }
+                            }
+                            circle.mass = Math.PI*Math.pow(circle.radius,2);
+                            chunk.objects.push(circle);
+                            n++;
+                        }
+                        for(var n=0;n<chunk.objects.length;n++) {
+                            var o = chunk.objects[n];
+                            var _delete = false;
+                            if(o.type!="collectable") continue;
+                            for(var n2=0;n2<chunk.objects.length;n2++) {
+                                var o2 = chunk.objects[n2];
+                                var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                if(dist<o2.radius-o.radius) {
+                                    _delete = true;
+                                    break;
+                                }
+                            }
+                            if(_delete) {
+                                chunk.objects.splice(n,1);
+                                n--;
+                            }
+                        }
+                        return chunk;
+                    },
+                    reload: function() {
+                        this.loaded = [];
+                        var loadCors = {x:Math.round(player.x/500)*500,y:Math.round(player.y/500)*500};
+
+                        var x = -2;
+                        while(x <= 2) {
+                            var y = -2;
+                            while(y <= 2) {
+                                this.loaded.push({x:loadCors.x+x*500,y:loadCors.y+y*500});
+                                y++;
+                            }
+                            x++;
+                        }
+
+                        var n = 0;
+                        while(n < this.chunks.length) {
+                            var n2 = 0;
+                            while(n2 < this.loaded.length) {
+                                if(this.chunks[n].x==this.loaded[n2].x&&this.chunks[n].y==this.loaded[n2].y) {
+                                    this.loaded.splice(n2,1);
+                                } else {
+                                    n2++;
+                                }
+                            }
+                            n++;
+                        }
+
+                        n = 0;
+                        while(n < this.loaded.length) {
+                            this.chunks.push(this.add(this.loaded[n].x,this.loaded[n].y));
+                            n++;
+                        }
+                        //add chunks that dont exist and need to be loaded
+
+                        this.loaded = [];
+                        var x = -2;
+                        while(x <= 2) {
+                            var y = -2;
+                            while(y <= 2) {
+                                this.loaded.push({x:loadCors.x+x*500,y:loadCors.y+y*500});
+                                y++;
+                            }
+                            x++;
+                        }
+
+                        n = 0;
+                        while(n < this.chunks.length) {
+                            var chunk = this.chunks[n];
+                            var n2 = 0;
+                            while(n2 < this.loaded.length) {
+                                var loaded = this.loaded[n2];
+                                if(loaded.x==chunk.x&&loaded.y==chunk.y) {
+                                    this.loaded[n2] = chunk;
+                                }
+                                n2++;
+                            }
+                            n++;
+                        }
+                    }
+                }
+            }
+
+            var player = {
+                mass: Math.PI*100,
+                r: 10,
+                x: 250,
+                y: 250,
+                xmove: 0,
+                ymove: 0,
+                chunkCors: {x:0,y:0},
+                left: false,
+                right: false,
+                up: false,
+                update: function() {
+                    if(Keys.keys[37]||Keys.keys[65]) {
+                        this.xmove -= 0.2;
+                        this.left = true;
+                    }
+                    if(Keys.keys[39]||Keys.keys[68]) {
+                        this.xmove += 0.2;
+                        this.right = true;
+                    }
+                    if((Keys.keys[38]||Keys.keys[87])&&touchingCircles(this.x,this.y,14).length>0) {
+                        this.ymove = -5;
+                        this.up = true;
+                    }
+                    //arrow key movement
+
+                    this.ymove += 0.2;
+                    //move down
+
+                    var oldChunkCors = JSON.parse(JSON.stringify(this.chunkCors));
+
+                    this.x += this.xmove;
+                    this.y += this.ymove;
+                    //move player
+
+                    this.chunkCors = {x:Math.round(this.x/500)*500,y:Math.round(this.y/500)*500};
+                    if(JSON.stringify(oldChunkCors)!=JSON.stringify(this.chunkCors)) {
+                        game.chunks.reload();
+                        //reload chunks
+                    }
+
+                    this.xmove *= 0.96;
+                    this.ymove *= 0.96;
+                    //damping
+
+                    var circles = touchingCircles(player.x,player.y,10);
+                    var n = 0;
+                    while(n < circles.length) {
+                        var circle = circles[n];
+                        var col = resolveCollision(player,{x:circle.x,y:circle.y,xmove:0,ymove:0,stable:true,mass:circle.mass,r:circle.radius},0.9)[0];
+                        player.x = col.x;
+                        player.y = col.y;
+                        player.xmove = col.xmove;
+                        player.ymove = col.ymove;
+                        n++;
+                    }
+                    //resolve collisions
+
+                    var circles = getCollectables();
+                    var n = 0;
+                    while(n < circles.length) {
+                        var circle = circles[n];
+                        if(circle.type!="collectable") continue;
+                        var dist = distTo(player.x,player.y,circle.x,circle.y);
+                        if(dist<player.r+circle.radius) {
+                            circle.collected = true;
+                        }
+                        n++;
+                    }
+                    //collectables
+                },
+                draw: function() {
+                    ctx.beginPath();
+                    ctx.fillStyle = 'black';
+                    ctx.arc(player.x-cam.x,player.y-cam.y,10,0,2*Math.PI);
+                    ctx.fill();
+
+                    ctx.save();
+                    ctx.translate(player.x-cam.x,player.y-cam.y);
+                    ctx.strokeStyle = "black";
+                    ctx.lineJoin = "round";
+                    ctx.lineWidth = 3;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "25px Comic Sans MS";
+                    if(!this.left) {
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(-100,-35,30,30);
+                        ctx.strokeRect(-100,-35,30,30);
+                        
+                        ctx.fillRect(-100,5,30,30);
+                        ctx.strokeRect(-100,5,30,30);
+                        
+                        ctx.fillStyle = "black";
+                        ctx.fillText("A",-85,-17);
+                        ctx.fillText("←",-85,20);
+                    }
+                    if(!this.right) {
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(70,-35,30,30);
+                        ctx.strokeRect(70,-35,30,30);
+                        
+                        ctx.fillRect(70,5,30,30);
+                        ctx.strokeRect(70,5,30,30);
+                        
+                        ctx.fillStyle = "black";
+                        ctx.fillText("D",85,-17);
+                        ctx.fillText("→",85,20);
+                    }
+                    if(!this.up) {
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(-35,-100,30,30);
+                        ctx.strokeRect(-35,-100,30,30);
+                        
+                        ctx.fillRect(5,-100,30,30);
+                        ctx.strokeRect(5,-100,30,30);
+                        
+                        ctx.fillStyle = "black";
+                        ctx.fillText("W",-20,-82);
+                        ctx.fillText("↑",20,-85);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            function touchingCircles(x,y,distance) {
+                var n = 0;
+                var arr = [];
+                while(n < game.chunks.loaded.length) {
+                    var chunk = game.chunks.loaded[n];
+                    var n2 = 0;
+                    while(n2 < chunk.objects.length) {
+                        var circle = chunk.objects[n2];
+                        if(circle.type=='collectable') {
+                            n2++;
+                            continue;
+                        }
+                        if(distTo(circle.x,circle.y,x,y)<=circle.radius+distance) {
+                            arr.push(circle);
+                        }
+                        n2 += 1;
+                    }
+                    n += 1;
+                }
+                return arr;
+            }
+            function getCollectables() {
+                var n = 0;
+                var arr = [];
+                while(n < game.chunks.loaded.length) {
+                    var chunk = game.chunks.loaded[n];
+                    var n2 = 0;
+                    while(n2 < chunk.objects.length) {
+                        var circle = chunk.objects[n2];
+                        if(circle.type=='collectable') {
+                            arr.push(circle);
+                        }
+                        n2 += 1;
+                    }
+                    n += 1;
+                }
+                return arr;
+            }
+
+            function resolveCollision(b1,b2,e) {
+                var ball1 = JSON.parse(JSON.stringify(b1));
+                var ball2 = JSON.parse(JSON.stringify(b2));
+                if(ball1.stable!=true||ball2.stable!=true) {
+                    var d = distTo(ball1.x,ball1.y,ball2.x,ball2.y);
+                    var dx = ball2.x-ball1.x;
+                    var dy = ball2.y-ball1.y;
+                    var nx = dx/d;
+                    var ny = dy/d;
+                    var s = ball1.r + ball2.r - d;
+                    var k = -2 * ((ball2.xmove - ball1.xmove) * nx + (ball2.ymove - ball1.ymove) * ny) / (1/ball1.mass + 1/ball2.mass);
+                    if(ball1.stable!=true&&ball2.stable!=true) {
+                        ball1.xmove -= k * nx / ball1.mass*e;
+                        ball1.ymove -= k * ny / ball1.mass*e;
+                        ball2.xmove += k * nx / ball2.mass*e;
+                        ball2.ymove += k * ny / ball2.mass*e;
+                        ball1.x -= nx * s/2;
+                        ball1.y -= ny * s/2;
+                        ball2.x += nx * s/2;
+                        ball2.y += ny * s/2;
+                    } else {
+                        if(ball1.stable) {
+                            var ball3 = JSON.parse(JSON.stringify(ball2));
+                            ball2 = JSON.parse(JSON.stringify(ball1));
+                            ball1 = JSON.parse(JSON.stringify(ball3));
+                        }
+                        ball1.xmove -= k * nx / ball1.mass*e;
+                        ball1.ymove -= k * ny / ball1.mass*e;
+                        ball2.xmove += k * nx / ball2.mass*e;
+                        ball2.ymove += k * ny / ball2.mass*e;
+                        ball1.x -= nx * s;
+                        ball1.y -= ny * s;
+                    }
+                }
+                return [ball1,ball2];
+            }
+
+            var cam = {
+                x: 250,
+                y: 250,
+                zoom: 2,
+                update: function() {
+                    this.x = this.x*0.95+player.x*0.05;
+                    this.y = this.y*0.95+player.y*0.05;
+
+                    var speed = distTo(0,0,player.xmove,player.ymove);
+                    this.zoom = this.zoom*0.98+(2-Math.min(Math.max(0,speed-3)/3,0.5))*0.02;
+                }
+            }
+
+            game.chunks.reload();
+            var startAnimation = 0;
+        </script>
+    </body>
+</html>

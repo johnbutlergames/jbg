@@ -1,0 +1,323 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Micro Factory";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+        }
+
+        var menu = {
+            page: "game",
+            switchPage: "game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.background.update();
+                this.objects.update();
+                this.level.update();
+                this.cam.update();
+                this.placement.update();
+                this.placement.updateUI();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                this.background.draw();
+
+                ctx.save();
+                this.cam.viewport.align();
+                this.objects.draw();
+                this.placement.draw();
+                ctx.restore();
+
+                this.placement.drawUI();
+            },
+            reset: function () {
+            },
+            keys: {
+                action: function (label, type) {
+                    var keys = this[label];
+                    for (var key of keys) {
+                        if (Keys[type][key]) return true;
+                    }
+                    return false;
+                },
+                panCamLeft: [37, 65],
+                panCamRight: [39, 68],
+                panCamUp: [38, 87],
+                panCamDown: [40, 83],
+                zoomCamIn: [90],
+                zoomCamOut: [88]
+            },
+            background: {
+                update: function () {
+
+                },
+                draw: function () {
+                    ctx.fillStyle = "rgb(200,200,200)";
+                    ctx.fillRect(0, 0, 1500, 1000);
+
+                    ctx.save();
+                    game.cam.viewport.align();
+                    var backgroundTiles = [];
+                    var vx = Math.floor(game.cam.viewport.x / 100) * 100 - 100;
+                    var vy = Math.floor(game.cam.viewport.y / 100) * 100 - 100;
+                    var vw = Math.ceil(game.cam.viewport.w / 100) * 100 + 200;
+                    var vh = Math.ceil(game.cam.viewport.h / 100) * 100 + 200;
+                    for (var x = vx; x < vx + vw; x += 100) {
+                        for (var y = vy; y < vy + vh; y += 100) {
+                            backgroundTiles.push({ x: x, y: y, w: 100, h: 100 });
+                        }
+                    }
+                    for (var o of backgroundTiles) {
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(o.x, o.y, o.w, o.h);
+                    }
+                    ctx.restore();
+                }
+            },
+            objects: {
+                objects: [],
+                update: function () {
+
+                },
+                draw: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x,o.y);
+                    ctx.fillStyle = "green";
+                    ctx.fillRect(10,10,80,80);
+                    ctx.restore();
+                },
+                create: function(x,y) {
+                    this.objects.push({x:x,y:y,w:100,h:100});
+                }
+            },
+            placement: {
+                update: function () {
+                    if (Mouse.click) {
+                        var x = Math.floor(game.cam.viewport.mouse.x / 100) * 100;
+                        var y = Math.floor(game.cam.viewport.mouse.y / 100) * 100;
+                        game.objects.create(x, y);
+                    }
+                },
+                draw: function () {
+                    var x = Math.floor(game.cam.viewport.mouse.x / 100) * 100;
+                    var y = Math.floor(game.cam.viewport.mouse.y / 100) * 100;
+                    ctx.fillStyle = "rgba(0,0,0,0.3)";
+                    ctx.fillRect(x, y, 100, 100);
+                },
+                updateUI: function () {
+
+                },
+                drawUI: function () {
+
+                }
+            },
+            level: {
+                update: function () {
+
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                realPosition: {
+                    x: 0,
+                    y: 0,
+                    zoom: 1,
+                },
+                viewport: {
+                    x: 0,
+                    y: 0,
+                    w: 10,
+                    h: 10,
+                    update: function () {
+                        this.setViewport();
+                        this.mouse.update();
+                    },
+                    setViewport: function () {
+                        var w = 1500 / game.cam.zoom;
+                        var h = 1000 / game.cam.zoom;
+                        var x = game.cam.x;
+                        var y = game.cam.y;
+                        this.x = x - w / 2;
+                        this.y = y - h / 2;
+                        this.w = w;
+                        this.h = h;
+                    },
+                    mouse: {
+                        x: 0,
+                        y: 0,
+                        update: function () {
+                            this.x = (Mouse.x - 750) / game.cam.zoom + game.cam.x;
+                            this.y = (Mouse.y - 500) / game.cam.zoom + game.cam.y;
+                        }
+                    },
+                    align: function () {
+                        ctx.translate(750, 500);
+                        ctx.scale(game.cam.zoom, game.cam.zoom);
+                        ctx.translate(-game.cam.x, -game.cam.y);
+                    }
+                },
+                update: function () {
+                    this.handleInput();
+                    this.animatePosition();
+                    this.viewport.update();
+                },
+                animatePosition: function () {
+                    var animateFactor = 0.1;
+                    this.x = this.x * (1 - animateFactor) + this.realPosition.x * animateFactor;
+                    this.y = this.y * (1 - animateFactor) + this.realPosition.y * animateFactor;
+                    this.zoom = this.zoom * (1 - animateFactor) + this.realPosition.zoom * animateFactor;
+                },
+                handleInput: function () {
+                    var movementSpeed = 5 / this.zoom;
+                    var zoomSpeed = 1.02;
+                    if (game.keys.action("panCamLeft", "keys")) {
+                        this.realPosition.x -= movementSpeed;
+                    }
+                    if (game.keys.action("panCamRight", "keys")) {
+                        this.realPosition.x += movementSpeed;
+                    }
+                    if (game.keys.action("panCamUp", "keys")) {
+                        this.realPosition.y -= movementSpeed;
+                    }
+                    if (game.keys.action("panCamDown", "keys")) {
+                        this.realPosition.y += movementSpeed;
+                    }
+                    if (game.keys.action("zoomCamIn", "keys")) {
+                        this.realPosition.zoom *= zoomSpeed;
+                    }
+                    if (game.keys.action("zoomCamOut", "keys")) {
+                        this.realPosition.zoom /= zoomSpeed;
+                    }
+                }
+            }
+        }
+
+        game.reset();
+
+        /*
+        TODO:
+        Camera:
+            Moving Camera with mouse
+            Viewport boudary
+        Placement:
+            Create placement UI
+            Placement Animation
+            Delete Blocks
+            Clear
+            Placement Boundary
+        Movement:
+            Pause
+            Play
+            Step
+            Animations
+            Speed
+            Reset
+        Level:
+            Goal molecule
+            Level Boundary
+        Blocks:
+            Block Logic
+            Tileset
+        */
+    </script>
+</body>
+
+</html>

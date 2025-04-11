@@ -1,0 +1,802 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = "Don't Shrink";
+            var dimensions = {width:500,height:500};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                word += String.fromCharCode(event.keyCode);
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var word = '';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro-=2;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation++;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,20);
+
+            function main() {
+                if(page=='menu') {
+                    menu.update();
+                } else if(page=='game') {
+                    game.tick();
+                }
+                particles.update();
+                t++;
+            }
+
+            var menu = {
+                startAnimation: 0,
+                animation: 0,
+                restartAnimation: 0,
+                update: function() {
+                    if(Keys.down[32]||Keys.down[88]||Mouse.click&&distTo(250,250,Mouse.x,Mouse.y)<=60) {
+                        if(this.animation==0) {
+                            this.animation = 1;
+                        }
+                    }
+                    if(this.animation>0) {
+                        this.animation *= 1.1;
+                    }
+                    if(this.startAnimation < 390) {
+                        this.startAnimation += 8;
+                    }
+                    if(this.animation>600) {
+                        page = 'game';
+                        game.reset();
+                    }
+                    //animations
+
+                    ctx.textAlign = 'center';
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'rgb(200,0,0)';
+                    ctx.font = "60px Comic Sans MS";
+                    ctx.fillText("Don't Shrink",250,100);
+                    //title
+
+                    ctx.font = "40px Comic Sans MS";
+                    if(highscore!=100) {
+                        ctx.fillText("Highscore: "+highscore,250,400);
+                    } else {
+                        ctx.fillText("Highscore: 💯",250,400);
+                    }
+                    //highscore
+
+                    ctx.fillStyle = 'rgb(0,0,100)';
+                    ctx.font = "30px Comic Sans MS";
+                    ctx.fillText('By John Butler',250,480);
+                    //credits
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(70+this.startAnimation,0,370-this.startAnimation,500);
+                    //text animation
+
+                    if(this.startAnimation>=360) {
+                        ctx.beginPath();
+                        ctx.arc(250,250,60,0,2*Math.PI);
+                    } else {
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(250,250);
+                        ctx.lineTo(250,190);
+                        ctx.arc(250,250,60,-90*Math.PI/180,Math.min(this.startAnimation-90,270)*Math.PI/180);
+                        ctx.lineTo(250,250);
+                    }
+                    if(distTo(250,250,Mouse.x,Mouse.y)<=60) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    } else {
+                        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                    }
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgb(0,0,100)';
+                    ctx.stroke();
+                    //play button
+
+                    ctx.beginPath();
+                    ctx.moveTo(250+Math.max(this.startAnimation-340,0)/2,250);
+                    ctx.lineTo(250-Math.max(this.startAnimation-340,0)/3,250+Math.max(this.startAnimation-340,0)/2.6);
+                    ctx.lineTo(250-Math.max(this.startAnimation-340,0)/3,250-Math.max(this.startAnimation-340,0)/2.6);
+                    ctx.lineTo(250+Math.max(this.startAnimation-340,0)/2,250);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                    ctx.stroke();
+                    //play button triangle
+
+                    ctx.fillStyle = 'rgb(0,0,100)';
+                    ctx.beginPath();
+                    ctx.arc(250,250,this.animation,0,2*Math.PI);
+                    ctx.fill();
+                    //play animation
+
+                    if(this.restartAnimation>0) {
+                        this.restartAnimation -= 5;
+                    }
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(-1,0,this.restartAnimation*5,500);
+                    //death animation
+                }
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    this.fadedCircles.update();
+                    this.perfectBalls.update();
+                    if(!this.gameOver) {
+                        this.circle.update();
+                    }
+                    if((Keys.down[32]||Keys.down[88]||Mouse.click)&&!this.gameOver) {
+                        if(tutorial) {
+                            tutorial -= 0.25;
+                        }
+                        this.circle.setWidth();
+                        this.timeSincePlay = 0;
+                    }
+                    if(this.circle.width<30) {
+                        if(!this.gameOver) {
+                            playNote(300,100);
+                        }
+                        this.gameOver = true;
+                        if(this.score>highscore) {
+                            highscore = this.score;
+                        }
+                        localStorage.setItem("dontshrinkhighscore",highscore);
+                    }
+                },
+                draw: function() {
+                    this.drawBackground();
+
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'black';
+                    ctx.font = "25px Comic Sans MS";
+                    if(tutorial===1) {
+                        ctx.fillText("Click when the pulse hits the edge...",250,430);
+                        ctx.font = "20px Comic Sans MS";
+                        ctx.fillText("(or Space/X)",100,455);
+                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = 'black';
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(100,380);
+                        ctx.lineTo(150,330);
+                        ctx.moveTo(150,330);
+                        ctx.lineTo(130,330);
+                        ctx.moveTo(150,330);
+                        ctx.lineTo(150,350);
+                        ctx.stroke();
+                    } else if(tutorial===0.75) {
+                        ctx.fillText("Don't click when the pulse",250,410);
+                        ctx.fillText("is inside the black circle!",250,440);
+                    } else if(tutorial===0.5) {
+                        ctx.fillText("Click when the pulse is exactly on",250,410);
+                        ctx.fillText("the edge to get a perfect bonus!",250,440);
+                    }
+                    //tutorial
+
+                    particles.draw();
+                    this.fadedCircles.draw();
+                    this.perfectBalls.draw();
+                    this.drawText();
+                    this.circle.draw();
+                    if(this.startAnimation>0) {
+                        this.startAnimation -= 5;
+                        ctx.fillStyle = 'rgb(0,0,100)';
+                        ctx.fillRect(-1,0,this.startAnimation*5,500);
+                    }
+                    if(this.gameOver) {
+                        this.deathAnimation += 0.3;
+                        if(this.deathAnimation<=600) {
+                            this.deathAnimation*=1.1;
+                            if(this.deathAnimation>600) {
+                                this.deathAnimation=601;
+                            }
+                        } else {
+                            this.deathAnimation+=1;
+                            if(Keys.down[32]||Keys.down[88]||Mouse.click) {
+                                this.deathAnimation = 801;
+                            }
+                        }
+                        if(this.deathAnimation>800) {
+                            menu.restartAnimation = 100;
+                            page = 'menu';
+                            menu.animation = 0;
+                            deathAnimation = 100;
+                        }
+                    } else {
+                        if(!tutorial) {
+                            ctx.globalAlpha = Math.min(Math.max((this.timeSincePlay-200)/100,0),1);
+                            ctx.textAlign = 'center';
+                            ctx.fillStyle = 'black';
+                            ctx.font = "30px Comic Sans MS";
+                            ctx.fillText("Press Space/X or click to play...",250,430);
+                            ctx.globalAlpha = 1;
+                        }
+                        this.timeSincePlay++;
+                    }
+                },
+                drawText: function() {
+                    ctx.textAlign = 'left';
+                    ctx.font = "40px Comic Sans MS";
+                    ctx.fillStyle = 'rgb('+this.perfect*2.55+','+this.perfect*2.55+',0)';
+                    if(this.score!=100) {
+                        ctx.fillText(this.score,10,40);
+                    } else {
+                        ctx.fillText("💯",10,40);
+                    }
+                    ctx.fillStyle = 'black';
+                    if(highscore!=100) {
+                        ctx.fillText("High: "+highscore,300,40);
+                    } else {
+                        ctx.fillText("High: 💯",300,40);
+                    }
+                    if(this.perfectStreak>0) {
+                        ctx.font = "20px Comic Sans MS";
+                        ctx.fillText("Perfect Multiplier: "+(this.perfectStreak*5),10,480);
+                    }
+                    if(this.perfect) {
+                        ctx.textAlign = 'center';
+                        this.perfect -= 1;
+                        ctx.fillStyle = 'rgba(255,255,0,'+this.perfect/100+')';
+                        ctx.font = "50px Comic Sans MS";
+                        var perfectTexts = ["Perfect","Double Perfect","On Fire","Extreme Accuracy","Perfect Accuracy"];
+                        ctx.fillText(perfectTexts[Math.min(this.perfectStreak-1,4)]+"!",250,120);
+                    }
+                },
+                drawBackground: function() {
+                    var a = this.backgroundAnimation%200;
+                    this.backgroundAnimation += this.speed;
+                    var n = -2;
+                    while(n < 4) {
+                        ctx.strokeStyle = this.backgroundColor;
+                        ctx.lineWidth = 100;
+                        ctx.beginPath();
+                        ctx.moveTo(a+n*200,0);
+                        ctx.lineTo(a+200+n*200,500);
+                        ctx.stroke();
+
+                        n++;
+                    }
+                },
+                perfectBalls: {
+                    balls: [],
+                    update: function() {
+                        if(word.endsWith('JOHNBUTLERGAMES')) {
+                            var d = Math.random()*360;
+                            var m = distToMove(game.circle.width+10,d);
+                            var s = Math.min(game.perfectStreak,5);
+                            var m2 = distToMove(5+s,d);
+                            game.perfectBalls.balls.push({x:m[0]+250,y:m[1]+250,xmove:m2[0],ymove:m2[1],type:6});
+                            word = '';
+                        }
+
+                        var n = 0;
+                        while(n < this.balls.length) {
+                            var b = this.balls[n];
+                            b.x += b.xmove;
+                            b.y += b.ymove;
+                            //move
+
+                            if(distTo(250,250,b.x,b.y)<10+game.circle.width) {
+                                var dir = dirTo(250,250,b.x,b.y);
+                                var speed = distTo(0,0,b.xmove,b.ymove);
+                                var move = distToMove(speed,dir);
+                                b.xmove = move[0];
+                                b.ymove = move[1];
+                            }
+                            //middle circle collision
+
+                            if(b.x<=10) {
+                                b.x = 20-b.x;
+                                b.xmove = -b.xmove;
+                            }
+                            if(b.y<=10) {
+                                b.y = 20 - b.y;
+                                b.ymove = -b.ymove;
+                            }
+                            if(b.x>=490) {
+                                b.x = 980 - b.x;
+                                b.xmove =- b.xmove;
+                            }
+                            if(b.y>=490) {
+                                b.y = 980 - b.y;
+                                b.ymove =- b.ymove;
+                            }
+                            //wall collisions
+
+                            if(b.type==3||b.type==4||b.type==5) {
+                                var p = {};
+                                p.x = b.x+Math.random()*8-4;
+                                p.y = b.y+Math.random()*8-4;
+                                p.alpha = 2;
+                                p.decay = 0.1;
+                                p.xmove = Math.random()-0.5;
+                                p.ymove = Math.random()-0.5;
+                                p.r = 3;
+                                if(b.type==3) {
+                                    p.color = 'rgb(255,'+(Math.random()*255)+',0)';
+                                } else if(b.type==4) {
+                                    p.color = 'hsl('+t+',100%,50%)';
+                                    p.r = 3.5;
+                                } else if(b.type==5) {
+                                    p.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                                    p.r = 4;
+                                }
+                                particles.particles.push(p);
+                            }
+                            //fireball particles
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.balls.length) {
+                            var b = this.balls[n];
+                            if(b.type==1) {
+                                ctx.fillStyle = 'rgb(255,255,0)';
+                            } else if(b.type==2) {
+                                ctx.fillStyle = 'rgb(0,0,255)';
+                            } else if(b.type==3) {
+                                ctx.fillStyle = 'rgb(255,'+(Math.random()*255)+',0)';
+                            } else if(b.type==4) {
+                                ctx.fillStyle = 'hsl('+t+',100%,50%)';
+                            } else if(b.type==5) {
+                                ctx.fillStyle = 'hsl('+(Math.random()*360)+',100%,50%)';
+                            }
+
+                            if(b.type==6) {
+                                ctx.fillStyle = 'blue';
+                                ctx.fillRect(b.x-10,b.y-10,20,20);
+                                ctx.fillStyle = 'black';
+                                ctx.beginPath();
+                                ctx.arc(b.x-3.5,b.y-3.5,2,0,2*Math.PI);
+                                ctx.fill();
+                                ctx.beginPath();
+                                ctx.arc(b.x+3.5,b.y-3.5,2,0,2*Math.PI);
+                                ctx.fill();
+                            } else {
+                                ctx.beginPath();
+                                ctx.arc(b.x,b.y,10,0,2*Math.PI);
+                                ctx.fill();
+                            }
+                            n++;
+                        }
+                    }
+                },
+                circle: {
+                    width: 0,
+                    stopped: 0,
+                    timeTillCanStop: 0,
+                    pulse: 0,
+                    pulseIn: false,
+                    color: '',
+                    setWidth: function() {
+                        if(this.pulse<=this.width-2) {
+                            game.perfectStreak = 0;
+                            game.perfect = 0;
+                            game.fadedCircles.circles.push({alpha:1,outerRadius:this.width,innerRadius:this.pulse,color:this.color});
+                            this.width = this.pulse;
+                            if(this.pulse>=30) {
+                                game.score++;
+                                playNote(600,100);
+                            }
+                        } else {
+                            game.perfectStreak++;
+                            playNote(400,100);
+                            window.setTimeout(function() {
+                                playNote(600,100);
+                            },100);
+                            game.fadedCircles.circles.push({alpha:1,outerRadius:this.width,innerRadius:Math.max(this.pulse-10,0),color:'rgb(255,255,0)'});
+                            this.width += 5;
+                            this.width = Math.min(this.width,100);
+                            game.perfect = 100;
+                            game.score += 5*game.perfectStreak;
+                            var d = Math.random()*360;
+                            var m = distToMove(this.width+10,d);
+                            var s = Math.min(game.perfectStreak,5);
+                            var m2 = distToMove(5+s,d);
+                            game.perfectBalls.balls.push({x:m[0]+250,y:m[1]+250,xmove:m2[0],ymove:m2[1],type:s});
+                        }
+                        if(game.score>40) {
+                            game.speed += 0.1;    
+                        }
+                    },
+                    update: function() {
+                        if(this.stopped<=0) {
+                            if(this.pulseIn) {
+                                this.pulse -= game.speed;
+                            } else {
+                                this.pulse += game.speed;
+                            }
+                            if(this.pulse<=0) {
+                                this.pulse = 0;
+                                this.pulseIn = false
+                            }
+                            if(this.pulse>=this.width) {
+                                this.pulse = this.width;
+                                this.pulseIn = true;
+                            }
+                            //change pulse width
+
+                            if(game.score > 30 && Math.random()<0.01 && this.timeTillCanStop==0) {
+                                this.stopped = Math.random()*20+30;
+                            }
+                        } else {
+                            this.stopped--;
+                            if(this.stopped<=0) {
+                                this.timeTillCanStop = 100;
+                            }
+                        }
+                        if(this.timeTillCanStop>0) {
+                            this.timeTillCanStop--;
+                        }
+                    },
+                    draw: function() {
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(250,250,this.width,0,2*Math.PI);
+                        ctx.fill();
+                        //large circle
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                        if(this.stopped>0) {
+                            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                        }
+                        ctx.arc(250,250,this.pulse,0,2*Math.PI);
+                        ctx.clip();
+                        if(game.perfectStreak==4) {
+                            ctx.fillStyle = 'hsl('+t+',100%,30%)';
+                        }
+                        if(game.perfectStreak>4) {
+                            var x = 0;
+                            while(x < 10) {
+                                var y = 0;
+                                while(y < 10) {
+                                    var f = x;
+                                    if(y%2) {
+                                        f++;
+                                    }
+                                    f%=2;
+                                    if(f) {
+                                        ctx.fillStyle = 'hsl('+(t+60)+',100%,40%)';
+                                    } else {
+                                        ctx.fillStyle = 'hsl('+t+',100%,50%)';
+                                    }
+                                    ctx.fillRect(x*50,y*50,50,50);
+                                    y++;
+                                }
+                                x++;
+                            }
+                        } else {
+                            ctx.fillRect(0,0,500,500);
+                        }
+                        ctx.restore();
+                        //pulsing circle
+
+                        if(game.deathAnimation<30) {
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 4+game.deathAnimation;
+                            ctx.beginPath();
+                            ctx.arc(250,250,Math.max(28-game.deathAnimation/2,0),0,360);
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = 'black';
+                            ctx.beginPath();
+                            ctx.arc(250,250,game.deathAnimation-2,0,360);
+                            ctx.fill();
+                            if(game.deathAnimation>600) {
+                                ctx.textAlign = 'center';
+                                ctx.fillStyle = 'rgba(200,0,0,'+(3-Math.abs((game.deathAnimation-700)/33))+')';
+                                ctx.font = "40px Comic Sans MS";
+                                if(game.score!=100) {
+                                    ctx.fillText("Your score was: "+game.score,250,250);
+                                } else {
+                                    ctx.fillText("Your score was: 💯",250,250);
+                                }
+                            }
+                        }
+                        //inner black circle
+                    }
+                },
+                fadedCircles: {
+                    circles: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.circles.length) {
+                            var c = this.circles[n];
+                            c.alpha -=0.03;
+                            c.outerRadius += 1;
+                            c.innerRadius += 1;
+                            if(c.alpha <= 0) {
+                                this.circles.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.circles.length) {
+                            var c = this.circles[n];
+                            ctx.beginPath();
+                            ctx.globalAlpha = c.alpha;
+                            var grd = ctx.createRadialGradient(250,250,c.innerRadius,250,250,c.innerRadius+0.1);
+                            grd.addColorStop(0,'rgba(0,0,0,0)');
+                            grd.addColorStop(1,c.color);
+                            ctx.fillStyle = grd;
+                            ctx.arc(250,250,c.outerRadius,0,2*Math.PI);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.globalAlpha = 1;
+
+                            n++;
+                        }
+                    }
+                },
+                reset: function() {
+                    this.timeSincePlay = 0;
+                    this.perfectBalls.balls = [];
+                    this.speed = 2;
+                    this.deathAnimation = 0;
+                    this.score = 0;
+                    this.circle.width = 100;
+                    this.circle.pulse = 100;
+                    this.circle.pulseIn = false;
+                    this.circle.stopped = 0;
+                    this.perfectStreak = 0;
+                    this.gameOver = false;
+                    this.startAnimation = 100;
+                    this.circle.color = 'hsl('+(Math.random()*360)+',100%,50%)';
+                    this.backgroundColor = 'hsl('+(Math.random()*360)+',100%,90%)';
+                },
+                gameOver: false,
+                perfectStreak: 0,
+                timeSincePlay: 0,
+                speed: 2,
+                score: 0,
+                perfect: 0,
+                startAnimation: 0,
+                backgroundColor: '',
+                backgroundAnimation: 0
+            }
+
+            var particles = {
+                particles: [],
+                update: function() {
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        p.x += p.xmove;
+                        p.y += p.ymove;
+                        p.alpha -= p.decay;
+                        if(p.alpha<=0) {
+                            this.particles.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                },
+                draw: function() {
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        ctx.beginPath();
+                        ctx.globalAlpha = p.alpha;
+                        ctx.fillStyle = p.color;
+                        ctx.arc(p.x,p.y,p.r,0,2*Math.PI);
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            var tutorial = 1;
+            var highscore = 0;
+            if(window.localStorage.getItem('dontshrinkhighscore')!==null) {
+                highscore = Number(window.localStorage.getItem('dontshrinkhighscore'));
+            }
+            var page = 'menu';
+            var t = 0;
+
+            var context = new AudioContext();
+            function playNote(frequency,length) {
+                var oscillator = context.createOscillator();
+                var gainNode = context.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                oscillator.connect(context.destination);
+                oscillator.start();
+                setTimeout(function(){
+                    gainNode.gain.setTargetAtTime(0, context.currentTime, 1);
+                    oscillator.stop();
+                },length);
+            }
+        </script>
+    </body>
+</html>

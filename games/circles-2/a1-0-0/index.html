@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script src="game.js"></script>
+    <script src="sprites.js"></script>
+    <script src="components.js"></script>
+    <script src="player.js"></script>
+    <script src="input.js"></script>
+    <script>
+        var title = "Circles 2";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            game.tick();
+        }
+
+        var game = new Game();
+        game.loadLevel({
+            objects:
+                [
+                    { x: 40, y: -490, r: 20, type: "player" },
+                    { x: 0, y: 300, r: 100, type: "circle platform" },
+                    { x: 200, y: 350, r: 200, type: "circle platform" },
+                    { x: -500, y: 350, r: 200, type: "circle platform" },
+                    { x: 0, y: -250, r: 200, type: "circle platform" },
+                    { x: 250, y: -100, r: 200, type: "circle platform" },
+                    { x: 25, y: -600, r: 100, type: "circle platform" },
+                    { x: 250, y: -600, r: 100, type: "circle platform" }
+                ]
+        });
+        game.loadCanvas(ctx);
+    </script>
+</body>

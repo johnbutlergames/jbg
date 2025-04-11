@@ -1,0 +1,1336 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Space Ace';
+            var dimensions = {width:1000,height:1000};
+            var imgs = ['asteroid1.png','asteroid2.png','asteroid3.png','asteroid4.png','asteroid5.png','asteroid6.png','alien-spaceship.png','spaceship1.png','spaceship2.png','spaceship3.png','spaceship4.png','engine1.png','engine2.png','engine3.png','weapon1.png'];
+            var audios = [];
+
+            document.title = title;
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            canvas.oncontextmenu = function(event) {
+                event.preventDefault();
+                Mouse.right = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            var loads = 0;
+            var loaded = true;
+            var intro = 0;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2-y1,x2-x1)*180/Math.PI);
+            }
+            function distToMove(dis,dir) {
+                return [dis*Math.sin(dir*Math.PI/180),-dis*Math.cos(dir*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function f(s) {
+                ctx.font = s+'px VT323';
+            }
+            function drawAlertIcon(x,y) {
+                ctx.save();
+                ctx.translate(x,y);
+                ctx.fillStyle = 'rgb(0,180,0)';
+                ctx.fillRect(-15,-15,30,30);
+                ctx.fillStyle = 'white';
+                f(40);
+                ctx.rotate(Math.sin(t/10)*10*Math.PI/180);
+                ctx.fillText('!',0,0);
+                ctx.restore();
+            }
+            function textLabel(text,x,y) {
+                ctx.fillStyle = 'black';
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 5;
+                f(40);
+                var w = ctx.measureText(text).width;
+                ctx.fillRect(x-10,y-20,w+20,40);
+                ctx.strokeRect(x-10,y-20,w+20,40);
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text,x,y);
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/500,s/500);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,500,500);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/500,s/500);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '30px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(45,270,410,15);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(47.5,272.5,405*percent,10);
+                    ctx.beginPath();
+                    ctx.rect(47.5,272.5,405*percent,10);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%40;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*20+a+5,272.5);
+                        ctx.lineTo(n*20+a+12.5,272.5);
+                        ctx.lineTo(n*20+a+7.5,282.5);
+                        ctx.lineTo(n*20+a,282.5);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',250,250);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.right = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                ctx.imageSmoothingEnabled = false;
+                if(page=='game') {
+                    game.tick();
+                } else if(page=='menu') {
+                    menu.update();
+                }
+                t++;
+            }
+
+            var menu = {
+                page: 'upgrades',
+                update: function() {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,1000,1000);
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    if(this.page=='title') {
+                        ctx.fillStyle = 'white';
+                        f(150);
+                        ctx.fillText("Space Ace",500,150);
+
+                        f(60);
+                        ctx.fillText("By John Butler",500,950);
+
+                        f(80);
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 5;
+                        ctx.strokeRect(350,400,300,150);
+                        ctx.fillStyle = 'white';
+                        ctx.fillText("Play",500,475);
+                        if(Mouse.clickInBox(350,400,300,150)) {
+                            page = 'game';
+                            game.reset();
+                        }
+                    } else if(this.page=='upgrades') {
+                        ctx.save();
+                        player.x = 0;
+                        player.y = 0;
+                        player.angle = 0;
+                        ctx.scale(5,5);
+                        ctx.translate(40,50);
+                        player.draw();
+                        ctx.restore();
+                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = 'white';
+                        ctx.strokeRect(50,50,310,400);
+
+                        f(80);
+                        ctx.textAlign = 'center';
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 5;
+                        ctx.strokeRect(50,470,310,100);
+                        ctx.fillStyle = 'white';
+                        ctx.fillText("Play",205,520);
+                        if(Mouse.clickInBox(50,470,310,100)) {
+                            page = 'game';
+                            game.reset();
+                        }
+
+                        f(30);
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        var tabs = ["Body","Engine","Weapon","Misc."];
+                        var n = 0;
+                        while(n < 4) {
+                            if(data.upgradeTab==tabs[n].toLowerCase()) {
+                                ctx.fillStyle = 'rgb(50,50,50)';
+                                ctx.fillRect(380+147*n,50,127,50);
+                            }
+                            ctx.fillStyle = 'white';
+                            ctx.strokeRect(380+147*n,50,127,50);
+                            ctx.fillText(tabs[n],443+147*n,75);
+                            if(Mouse.clickInBox(380+147*n,50,127,50)) {
+                                data.upgradeTab = tabs[n].toLowerCase();
+                            }
+                            n++;
+                        }
+                        var parts = data.shipParts[data.upgradeTab];
+                        var selectedPart = data.partsSelected[data.upgradeTab];
+                        var n = 0;
+                        while(n < parts.length) {
+                            var part = parts[n];
+
+                            ctx.drawImage(imgs[part.img],410+137*(n%4),155+144*Math.floor(n/4),97,97);
+
+                            ctx.strokeStyle = 'white';
+                            if(n===selectedPart) {
+                                ctx.strokeStyle = 'rgb(100,100,255)';
+                            }
+                            if(!part.bought) {
+                                ctx.fillStyle = 'rgb(0,255,0)';
+                                ctx.fillRect(400+137*(n%4),170+144*Math.floor(n/4),117,64);
+                                ctx.fillStyle = 'black';
+                                f(80);
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText('BUY',458+137*(n%4),202+144*Math.floor(n/4));
+                            }
+                            ctx.strokeRect(400+137*(n%4),140+144*Math.floor(n/4),117,124);
+                            if(Mouse.inBox(400+137*(n%4),140+144*Math.floor(n/4),117,124)) {
+                                textLabel(part.name,Mouse.x,Mouse.y);
+                                if(Mouse.click) {
+                                    if(part.bought) {
+                                        data.partsSelected[data.upgradeTab] = n;
+                                    } else {
+                                        part.bought = true;
+                                        //buy part?
+                                    }
+                                }
+                            }
+                            n++;
+                        }
+
+                        ctx.strokeStyle = 'white';
+                        ctx.strokeRect(380,120,570,450);
+                        ctx.strokeRect(380,590,570,300);
+                    }
+                }
+            }
+
+            var game = {
+                material: 0,
+                gameOverMenuAnimation: 0,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    particles.update();
+
+                    player.updateAnimations();
+                    if(!player.dead) {
+                        player.update();
+                    }
+                    this.objects.update();
+                    this.spawn.update();
+                    this.scoreTexts.update();
+
+                    if(player.dead||player.fuel==0) {
+                        this.moveSpeed *= 0.99;
+                        if(this.moveSpeed < 0.1) {
+                            this.moveSpeed = 0;
+                        }
+                    } else {
+                        this.moveSpeed = this.moveSpeed*0.99+player.engineSpeed*0.01;
+                    }
+
+                    this.camY += this.moveSpeed;
+                },
+                draw: function() {
+                    this.background.update();
+
+                    ctx.save();
+
+                    ctx.translate(0,this.camY);
+                    particles.draw();
+                    this.objects.draw();
+                    if(!player.dead) {
+                        player.draw();
+                    }
+                    this.scoreTexts.draw();
+
+                    ctx.restore();
+
+                    this.drawLabels();
+
+                    if(this.moveSpeed==0) {
+                        this.drawGameOverMenu();
+                    }
+                },
+                reset: function() {
+                    player.reset();
+                    this.camY = 0;
+                    this.moveSpeed = 1.5;
+                    this.material = 0;
+                    this.objects.objects = [];
+                    this.background.reset();
+                    this.spawn.lastSpawnY = 0;
+                    this.gameOverMenuAnimation = 0;
+                },
+                drawGameOverMenu: function() {
+                    this.gameOverMenuAnimation++;
+                    this.gameOverMenuAnimation = Math.min(this.gameOverMenuAnimation,100);
+                    ctx.globalAlpha = this.gameOverMenuAnimation/100;
+
+                    ctx.fillStyle = 'black';
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 5;
+                    ctx.fillRect(100,100,800,800);
+                    ctx.strokeRect(100,100,800,800);
+                    f(80);
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    if(player.health<=0) {
+                        ctx.fillStyle = 'red';
+                        ctx.fillText("Ship Destroyed!",500,180);
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(260,220,480,5);
+                    } else {
+                        ctx.fillStyle = 'rgb(255,150,0)';
+                        ctx.fillText("Out of Fuel!",500,180);
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(310,220,380,5);
+                    }
+
+                    f(80);
+                    ctx.strokeStyle = 'white';
+                    ctx.strokeRect(560,750,260,100);
+                    ctx.fillStyle = 'white';
+                    ctx.fillText("Retry",680,800);
+                    if(Mouse.clickInBox(560,750,260,100)) {
+                        game.reset();
+                    }
+
+                    ctx.strokeRect(180,750,340,100);
+                    ctx.fillStyle = 'white';
+                    ctx.fillText("Upgrades",350,800);
+                    drawAlertIcon(500,770);
+                    if(Mouse.clickInBox(180,750,340,100)) {
+                        menu.page = 'upgrades';
+                        page = 'menu';
+                    }
+
+                    ctx.globalAlpha = 1;
+                },
+                background: {
+                    stars: [],
+                    update: function() {
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(0,0,1000,1000);
+                        var n = 0;
+                        while(n < this.stars.length) {
+                            var s = this.stars[n];
+                            var y = (s.y+game.camY/10)*s.z%1000;
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(s.x,y,2*s.z,2*s.z);
+                            n++;
+                        }
+                    },
+                    reset: function() {
+                        this.stars = [];
+                        var n = 0;
+                        while(n < 100) {
+                            var s = {};
+                            s.z = Math.random()+1;
+                            s.x = Math.random()*1000;
+                            s.y = Math.random()*1000;
+                            this.stars.push(s);
+                            n++;
+                        }
+                    }
+                },
+                drawLabels: function() {
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+
+                    ctx.save();
+                    if(player.lastDamageTime>0) {
+                        ctx.translate(Math.random()*6-3,Math.random()*6-3);
+                    }
+                    ctx.fillStyle = 'red';
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(10,10,20,20);
+                    ctx.fillRect(18,14,4,12);
+                    ctx.fillRect(14,18,12,4);
+                    //health icon
+
+                    ctx.fillStyle = 'rgb(100,0,0)';
+                    ctx.fillRect(40,10,500,20);
+                    ctx.fillStyle = 'red';
+                    if(player.lastDamageTime>0) {
+                        ctx.fillStyle = 'rgb(255,100,100)';
+                    }
+                    ctx.fillRect(40,10,Math.max(500*player.healthAnimation/player.maxHealth,0),20);
+                    //health bar
+                    ctx.restore();
+
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    ctx.strokeStyle = 'rgb(255,100,0)';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(10,40,20,20);
+                    ctx.beginPath();
+                    ctx.moveTo(20,43);
+                    ctx.arc(20,51,5,-Math.PI/4,Math.PI*1.25);
+                    ctx.closePath();
+                    ctx.fill();
+                    //fuel icon
+
+                    ctx.fillStyle = 'rgb(100,50,0)';
+                    ctx.fillRect(40,40,500,20);
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    ctx.fillRect(40,40,500*player.fuelAnimation/player.maxFuel,20);
+                    //fuel bar
+
+                    ctx.fillStyle = 'yellow';
+                    ctx.strokeStyle = 'yellow';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(10,70,20,20);
+                    ctx.beginPath();
+                    ctx.moveTo(24,72);
+                    ctx.lineTo(21,79);
+                    ctx.lineTo(28,79);
+                    ctx.lineTo(16,88);
+                    ctx.lineTo(19,81);
+                    ctx.lineTo(12,81);
+                    ctx.closePath();
+                    ctx.fill();
+                    //energy icon
+
+                    ctx.fillStyle = 'rgb(100,100,0)';
+                    ctx.fillRect(40,70,500,20);
+                    ctx.fillStyle = 'yellow';
+                    if(player.energyBoost) {
+                        ctx.fillStyle = 'rgb(255,255,200)';
+                    }
+                    ctx.fillRect(40,70,500*player.energy/player.maxEnergy,20);
+                    //energy bar
+
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'bottom';
+                    f(50);
+                    ctx.fillText(this.material,980,60);
+                    ctx.fillText(Math.round(this.camY/50),980,100);
+                    //material and distance
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            this.updateObject(o);
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            if(o.delete) {
+                                if(o.destroy) {
+                                    this.destroy(o);
+                                }
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            this.drawObject(o);
+                            n++;
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(o.type!=='boost'&&!(o.type=='debree'&&o.collideTime>0)) {
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                var o2 = this.objects[n];
+                                var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                if(dist<o.r+o2.r&&dist>0&&o2.type!='boost') {
+                                    var health1 = Math.max(o.health,0);
+                                    var health2 = Math.max(o2.health,0);
+                                    o.health -= health2;
+                                    o2.health -= health1;
+                                    o.lastHit = o2.type;
+                                    o2.lastHit = o.type;
+                                }
+                                n++;
+                            }
+                        } else {
+                            if(o.collected) {
+                                o.delete = true;
+                            }
+                        }
+
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        if(o.type=='laser') {
+                            o.x2 = o.x-o.xmove*5;
+                            o.y2 = o.y-o.ymove*5;
+                            o.decay--;
+                            if(o.decay<=0) {
+                                o.delete = true;
+                            }
+
+                            var distToPlayer = distTo(o.x,o.y,player.x,player.y);
+                            if(distToPlayer<player.r&&!player.dead&&o.source=='alien') {
+                                player.damage(o.damage);
+                                o.delete = true;
+                                o.destroy = true;
+                            }
+                        }
+                        if(o.type=='debree') {
+                            o.collideTime--;
+                        }
+                        if(o.type=='asteroid'||o.type=='alien ship'||o.type=='debree') {
+                            o.angle += o.turn;
+
+                            var n = 0;
+                            while(n < this.objects.length) {
+                                var o2 = this.objects[n];
+                                if(o2.type=='laser'&&!(o.type=='alien ship'&&o2.source=='alien')) {
+                                    var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                    if(dist<o.r) {
+                                        o.health -= o2.damage;
+                                        o2.delete = true;
+                                        o2.destroy = true;
+                                        o.lastHit = o2.source;
+                                    }
+                                }
+                                n++;
+                            }
+                            if(o.y-o.r>1500-game.camY||o.health<=0) {
+                                o.delete = true;
+                            }
+                            if(o.health<=0) {
+                                o.destroy = true;
+                            }
+
+                            var distToPlayer = distTo(o.x,o.y,player.x,player.y);
+                            if(distToPlayer<o.r+player.r&&!player.dead) {
+                                if(player.health<o.health) {
+                                    o.health -= player.health;
+                                    player.damage(player.health);
+                                } else {
+                                    player.damage(o.health);
+                                    o.delete = true;
+                                    o.destroy = true;
+                                    o.lastHit = player.type;
+                                }
+                            }
+                        }
+                        if(o.type=='alien ship') {
+                            o.reload--;
+                            o.reload = Math.max(o.reload,0);
+                            var target = false;
+                            if(!player.dead) {
+                                target = {x:player.x,y:player.y,xmove:player.xmove,ymove:player.ymove};
+                            }
+                            if(!target) {
+                                var n = 0;
+                                while(n < this.objects.length) {
+                                    var o2 = this.objects[n];
+                                    if(o2.type=='debree'&&o2.source=='player') {
+                                        var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                        if(dist<500) {
+                                            if(!target) {
+                                                target = {x:o2.x,y:o2.y,xmove:o2.xmove,ymove:o2.ymove};
+                                            } else {
+                                                if(dist<distTo(target.x,target.y,o.x,o.y)) {
+                                                    target = {x:o2.x,y:o2.y,xmove:o2.xmove,ymove:o2.ymove};
+                                                }
+                                            }
+                                        }
+                                    }
+                                    n++;
+                                }
+                            }
+                            if(target) {
+                                var distToTarget = distTo(o.x,o.y,target.x,target.y);
+                                if(o.reload==0&&distToTarget<500) {
+                                    o.reload = o.reloadReset;
+                                    var shootSpeed = 4;
+                                    var n = 0;
+                                    var originalX = target.x;
+                                    var originalY = target.y;
+                                    while(n<10) {
+                                        var framesToCollision = distTo(o.x,o.y,target.x,target.y)/shootSpeed;
+                                        target.x = originalX+target.xmove*framesToCollision;
+                                        target.y = originalY+target.ymove*framesToCollision;
+                                        n++;
+                                    }
+                                    var dir = dirTo(o.x,o.y,target.x,target.y);
+                                    var l = {};
+                                    l.decay = 200;
+                                    l.x = o.x;
+                                    l.y = o.y;
+                                    var move = distToMove(shootSpeed,dir);
+                                    l.xmove = move[0];
+                                    l.ymove = move[1];
+                                    l.type = 'laser';
+                                    l.color = 'blue';
+                                    l.source = 'alien';
+                                    l.damage = 40;
+                                    game.objects.objects.unshift(l);
+                                }
+                            }
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.type=='asteroid') {
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.rotate(o.angle*Math.PI/180);
+                            ctx.drawImage(imgs[o.img],-o.r,-o.r,o.r*2,o.r*2);
+                            ctx.restore();
+                        } if(o.type=='alien ship') {
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.rotate(o.angle*Math.PI/180);
+                            ctx.drawImage(imgs[o.img],-o.r,-o.r,o.r*2,o.r*2);
+                            ctx.restore();
+                        } else if(o.type=='laser') {
+                            ctx.strokeStyle = o.color;
+                            ctx.lineWidth = 5;
+                            ctx.lineCap = 'round';
+                            ctx.beginPath();
+                            ctx.moveTo(o.x,o.y);
+                            ctx.lineTo(o.x2,o.y2);
+                            ctx.stroke();
+                        } else if(o.type=='debree') {
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.rotate(o.angle*Math.PI/180);
+                            var img = imgs[o.img];
+                            ctx.drawImage(img,o.imgPart%2*img.width/2,Math.floor(o.imgPart/2)*img.width/2,img.width/2,img.width/2,-o.r,-o.r,o.r*2,o.r*2);
+                            ctx.restore();
+                        } else if(o.type=='boost') {
+                            if(o.boostType=='health') {
+                                ctx.fillStyle = 'red';
+                                ctx.save();
+                                ctx.translate(o.x,o.y);
+                                ctx.fillRect(-4,-12,8,24);
+                                ctx.fillRect(-12,-4,24,8);
+                                ctx.restore();
+                                ctx.strokeStyle = 'red';
+                            } else if(o.boostType=='energy') {
+                                ctx.fillStyle = 'yellow';
+                                ctx.save();
+                                ctx.translate(o.x,o.y);
+                                ctx.beginPath();
+                                ctx.moveTo(8,-16);
+                                ctx.lineTo(2,-2);
+                                ctx.lineTo(16,-2);
+                                ctx.lineTo(-8,16);
+                                ctx.lineTo(-2,2);
+                                ctx.lineTo(-16,2);
+                                ctx.closePath();
+                                ctx.fill();
+                                ctx.restore();
+                                ctx.strokeStyle = 'yellow';
+                            } else if(o.boostType=='fuel') {
+                                ctx.fillStyle = 'rgb(255,100,0)';
+                                ctx.save();
+                                ctx.translate(o.x,o.y);
+                                ctx.beginPath();
+                                ctx.moveTo(0,-14);
+                                ctx.arc(0,2,10,-Math.PI/4,Math.PI*1.25);
+                                ctx.closePath();
+                                ctx.fill();
+                                ctx.restore();
+                                ctx.strokeStyle = 'rgb(255,100,0)';
+                            }
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                            ctx.stroke();
+                            ctx.fillStyle = 'white';
+                            ctx.save();
+                            ctx.translate(o.x,o.y);
+                            ctx.rotate(t*Math.PI/180);
+                            ctx.beginPath();
+                            ctx.arc(-o.r,0,2,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(o.r,0,2,0,2*Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    },
+                    destroy: function(o) {
+                        var material = 0;
+                        if(o.type=='asteroid') {
+                            var n = 0;
+                            while(n < o.r/3) {
+                                var p = {};
+                                var dir = Math.random()*360;
+                                var move = distToMove(Math.random()*o.r,dir);
+                                p.x = o.x+move[0];
+                                p.y = o.y+move[1];
+                                p.color = 'rgb(150,100,50)';
+                                p.xmove = move[0]/20;
+                                p.ymove = move[1]/20;
+                                p.alpha = 2;
+                                p.decay = 0.05;
+                                particles.particles.push(p);
+                                n++;
+                            }
+                            if(o.r>20) {
+                                var angle = Math.random()*360;
+                                var n = 0;
+                                while(n < 3) {
+                                    var o2 = {type:'asteroid'};
+                                    var move = distToMove(o.r/2,n*120+angle);
+                                    o2.x = o.x+move[0];
+                                    o2.y = o.y+move[1];
+                                    o2.xmove = o.xmove+move[0]/20;
+                                    o2.ymove = o.ymove+move[1]/20;
+                                    o2.r = Math.sqrt(o.r**2*Math.PI/2)/Math.PI;
+                                    o2.health = Math.round(o.maxHealth/3);
+                                    o2.maxHealth = o.maxHealth/3;
+                                    o2.angle = Math.random()*360;
+                                    o2.turn = this.randomTurn();
+                                    o2.img = Math.floor(Math.random()*3);
+                                    this.objects.push(o2);
+                                    n++;
+                                }
+                            }
+                            if(o.lastHit=='player') {
+                                material = Math.round(o.r*5/12);
+                            }
+                        } else if(o.type=='laser') {
+                            var n = 0;
+                            while(n < 10) {
+                                var p = {};
+                                p.x = o.x;
+                                p.y = o.y;
+                                p.color = o.color;
+                                var move = distToMove(Math.random()*3,Math.random()*360);
+                                p.xmove = move[0]-o.xmove;
+                                p.ymove = move[1]-o.ymove;
+                                p.alpha = 2;
+                                p.decay = 0.05;
+                                particles.particles.push(p);
+                                n++;
+                            }
+                        } else if(o.type=='alien ship') {
+                            var n = 0;
+                            while(n < 50) {
+                                var p = {};
+                                p.x = o.x;
+                                p.y = o.y;
+                                p.color = 'rgb(50,50,200)';
+                                var move = distToMove(Math.random()*3,Math.random()*360);
+                                p.xmove = move[0];
+                                p.ymove = move[1];
+                                p.alpha = 2;
+                                p.decay = 0.05;
+                                particles.particles.push(p);
+                                n++;
+                            }
+                            this.createDebree(o);
+                            if(o.lastHit=='player') {
+                                material = 100;
+                            }
+                        } else if(o.type=='debree') {
+                            var n = 0;
+                            while(n < o.r/3) {
+                                var p = {};
+                                var dir = Math.random()*360;
+                                var move = distToMove(Math.random()*o.r,dir);
+                                p.x = o.x+move[0];
+                                p.y = o.y+move[1];
+                                p.color = 'rgb(50,50,200)';
+                                var move = distToMove(Math.random()*5,dir);
+                                p.xmove = move[0];
+                                p.ymove = move[1];
+                                p.alpha = 2;
+                                p.decay = 0.05;
+                                particles.particles.push(p);
+                                n++;
+                            }
+                            if(o.lastHit=='player') {
+                                material = 5;
+                            }
+                        }
+                        if(material!==0) {
+                            game.material += material;
+                            var t = {};
+                            t.x = o.x;
+                            t.y = o.y;
+                            t.alpha = 3;
+                            t.material = material;
+                            game.scoreTexts.texts.push(t);
+                        }
+                    },
+                    randomTurn: function() {
+                        return (Math.random()+0.5)*(Math.floor(Math.random()*2)*2-1);
+                    },
+                    createDebree: function(o) {
+                        var angle = o.angle;
+                        var imgParts = [1,3,2,0];
+                        var n = 0;
+                        while(n < 4) {
+                            var o2 = {type:'debree'};
+                            var move = distToMove(o.r/1.5,n*90+angle);
+                            o2.x = o.x+move[0];
+                            o2.y = o.y+move[1];
+                            move = distToMove(o.r/30*(0.5+Math.random()),n*90+angle);
+                            o2.xmove = move[0];
+                            o2.ymove = move[1];
+                            o2.r = Math.sqrt(o.r**2*Math.PI/2)/Math.PI;
+                            o2.health = Math.round(o.maxHealth/3);
+                            o2.maxHealth = o.maxHealth/3;
+                            o2.angle = -45+angle;
+                            o2.turn = this.randomTurn();
+                            o2.img = o.img;
+                            o2.imgPart = imgParts[n];
+                            o2.source = o.type;
+                            o2.collideTime = 50;
+                            this.objects.push(o2);
+                            n++;
+                        }
+                    }
+                },
+                scoreTexts: {
+                    texts: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.texts.length) {
+                            var t = this.texts[n];
+                            t.alpha -= 0.05;
+                            t.y -= game.moveSpeed;
+                            if(t.alpha<=0) {
+                                this.texts.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.texts.length) {
+                            var t = this.texts[n];
+                            ctx.save();
+                            ctx.fillStyle = 'white';
+                            ctx.font = f(Math.min(Math.max(t.material,20),70));
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.globalAlpha = t.alpha;
+                            ctx.fillText('+'+t.material,t.x,t.y);
+                            ctx.restore();
+                            n++;
+                        }
+                    }
+                },
+                spawn: {
+                    lastSpawnY: 0,
+                    update: function() {
+                        if(this.lastSpawnY-1000<game.camY) {
+                            var n = Math.floor(Math.random()*10);
+                            var n2 = 0;
+                            while(n2 < 10) {
+                                if(Math.random()<1&&n-n2==0) {
+                                    var o = {r:20,xmove:0,ymove:0,type:'boost',boostType:'health'};
+                                    if(Math.random()<0.33) {
+                                        o.boostType = 'energy';
+                                    } else if(Math.random()<0.5) {
+                                        o.boostType = 'fuel';
+                                    }
+                                    o.y = -200-this.lastSpawnY+Math.random()*500;
+                                    o.x = n2*100+50;
+                                    game.objects.objects.push(o);
+                                } else if(Math.abs(n2-n)<3) {
+                                    var o = {r:30,xmove:0,ymove:0,type:'asteroid',health:100,maxHealth:100};
+                                    o.y = -200-this.lastSpawnY+Math.random()*500;
+                                    o.x = n2*100+50;
+                                    o.angle = Math.random()*360;
+                                    o.turn = game.objects.randomTurn();
+                                    o.img = Math.floor(Math.random()*6);
+                                    game.objects.objects.push(o);
+                                }
+                                n2++;
+                            }
+                            if(Math.random()<0.1) {
+                                var o = {r:121,xmove:0,ymove:0,type:'asteroid',health:600,maxHealth:600};
+                                o.y = -700-this.lastSpawnY+Math.random()*500;
+                                o.x = Math.random()*600+200;
+                                o.angle = Math.random()*360;
+                                o.turn = game.objects.randomTurn();
+                                o.img = Math.floor(Math.random()*6);
+                                game.objects.objects.push(o);
+                            } else {
+                                var o = {r:70,xmove:0,ymove:0,type:'asteroid',health:300,maxHealth:300};
+                                o.y = -700-this.lastSpawnY+Math.random()*200;
+                                o.x = Math.random()*600+200;
+                                o.angle = Math.random()*360;
+                                o.turn = game.objects.randomTurn();
+                                o.img = Math.floor(Math.random()*3);
+                                game.objects.objects.push(o);
+                                if(Math.random()<0.5&&game.camY>3000) {
+                                    var o = {r:30,xmove:0,ymove:0,type:'alien ship',health:100,maxHealth:100,reload:0,reloadReset:100};
+                                    o.y = -700-this.lastSpawnY+Math.random()*200+250;
+                                    o.x = Math.random()*600+200;
+                                    o.angle = Math.random()*360;
+                                    o.turn = game.objects.randomTurn();
+                                    o.img = 6;
+                                    game.objects.objects.push(o);
+                                }
+                            }
+                            this.lastSpawnY += 1000;
+                        }
+                    }
+                },
+                camY: 0,
+                moveSpeed: 2,
+            }
+
+            var player = {
+                x: 500,
+                y: 850,
+                xmove: 0,
+                ymove: 0,
+                r: 25,
+                angle: 0,
+                energy: 100,
+                maxEnergy: 100,
+                energyReload: 1,
+                weaponEnergyCost: 50,
+                weaponReload: 0,
+                weaponReloadReset: 20,
+                health: 500,
+                maxHealth: 500,
+                agility: 2,
+                speed: 4,
+                dead: false,
+                img: 7,
+                type: 'player',
+                lastDamageTime: 0,
+                healthAnimation: 500,
+                energyBoost: 0,
+                fuel: 3000,
+                maxFuel: 3000,
+                fuelAnimation: 3000,
+                engineSpeed: 2,
+                updateAnimations: function() {
+                    player.lastDamageTime--;
+                    player.lastDamageTime = Math.max(player.lastDamageTime,0);
+                    //update player damage time
+
+                    this.healthAnimation = this.healthAnimation*0.9+this.health*0.1;
+                    //health animation
+
+                    this.fuelAnimation = this.fuelAnimation*0.9+this.fuel*0.1;
+                    //fuel animation
+                },
+                update: function() {
+                    if(this.fuel>0) {
+                        if(Keys.keys[37]) {
+                            this.angle -= this.agility;
+                        }
+                        if(Keys.keys[39]) {
+                            this.angle += this.agility;
+                        }
+                        this.angle *= 0.9;
+                        //turn towards mouse
+
+                        var move = distToMove(this.speed,this.angle);
+                        this.xmove = move[0];
+                        this.x += this.xmove;
+                        //move along x
+                    }
+
+                    this.x = Math.min(this.x,1000-this.r);
+                    this.x = Math.max(this.x,this.r);
+
+                    if(this.fuel>0) {
+                        var p = {};
+                        p.x = this.x;
+                        p.y = this.y;
+                        p.color = 'rgb(255,'+(Math.random()*255)+',0)';
+                        p.alpha = 2;
+                        p.decay = 0.04;
+                        p.ymove = 3;
+                        p.xmove = Math.random()*2-1;
+                        particles.particles.push(p);
+                        //particle engine effect
+                    }
+
+                    this.health = Math.min(this.health,this.maxHealth);
+                    //health cap
+
+                    this.fuel--;
+                    this.fuel = Math.min(Math.max(this.fuel,0),this.maxFuel);
+                    //use fuel
+
+                    if(this.energyBoost>0) {
+                        this.energy = this.maxEnergy;
+                        this.energyBoost--;
+                    }
+                    //energy boost
+
+                    if(this.fuel>0) {
+                        this.weaponReload--;
+                        this.weaponReload = Math.max(this.weaponReload,0);
+                    }
+                    //weapon reload
+
+                    if(Keys.keys[32]&&this.energy>this.weaponEnergyCost&&this.weaponReload==0) {
+                        this.energy -= this.weaponEnergyCost;
+                        this.weaponReload = this.weaponReloadReset;
+                        var l = {};
+                        l.decay = 200;
+                        l.x = this.x;
+                        l.y = this.y;
+                        var move = distToMove(5,this.angle);
+                        l.xmove = move[0];
+                        l.ymove = move[1]-game.moveSpeed;
+                        l.type = 'laser';
+                        l.color = 'red';
+                        l.source = 'player';
+                        l.damage = 100;
+                        game.objects.objects.push(l);
+                    }
+                    //shoot
+
+                    this.energy += this.energyReload;
+                    this.energy = Math.min(this.maxEnergy,this.energy);
+                    //energy
+
+                    var n = 0;
+                    while(n < game.objects.objects.length) {
+                        var o = game.objects.objects[n];
+                        if(o.type=='boost') {
+                            var dist = distTo(o.x,o.y,this.x,this.y);
+                            if(dist<o.r+this.r) {
+                                this.collectBoost(o);
+                                o.collected = true;
+                            }
+                        }
+                        n++;
+                    }
+
+                    if(this.health<=0) {
+                        this.dead = true;
+                        this.destroy();
+                    }
+
+                    this.y = 800-game.camY;
+                    if(this.fuel>0) {
+                        this.ymove = -game.moveSpeed;
+                    } else {
+                        this.ymove = 0;
+                        this.xmove = 0;
+                    }
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(this.x,this.y);
+                    ctx.rotate(this.angle*Math.PI/180);
+                    if(data.partsSelected.weapon!==false) {
+                        var img = data.shipParts.weapon[data.partsSelected.weapon].img;
+                        ctx.drawImage(imgs[img],-this.r,-this.r,this.r*2,this.r*2);
+                    }
+                    var img = data.shipParts.engine[data.partsSelected.engine].img;
+                    ctx.drawImage(imgs[img],-this.r,-this.r,this.r*2,this.r*2);
+                    var img = data.shipParts.body[data.partsSelected.body].img;
+                    ctx.drawImage(imgs[img],-this.r,-this.r,this.r*2,this.r*2);
+                    ctx.restore();
+                },
+                destroy: function() {
+                    var n = 0;
+                    while(n < 50) {
+                        var p = {};
+                        p.x = this.x;
+                        p.y = this.y;
+                        p.color = 'red';
+                        var move = distToMove(Math.random()*3,Math.random()*360);
+                        p.xmove = move[0];
+                        p.ymove = move[1];
+                        p.alpha = 2;
+                        p.decay = 0.05;
+                        particles.particles.push(p);
+                        n++;
+                    }
+                    this.maxHealth /= 3;
+                    if(data.partsSelected.weapon!==false) {
+                        this.img = data.shipParts.weapon[data.partsSelected.weapon].img;
+                        game.objects.createDebree(this);
+                    }
+                    this.angle += 30;
+                    this.img = data.shipParts.engine[data.partsSelected.engine].img;
+                    game.objects.createDebree(this);
+                    this.angle += 30;
+                    this.img = data.shipParts.body[data.partsSelected.body].img;
+                    game.objects.createDebree(this);
+                    this.maxHealth *= 3;
+                },
+                damage: function(damage) {
+                    this.health -= damage;
+                    this.lastDamageTime = 10;
+                },
+                collectBoost: function(boost) {
+                    if(boost.boostType=='health') {
+                        this.health += 200;
+                    }
+                    if(boost.boostType=='energy') {
+                        this.energyBoost = 500;
+                    }
+                    if(boost.boostType=='fuel') {
+                        this.fuel += 1000;
+                    }
+                },
+                reset: function() {
+                    this.x = 500;
+                    this.y = 850;
+                    this.xmove = 0;
+                    this.ymove = 0;
+                    this.angle = 0;
+                    this.health = this.maxHealth;
+                    this.dead = false;
+                    this.lastDamageTime = 0;
+                    this.healthAnimation = this.maxHealth;
+                    this.energy = this.maxEnergy;
+                    this.energyBoost = 0;
+                    this.fuel = this.maxFuel;
+                    this.fuelAnimation = this.maxFuel;
+                }
+            }
+
+            var particles = {
+                particles: [],
+                update: function() {
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        p.x += p.xmove;
+                        p.y += p.ymove-game.moveSpeed;
+                        p.alpha -= p.decay;
+                        if(p.alpha<=0) {
+                            this.particles.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                },
+                draw: function() {
+                    ctx.save();
+                    var n = 0;
+                    while(n < this.particles.length) {
+                        var p = this.particles[n];
+                        ctx.globalAlpha = p.alpha;
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(p.x-4,p.y-4,8,8);
+                        n++;
+                    }
+                    ctx.restore();
+                }
+            }
+
+            var data = {
+                material:0,
+                highscore:0,
+                shipParts: {
+                    "body": [{bought:true,name:"MX41",img:7},{bought:false,name:"MX42",img:8},{bought:false,name:"MX43",img:9},{bought:false,name:"MX44",img:10}],
+                    "engine": [{bought:true,name:"E1",img:11},{bought:false,name:"E2",img:12},{bought:false,name:"E3",img:13}],
+                    "weapon": [{bought:false,name:"W1",img:14},{bought:false,name:"W2",img:3}],
+                    "misc.": [{bought:false,name:"M1",img:2}]
+                },
+                partsSelected: {
+                    "body": 0,
+                    "engine": 0,
+                    "weapon": false,
+                    "misc.": false
+                },
+                upgradeTab: "body"
+            }
+            if(localStorage.getItem("spaceacedata")!==null) {
+                data = JSON.parse(localStorage.getItem("spaceacedata"));
+            }
+            function storeData() {
+                localStorage.setItem("spaceacedata",JSON.stringify(data));
+            }
+            var page = 'menu';
+            var t = 0;
+
+            /*
+            To Do for basic gameplay to be successful:
+            Add Menu
+            Game Lost Screen
+
+            After basics are done:
+                Upgrades in menu
+                Currency
+                Highscore
+            */
+        </script>
+    </body>
+</html>

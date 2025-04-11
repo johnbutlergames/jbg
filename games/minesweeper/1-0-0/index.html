@@ -1,0 +1,945 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Minesweeper';
+            var dimensions = {width:1000,height:500};
+            var imgs = ["bomb.png","flag.png"];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            canvas.oncontextmenu = function(event) {
+                event.preventDefault();
+                Mouse.rightClick = true;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                word += String.fromCharCode(event.keyCode);
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var word = '';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = "images/"+imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                rightClick: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro-=2;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation++;
+                }
+                Mouse.click = false;
+                Mouse.rightClick = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,20);
+
+            function main() {
+                if(page=='menu'||page=='credits'||page=='selectDifficulty') {
+                    var n = 0;
+                    while(n < menuMines.length) {
+                        ctx.save();
+                        var mine = menuMines[n];
+                        mine.angle+=mine.angleMove;
+                        mine.y += 2-mine.z/5;
+                        var size = (10-mine.z)*4;
+                        var s = -size/2;
+                        var x = (mine.x+s-Mouse.x)/(mine.z+2)+mine.x;
+                        var y = (mine.y+s-Mouse.y)/(mine.z+2)+mine.y;
+                        ctx.translate(x,y);
+                        ctx.rotate(mine.angle*Math.PI/180);
+                        ctx.globalAlpha = 1-mine.z/10;
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(imgs[0],s,s,size,size);
+                        ctx.restore();
+                        if(mine.y>550) {
+                            mine.x = Math.random()*1000;
+                            mine.y = -100;
+                        }
+                        n++;
+                    }
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                    ctx.fillRect(250,0,500,500);
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(250,-2,500,504);
+                    ctx.fillStyle = 'black';
+                    ctx.font = '70px Times New Roman';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                }
+                if(page=='menu') {
+                    ctx.fillText('Minesweeper',500,80);
+                    ctx.font = '50px Times New Roman';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.fillText('Play',500,220);
+                    ctx.strokeRect(400,180,200,80);
+                    ctx.fillText('Credits',500,360);
+                    ctx.strokeRect(400,320,200,80);
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(Mouse.inBox(400,180,200,80)) {
+                        ctx.fillRect(400,180,200,80);
+                        if(Mouse.click) {
+                            page = 'selectDifficulty';
+                        }
+                    }
+                    if(Mouse.inBox(400,320,200,80)) {
+                        ctx.fillRect(400,320,200,80);
+                        if(Mouse.click) {
+                            page = 'credits';
+                        }
+                    }
+                } else if(page=='credits') {
+                    ctx.fillText('Credits',500,80);
+                    ctx.font = '30px Times New Roman';
+                    ctx.fillText('Programming: John Butler',500,180);
+                    ctx.fillText('Images & Artwork: Kate Butler',500,230);
+                    ctx.fillText('Sounds and Music: Kate Butler',500,280);
+                    ctx.font = '50px Times New Roman';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.fillText('Back',500,400);
+                    ctx.strokeRect(400,360,200,80);
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(Mouse.inBox(400,360,200,80)) {
+                        ctx.fillRect(400,360,200,80);
+                        if(Mouse.click) {
+                            page = 'menu';
+                        }
+                    }
+                } else if(page=='selectDifficulty') {
+                    ctx.font = '60px Times New Roman';
+                    ctx.fillText('Select Difficulty:',500,80);
+                    ctx.font = '50px Times New Roman';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.fillText('Easy',500,200);
+                    ctx.strokeRect(400,160,200,80);
+                    ctx.fillText('Medium',500,300);
+                    ctx.strokeRect(400,260,200,80);
+                    ctx.fillText('Hard',500,400);
+                    ctx.strokeRect(400,360,200,80);
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(Mouse.inBox(400,160,200,80)) {
+                        ctx.fillRect(400,160,200,80);
+                        if(Mouse.click) {
+                            game.new(12,12,15);
+                            page = 'play';
+                        }
+                    }
+                    if(Mouse.inBox(400,260,200,80)) {
+                        ctx.fillRect(400,260,200,80);
+                        if(Mouse.click) {
+                            game.new(20,20,40);
+                            page = 'play';
+                        }
+                    }
+                    if(Mouse.inBox(400,360,200,80)) {
+                        ctx.fillRect(400,360,200,80);
+                        if(Mouse.click) {
+                            game.new(30,30,100);
+                            page = 'play';
+                        }
+                    }
+                } else if(page=='play') {
+                    game.tick();
+                }
+            }
+
+            var game = {
+                width: 0,
+                height: 0,
+                cellSize: 0,
+                avail: {
+                    width: 900,
+                    height: 400
+                },
+                cellNum: {
+                    x:0,
+                    y:0
+                },
+                offset: {
+                    x:0,
+                    y:0
+                },
+                cells: [],
+                movingTiles: [],
+                grassColors: [[160,230,130],[170,240,140]],
+                sandColors: [[233,193,163],[240,200,170]],
+                numberColors: ['rgb(0,0,255)','rgb(0,100,0)','rgb(200,0,0)','rgb(255,100,0)','rgb(0,100,100)','rgb(50,0,150)','rgb(100,0,0)','rgb(0,0,0)'],
+                firstClick: true,
+                availableCells: [],
+                flags: [],
+                bombs: [],
+                falseFlags: [],
+                lost: false,
+                win: false,
+                endMenu: false,
+                explosion: 0,
+                numberOfBombs: 0,
+                time: 0,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.time>0&&this.lost==false&&this.win==false) {
+                        this.time++;
+                    }
+                    //update time
+
+                    if(Mouse.inBox(this.offset.x,this.offset.y,this.width,this.height)&&(Mouse.click||Mouse.rightClick)&&this.lost===false&&this.win==false) {
+                        var x = Math.min(Math.floor((Mouse.x-this.offset.x)/this.cellSize),this.cellNum.y-1);
+                        var y = Math.min(Math.floor((Mouse.y-this.offset.y)/this.cellSize),this.cellNum.x-1);
+                        if(this.cells[y][x][0]!=1) {
+                            this.clickCell(x,y,Mouse.rightClick);
+                        }
+                        if(this.time===0) {
+                            this.time = 50;
+                        }
+                    }
+                    //clicking on tile
+
+                    if(word.endsWith('RAGEQUIT')) {
+                        this.cells[0][0][1] = 'bomb';
+                        this.clickCell(0,0,false);
+                        this.cells[0][0][1] = 'bomb';
+                        this.clickCell(0,0,false);
+                        word = '';
+                    }
+
+                    if(word.endsWith('JOHNBUTLERGAMES')) {
+                        game.grassColors = [[160,130,230],[170,140,240]];
+                        word = '';
+                    }
+
+                    if(word.endsWith('DAMAGEDRADAR')) {
+                        for(var x=0;x<this.cellNum.x;x++) {
+                            for(var y=0;y<this.cellNum.y;y++) {
+                                if(typeof this.cells[x][y][1]=='number'&&this.cells[x][y][1]>0) {
+                                    this.cells[x][y][1] = Math.floor(Math.random()*8)+1;
+                                }
+                            }
+                        }
+                        word = '';
+                    }
+
+                    this.win = true;
+                    var x = 0;
+                    while(x < this.cellNum.x) {
+                        var y = 0;
+                        while(y < this.cellNum.y) {
+                            if(this.cells[x][y][0]==0&&this.cells[x][y][1]!='bomb') {
+                                this.win = false;
+                                break;
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    if(this.win) {
+                        this.endMenu = true;
+                    }
+                    //has won game?
+
+                    var n = 0;
+                    while(n < this.movingTiles.length) {
+                        var tile = this.movingTiles[n];
+                        tile.x += tile.xmove;
+                        tile.y += tile.ymove;
+                        tile.ymove += 0.05;
+                        tile.angle += tile.angleMove;
+                        tile.size -= 1;
+                        if(tile.size<=0) {
+                            this.movingTiles.splice(n,1);
+                        } else {
+                            n++;
+                        }
+                    }
+                    var n = 0;
+                    while(n < this.flags.length) {
+                        var flags = this.flags[n];
+                        flags.x += flags.xmove;
+                        flags.y += flags.ymove;
+                        flags.ymove += 0.05;
+                        flags.angle += flags.angleMove;
+                        flags.size -= 1;
+                        if(flags.size<=0) {
+                            this.flags.splice(n,1);
+                        } else {
+                            n++;
+                        }
+                    }
+                    var n = 0;
+                    while(n < this.bombs.length) {
+                        var bomb = this.bombs[n];
+                        if(bomb.time==0) {
+                            this.removeTile(bomb.x,bomb.y);
+                            this.cells[bomb.y][bomb.x][0] = 1;
+                        }
+                        bomb.time--;
+                        if(bomb.time<-20) {
+                            this.bombs.splice(n,1);
+                        } else {
+                            n++;
+                        }
+                    }
+                    var n = 0;
+                    while(n < this.falseFlags.length) {
+                        var flag = this.falseFlags[n];
+                        if(flag.time==0) {
+                            this.removeFlag(flag.x,flag.y);
+                        }
+                        flag.time--;
+                        n++;
+                    }
+                    if(this.lost==true&&this.bombs.length==0&&this.falseFlags.length==0) {
+                        var numOfFlags = 0;
+                        var y = 0;
+                        while(y < this.cellNum.y) {
+                            var x = 0;
+                            while(x < this.cellNum.x) {
+                                if(this.cells[y][x][0]==2&&this.cells[y][x][1]!='bomb') {
+                                    this.falseFlags.push({x:x,y:y});
+                                    numOfFlags++;
+                                }
+                                x++;
+                            }
+                            y++;
+                        }
+                        this.falseFlags = shuffle(this.falseFlags);
+                        var n = 0;
+                        while(n < this.falseFlags.length) {
+                            this.falseFlags[n].time = Math.floor(n*100/numOfFlags);
+                            n++;
+                        }
+                    }
+                    //update animated objects
+
+                    if(this.lost==true&&this.bombs.length==0&&this.flags.length==0&&!this.endMenu) {
+                        var falseFlagsDone = true;
+                        var n = 0;
+                        while(n < this.falseFlags.length) {
+                            if(this.falseFlags[n].time>0) {
+                                falseFlagsDone = false;
+                                break;
+                            }
+                            n++;
+                        }
+                        if(falseFlagsDone) {
+                            this.endMenu = true;
+                        }
+                    }
+                    //animated objects done, launch win/lose screen
+                },
+                draw: function() {
+                    this.drawMenu();
+                    //draw menu
+
+                    ctx.save();
+                    ctx.translate(500,250);
+                    var e = this.explosion/150;
+                    ctx.rotate(e*(Math.random()-0.5));
+                    ctx.scale(e+1,e+1);
+                    ctx.translate(-500,-250);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'black';
+                    var y = 0;
+                    while(y < this.cellNum.x) {
+                        var x = 0;
+                        while(x < this.cellNum.y) {
+                            var c = this.cells[y][x];
+                            var color;
+                            if(c[0]==0||c[0]==2) {
+                                color = JSON.parse(JSON.stringify(this.grassColors));
+                            } else if(c[0]==1) {
+                                color = JSON.parse(JSON.stringify(this.sandColors));
+                            }
+                            if((x+y)%2) {
+                                color = color[0];
+                            } else {
+                                color = color[1];
+                            }
+                            ctx.fillStyle = rgb(color[0],color[1],color[2]);
+                            var r = {x:x*this.cellSize+this.offset.x,y:y*this.cellSize+this.offset.y,w:this.cellSize,h:this.cellSize}
+                            ctx.fillRect(r.x,r.y,r.w,r.h);
+                            if(Mouse.inBox(r.x,r.y,r.w,r.h)) {
+                                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                                ctx.fillRect(r.x,r.y,r.w,r.h);
+                            }
+                            var n = [x>0&&this.cells[y][x-1][0]==1,y>0&&this.cells[y-1][x][0]==1,x<this.cellNum.x-1&&this.cells[y][x+1][0]==1,y<this.cellNum.y-1&&this.cells[y+1][x][0]==1];
+                            if(c[0]!=1) {
+                                ctx.strokeStyle = 'black';
+                                ctx.lineWidth = 2;
+                                if(n[0]) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(r.x,r.y);
+                                    ctx.lineTo(r.x,r.y+r.h);
+                                    ctx.stroke();
+                                }
+                                if(n[1]) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(r.x,r.y);
+                                    ctx.lineTo(r.x+r.w,r.y);
+                                    ctx.stroke();
+                                }
+                                if(n[2]) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(r.x+r.w,r.y);
+                                    ctx.lineTo(r.x+r.w,r.y+r.h);
+                                    ctx.stroke();
+                                }
+                                if(n[3]) {
+                                    ctx.beginPath();
+                                    ctx.moveTo(r.x,r.y+r.h);
+                                    ctx.lineTo(r.x+r.w,r.y+r.h);
+                                    ctx.stroke();
+                                }
+                                if(c[0]==2) {
+                                    ctx.imageSmoothingEnabled = false;
+                                    ctx.drawImage(imgs[1],r.x,r.y,r.w,r.h);
+                                }
+                            } else if(c[0]==1) {
+                                if(c[1]!==0&&c[1]!='bomb'&&c[0]!=2) {
+                                    ctx.fillStyle = this.numberColors[c[1]-1];
+                                    ctx.font = this.cellSize*0.8+'px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(c[1],r.x+r.w/2,r.y+r.h/2);
+                                } else if(c[1]=='bomb') {
+                                    ctx.drawImage(imgs[0],r.x,r.y,r.w,r.h);
+                                }
+                            }
+                            x++;
+                        }
+                        y++;
+                    }
+                    ctx.strokeRect(this.offset.x,this.offset.y,this.width,this.height);
+                    var n = 0;
+                    while(n < this.movingTiles.length) {
+                        var tile = this.movingTiles[n];
+                        ctx.fillStyle = tile.color;
+                        ctx.save();
+                        ctx.translate(tile.x+tile.size/2,tile.y+tile.size/2);
+                        ctx.rotate(tile.angle*Math.PI/180);
+                        ctx.fillRect(-tile.size/2,-tile.size/2,tile.size,tile.size);
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(-tile.size/2,-tile.size/2,tile.size,tile.size);
+                        ctx.restore();
+                        n++;
+                    }
+                    ctx.lineCap = 'round';
+                    ctx.lineWidth = this.cellSize/5;
+                    var n = 0;
+                    while(n < this.falseFlags.length) {
+                        var flag = this.falseFlags[n];
+                        if(flag.time<0) {
+                            var x = this.offset.x+flag.x*this.cellSize;
+                            var y = this.offset.y+flag.y*this.cellSize;
+                            var s = this.cellSize;
+                            ctx.strokeStyle = 'red';
+                            ctx.beginPath();
+                            ctx.moveTo(x+s/5,y+s/5);
+                            ctx.lineTo(x+s*4/5,y+s*4/5);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(x+s*4/5,y+s/5);
+                            ctx.lineTo(x+s/5,y+s*4/5);
+                            ctx.stroke();
+                        }
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < this.flags.length) {
+                        var flag = this.flags[n];
+                        ctx.save();
+                        ctx.translate(flag.x+flag.size/2,flag.y+flag.size/2);
+                        ctx.rotate(flag.angle*Math.PI/180);
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.drawImage(imgs[1],-flag.size/2,-flag.size/2,flag.size,flag.size);
+                        ctx.restore();
+                        n++;
+                    }
+                    this.explosion = 0;
+                    var n = 0;
+                    while(n < this.bombs.length) {
+                        var bomb = this.bombs[n];
+                        if(bomb.time<0) {
+                            var r = (101-Math.pow(2,(100+bomb.time)/15))/20*this.cellSize;
+                            ctx.fillStyle = 'rgba(255,'+bomb.yellow+',0,'+(1-Math.pow(Math.abs(bomb.time),1.5)/100)+')';
+                            ctx.beginPath();
+                            ctx.arc(this.offset.x+(bomb.x+0.5)*this.cellSize,this.offset.y+(bomb.y+0.5)*this.cellSize,r,0,2*Math.PI);
+                            ctx.fill();
+                            this.explosion += 100-r;
+                        }
+                        n++;
+                    }
+                    this.explosion /= this.numberOfBombs;
+                    ctx.restore();
+                },
+                clickCell: function(x,y,r) {
+                    if(r) {
+                        if(this.cells[y][x][0]==2) {
+                            this.removeFlag(x,y);
+                        } else {
+                            this.cells[y][x][0] = 2;
+                        }
+                    } else {
+                        if(this.firstClick&&this.cells[y][x]!==2) {
+                            var bombCount = 0;
+                            this.firstClick = false;
+                            var y2 = -2;
+                            while(y2<=2) {
+                                var x2 = -2;
+                                while(x2<=2) {
+                                    var x3 = x+x2;
+                                    var y3 = y+y2;
+                                    if(x3<0||x3>=this.cellNum.x||y3<0||y3>=this.cellNum.y) {
+                                        x2++;
+                                        continue;
+                                    }
+                                    if(this.cells[y3][x3][1]=='bomb') {
+                                        this.cells[y3][x3][1] = 0;
+                                        bombCount++;
+                                    }
+                                    x2++;
+                                }
+                                y2++;
+                            }
+                            var n = 0;
+                            while(n < this.availableCells.length) {
+                                var c = this.availableCells[n];
+                                if(c[0]>x-2&&c[0]<x+2&&c[1]>y-2&&c[1]<y+2) {
+                                    this.availableCells.splice(n,1);
+                                } else {
+                                    n++;
+                                }
+                            }
+                            var n = 0;
+                            while(n < bombCount) {
+                                var r = Math.floor(Math.random()*this.availableCells.length);
+                                var c = this.availableCells[r];
+                                this.cells[c[1]][c[0]][1] = 'bomb';
+                                this.availableCells.splice(r,1);
+                                n++;
+                            }
+                            this.evaluateNumbers(this.cellNum.x,this.cellNum.y);
+                        }
+                        if(this.cells[y][x][0]==2) {
+                            this.removeFlag(x,y);
+                        } else if(this.cells[y][x][1]==0) {
+                            var nodes = [[x,y]];
+                            while(nodes.length>0) {
+                                var node = nodes[0];
+                                this.cells[node[1]][node[0]][0] = 1;
+                                this.removeTile(node[0],node[1]);
+                                var adjacent = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+                                var n = 0;
+                                while(n < adjacent.length) {
+                                    var x = node[0]+adjacent[n][0];
+                                    var y = node[1]+adjacent[n][1];
+                                    if(x<0||x>=this.cellNum.x||y<0||y>=this.cellNum.y) {
+                                        n++;
+                                        continue;
+                                    }
+                                    var c = false;
+                                    var n2 = 0;
+                                    while(n2 < nodes.length) {
+                                        if(nodes[n2][0]==x&&nodes[n2][1]==y) {
+                                            c = true;
+                                            break;
+                                        }
+                                        n2++;
+                                    }
+                                    if(c) {
+                                        n++;
+                                        continue;
+                                    }
+                                    if(this.cells[y][x][0]==0) {
+                                        if(this.cells[y][x][1]==0) {
+                                            nodes.push([x,y]);
+                                        } else if(this.cells[y][x][1]!='bomb') {
+                                            this.cells[y][x][0] = 1;
+                                            this.removeTile(x,y);
+                                        }
+                                    }
+                                    n++;
+                                }
+                                nodes.shift();
+                            }
+                        } else if(this.cells[y][x][1]=='bomb') {
+                            this.lost = true;
+                            var y2 = 0;
+                            while(y2 < this.cellNum.x) {
+                                var x2 = 0;
+                                while(x2 < this.cellNum.y) {
+                                    if(this.cells[y2][x2][1]=='bomb'&&this.cells[y2][x2][0]!==2) {
+                                        this.bombs.push({x:x2,y:y2,distance:distTo(x,y,x2,y2),yellow:Math.random()*255});
+                                    }
+                                    x2++;
+                                }
+                                y2++;
+                            }
+                            this.bombs.sort(function(a,b){return a.distance-b.distance;});
+                            var n = 0;
+                            while(n < this.bombs.length) {
+                                this.bombs[n].time = Math.floor(n*100/this.numberOfBombs);
+                                n++;
+                            }
+                        } else {
+                            this.cells[y][x][0] = 1;
+                            this.removeTile(x,y);
+                        }
+                    }
+                },
+                removeTile: function(x,y) {
+                    var tile = {};
+                    var color = this.grassColors[(x+y+1)%2];
+                    color = rgb(color[0],color[1],color[2]);
+                    tile.color = color;
+                    tile.x = this.offset.x+x*this.cellSize;
+                    tile.y = this.offset.y+y*this.cellSize;
+                    tile.angle = 0;
+                    tile.angleMove = Math.random()*10-5;
+                    tile.size = this.cellSize;
+                    tile.xmove = Math.random()*6-3;
+                    tile.ymove = Math.random()*3-3;
+                    this.movingTiles.push(tile);
+                },
+                removeFlag: function(x,y) {
+                    this.cells[y][x][0] = 0;
+                    var flag = {};
+                    flag.x = this.offset.x+x*this.cellSize;
+                    flag.y = this.offset.y+y*this.cellSize;
+                    flag.angle = 0;
+                    flag.angleMove = Math.random()*10-5;
+                    flag.size = this.cellSize;
+                    flag.xmove = Math.random()*6-3;
+                    flag.ymove = Math.random()*3-3;
+                    this.flags.push(flag);
+                },
+                drawMenu: function() {
+                    ctx.fillStyle = 'black';
+                    ctx.font = '50px Times New Roman';
+                    ctx.textAlign = 'left';
+
+                    if(this.endMenu) {
+                        var text;
+                        if(this.win) {
+                            text = "You Win!";
+                        } else {
+                            text = "You Lose!";
+                        }
+                        ctx.fillText(text,750,100);
+                    }
+
+                    ctx.fillText(getTimeText(this.time),750,150);
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Retry',850,220);
+                    ctx.strokeRect(750,180,200,80);
+                    ctx.fillText('Quit',850,310);
+                    ctx.strokeRect(750,270,200,80);
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(Mouse.inBox(750,180,200,80)) {
+                        ctx.fillRect(750,180,200,80);
+                        if(Mouse.click) {
+                            if(this.cellNum.x==12) {
+                                game.new(12,12,15);
+                            } else if(this.cellNum.x==20) {
+                                game.new(20,20,40);
+                            } else if(this.cellNum.x==30) {
+                                game.new(30,30,100);
+                            }
+                        }
+                    }
+                    if(Mouse.inBox(750,270,200,80)) {
+                        ctx.fillRect(750,270,200,80);
+                        if(Mouse.click) {
+                            page = 'menu';
+                        }
+                    }
+                },
+                evaluateNumbers: function(x,y) {
+                    var y2 = 0;
+                    while(y2 < y) {
+                        var x2 = 0;
+                        while(x2 < x) {
+                            if(this.cells[y2][x2][1]!='bomb') {
+                                this.cells[y2][x2][1] = 0;
+                                var adjacentBombs = 0;
+                                var x3 = -1;
+                                while(x3 <= 1) {
+                                    if(x2+x3<0||x2+x3>=x) {
+                                        x3++;
+                                        continue;
+                                    }
+                                    var y3 = -1;
+                                    while(y3 <= 1) {
+                                        if(y2+y3<0||y2+y3>=y) {
+                                            y3++;
+                                            continue;
+                                        }
+                                        if(this.cells[y2+y3][x2+x3][1]=='bomb') {
+                                            adjacentBombs++;
+                                        }
+                                        y3++;
+                                    }
+                                    x3++;
+                                }
+                                this.cells[y2][x2][1] = adjacentBombs;
+                            }
+                            x2++;
+                        }
+                        y2++;
+                    }
+                },
+                new: function(x,y,numberOfBombs) {
+                    this.bombs = [];
+                    this.time = 0;
+                    this.falseFlags = [];
+                    this.numberOfBombs = numberOfBombs;
+                    this.lost = false;
+                    this.endMenu = false;
+                    this.firstClick = true;
+                    this.cellNum.x = x;
+                    this.cellNum.y = y;
+                    var w = this.avail.width;
+                    var h = this.avail.height;
+                    this.cellSize = Math.min(w/x,h/y);
+                    this.width = this.cellSize*x;
+                    this.height = this.cellSize*y;
+                    this.offset.x = (1000-this.width)/2;
+                    this.offset.y = (500-this.height)/2;
+                    this.cells = [];
+                    this.availableCells = [];
+                    var y2 = 0;
+                    while(y2 < y) {
+                        this.cells.push([]);
+                        var x2 = 0;
+                        while(x2 < x) {
+                            this.cells[y2].push([0,0]);
+                            this.availableCells.push([x2,y2]);
+                            x2++;
+                        }
+                        y2++;
+                    }
+                    var n = 0;
+                    while(n < numberOfBombs) {
+                        var r = Math.floor(Math.random()*this.availableCells.length);
+                        var c = this.availableCells[r];
+                        this.cells[c[0]][c[1]][1] = 'bomb';
+                        this.availableCells.splice(r,1);
+                        n++;
+                    }
+                    this.evaluateNumbers(x,y);
+                }
+            }
+            function rgb(r,g,b) {
+                return 'rgb('+r+','+g+','+b+')';
+            }
+            function shuffle(r){
+                for(var f,n,o=r.length;0!==o;) {
+                    n=Math.floor(Math.random()*o);
+                    f=r[--o];
+                    r[o]=r[n];
+                    r[n]=f;
+                }
+                return r;
+            }
+            function getTimeText(t) {
+                t = Math.floor(t/50);
+                var s = t%60;
+                var m = Math.floor(t/60);
+                if(s<10) {
+                    s = '0'+s;
+                }
+                return m+':'+s;
+            }
+            var page = 'menu';
+
+            var menuMines = [];
+            var n = 0;
+            while(n < 200) {
+                var mine = {};
+                mine.x = Math.random()*1000;
+                mine.y = Math.random()*700-200;
+                mine.z = Math.random()*10;
+                mine.angle = Math.random()*360;
+                mine.angleMove = Math.random()*6-3;
+                menuMines.push(mine);
+                n++;
+            }
+            menuMines.sort(function(a,b){return b.z-a.z});
+            //init menu mines
+        </script>
+    </body>
+</html>

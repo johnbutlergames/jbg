@@ -1,0 +1,1646 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'Ghost Town';
+            var dimensions = {width:1000,height:1000};
+            var imgs = ['tutorial1.png','tutorial2.png','candy1.png','ghost1.png','ghost2.png','ghost3.png','wizard1.png','wizard2.png','wizard3.png','wizard4.png','wizard5.png','wizard6.png','wizard7.png','wizard8.png','cauldron1.png','cauldron2.png','cauldron3.png','potion.png','house1.png','house1off.png','house2.png','house2off.png','house3.png','house3off.png','candy2.png','candy3.png','candy4.png'];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+                word += String.fromCharCode(event.keyCode);
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var word = '';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = "images/"+imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function roundRect(x, y, width, height, radius) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function blocksColliding(b1,b2) {
+                return r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h);
+            }
+            function blocksCollidingEdge(b1,b2) {
+                return r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h);
+            }
+            function r(n) {
+                return Math.round(n*10000)/10000;
+            }
+            function updateBlock(block,staticBlocks) {
+                block.x += block.xmove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide&&blocksColliding(block,b)) {
+                        if(block.x+block.w/2<b.x+b.w/2) {
+                            block.x = b.x-block.w;
+                        } else {
+                            block.x = b.x+b.w;
+                        }
+                        block.xmove = 0;
+                    }
+                    n++;
+                }
+                block.y += block.ymove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide&&blocksColliding(block,b)) {
+                        if(block.y+block.h/2<b.y+b.h/2) {
+                            block.y = b.y-block.h;
+                        } else {
+                            block.y = b.y+b.h;
+                        }
+                        block.ymove = 0;
+                    }
+                    n++;
+                }
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function generateMaze(data) {
+                if(data===undefined) {
+                    data = {};
+                }
+                if(!data.width) {
+                    data.width = 10;
+                }
+                if(!data.height) {
+                    data.height = 10;
+                }
+                var blocks = [];
+                var y = 0;
+                while(y < data.height*2-1) {
+                    blocks.push([]);
+                    var x = 0;
+                    while(x < data.width*2-1) {
+                        blocks[y].push(0);
+                        x++;
+                    }
+                    y++;
+                }
+                var pos = [1,1];
+                while(true) {
+                    blocks[pos[0]][pos[1]]++;
+                    var cors = [[-2,0],[2,0],[0,-2],[0,2]];
+                    var n = 0;
+                    while(n < cors.length) {
+                        var x = cors[n][0]+pos[0];
+                        var y = cors[n][1]+pos[1];
+                        if(x<1||x>(data.width-1)*2||y<1||y>(data.height-1)*2) {
+                            cors.splice(n,1);
+                        } else {
+                            cors[n] = [x,y];
+                            n++;
+                        }
+                    }
+                    var needToBacktrack = true;
+                    var n = 0;
+                    while(n < cors.length) {
+                        if(blocks[cors[n][0]][cors[n][1]]==0) {
+                            needToBacktrack = false;
+                            break;
+                        }
+                        n++;
+                    }
+                    var cor = false;
+                    var n = 0;
+                    while(n < cors.length) {
+                        var b = blocks[cors[n][0]][cors[n][1]];
+                        if(b>1) {
+                            cors.splice(n,1);
+                            n--;
+                        } else if(needToBacktrack==true) {
+                            var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                            var n2 = 0;
+                            while(n2 < cors2.length) {
+                                var x = cors2[n2][0]+pos[0];
+                                var y = cors2[n2][1]+pos[1];
+                                if(blocks[x][y]===1) {
+                                    cor = [cors2[n2][0]*2+pos[0],cors2[n2][1]*2+pos[1]];
+                                    break;
+                                }
+                                n2++;
+                            }
+                            break;
+                        } else if(needToBacktrack==false&&b==1) {
+                            cors.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    var justBacktracked = false;
+                    var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                    var n2 = 0;
+                    while(n2 < cors2.length) {
+                        var x = cors2[n2][0]+pos[0];
+                        var y = cors2[n2][1]+pos[1];
+                        var x2 = cors2[n2][0]*2+pos[0];
+                        var y2 = cors2[n2][1]*2+pos[1];
+                        if(x2>0&&x2<blocks.length&&y2>0&&y2<blocks.length&&blocks[x][y]!==1) {
+                            if(blocks[x2][y2]==2) {
+                                justBacktracked = true;
+                            }
+                        }
+                        n2++;
+                    }
+                    if(needToBacktrack&&!justBacktracked) {
+                        blocks[pos[0]][pos[1]]++;
+                    }
+                    if(justBacktracked&&!needToBacktrack) {
+                        blocks[pos[0]][pos[1]]--;
+                    }
+                    if(!needToBacktrack) {
+                        if(cors.length===0) {
+                            break;
+                        }
+                        cor = cors[Math.floor(Math.random()*cors.length)];
+                    } else if(cor===false) {
+                        break;
+                    }
+                    blocks[(pos[0]+cor[0])/2][(pos[1]+cor[1])/2]++;
+                    pos = cor;
+                }
+                var y = 0;
+                while(y < blocks.length) {
+                    var x = 0;
+                    while(x < blocks[y].length) {
+                        if(blocks[x][y]==0) {
+                            blocks[x][y] = 1;
+                        } else {
+                            blocks[x][y] = 0;
+                        }
+                        x++;
+                    }
+                    y++;
+                }
+                blocks[pos[0]][pos[1]] = 4;
+                return blocks;
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                ctx.textAlign = 'center';
+                if(page=='menu') {
+                    menu.update();
+                } else if(page=='game') {
+                    game.tick();
+                } else if(page=='tutorial') {
+                    tutorial.update();
+                } else if(page=='select-difficulty') {
+                    menu.selectDifficulty();
+                }
+                t++;
+            }
+
+            var menu = {
+                candy: [],
+                reset: function() {
+                    this.candy = [];
+                    var n = 0;
+                    while(n < 12) {
+                        var c = {};
+                        c.x = Math.random()*1000;
+                        c.y = Math.random()*1000;
+                        c.angle = Math.random()*360;
+                        c.turn = Math.random()*2-1;
+                        var move = distToMove(1,Math.random()*360);
+                        c.xmove = move[0];
+                        c.ymove = move[1];
+                        this.candy.push(c);
+                        n++;
+                    }
+                },
+                updateBackground: function() {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0,0,1000,1000);
+
+                    var n = 0;
+                    while(n < this.candy.length) {
+                        var c = this.candy[n];
+                        c.x += c.xmove;
+                        c.y += c.ymove;
+                        c.angle += c.turn;
+                        ctx.save();
+                        ctx.translate(c.x,c.y);
+                        ctx.rotate(c.angle*Math.PI/180);
+                        if(n%4==0) {
+                            ctx.drawImage(imgs[2],-35,-35,70,70);
+                        } else if(n%4==1) {
+                            ctx.drawImage(imgs[24],-35,-35,70,70);
+                        } else if(n%4==2) {
+                            ctx.drawImage(imgs[25],-35,-35,70,70);
+                        } else if(n%4==3) {
+                            ctx.drawImage(imgs[26],-35,-35,70,70);
+                        }
+                        ctx.restore();
+                        if(c.x<0) {
+                            c.xmove *= -1;
+                        }
+                        if(c.y<0) {
+                            c.ymove *= -1;
+                        }
+                        if(c.x>1000) {
+                            c.xmove *= -1;
+                        }
+                        if(c.y>1000) {
+                            c.ymove *= -1;
+                        }
+                        n++;
+                    }
+                    //moving candy
+
+                    ctx.save();
+                    ctx.translate(500,500);
+                    ctx.rotate(Math.sin(t/100)/30);
+                    //rotate menu
+                },
+                update: function() {
+                    this.updateBackground();
+
+                    ctx.font = '100px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Ghost Town',0,-300);
+                    ctx.font = '50px Comic Sans MS';
+                    ctx.fillText('By John Butler',0,380);
+                    ctx.fillText('Artwork By Kate Butler',0,460);
+                    ctx.font = '40px Comic Sans MS';
+                    ctx.fillText('Easy Highscore: '+easyHighscore,0,150);
+                    ctx.fillText('Medium Highscore: '+mediumHighscore,0,200);
+                    ctx.fillText('Hard Highscore: '+hardHighscore,0,250);
+                    //title and credits and highscore
+
+                    ctx.scale(this.playButtonSize,this.playButtonSize);
+                    ctx.strokeStyle = 'white';
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(400,435,200,100,20)) {
+                        ctx.fillStyle = 'rgb(50,50,50)';
+                        this.playButtonSize += 0.03;
+                        this.playButtonSize *= 0.978;
+                        if(Mouse.click) {
+                            page = 'select-difficulty';
+                            this.playButtonSize = 1;
+                            game.reset();
+                        }
+                    } else {
+                        this.playButtonSize -= 0.03;
+                        this.playButtonSize *= 1.022;
+                    }
+                    this.playButtonSize = Math.max(1,this.playButtonSize);
+                    this.playButtonSize = Math.min(1.3,this.playButtonSize);
+                    ctx.lineWidth = 5;
+                    roundRect(-100,-65,200,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.font = '50px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Play',0,0);
+                    //play button
+
+                    ctx.restore();
+                },
+                selectDifficulty: function() {
+                    this.updateBackground();
+
+                    ctx.fillStyle = 'white';
+                    ctx.font = '80px Comic Sans MS';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Select Difficulty:',0,-400);
+                    //title
+
+                    var click = false;
+
+                    ctx.save();
+                    ctx.scale(this.easyButtonSize,this.easyButtonSize);
+                    ctx.strokeStyle = 'white';
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(370,330,260,100,20)) {
+                        ctx.fillStyle = 'rgb(50,50,50)';
+                        this.easyButtonSize += 0.03;
+                        this.easyButtonSize *= 0.978;
+                        if(Mouse.click) {
+                            click = 'easy';
+                            this.easyButtonSize = 1;
+                        }
+                    } else {
+                        this.easyButtonSize -= 0.03;
+                        this.easyButtonSize *= 1.022;
+                    }
+                    this.easyButtonSize = Math.max(1,this.easyButtonSize);
+                    this.easyButtonSize = Math.min(1.3,this.easyButtonSize);
+                    ctx.lineWidth = 5;
+                    roundRect(-130,-170,260,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Easy',0,-100);
+                    ctx.restore();
+                    //easy button
+
+                    ctx.save();
+                    ctx.scale(this.mediumButtonSize,this.mediumButtonSize);
+                    ctx.strokeStyle = 'white';
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(370,480,260,100,20)) {
+                        ctx.fillStyle = 'rgb(50,50,50)';
+                        this.mediumButtonSize += 0.03;
+                        this.mediumButtonSize *= 0.978;
+                        if(Mouse.click) {
+                            click = 'medium';
+                            this.mediumButtonSize = 1;
+                        }
+                    } else {
+                        this.mediumButtonSize -= 0.03;
+                        this.mediumButtonSize *= 1.022;
+                    }
+                    this.mediumButtonSize = Math.max(1,this.mediumButtonSize);
+                    this.mediumButtonSize = Math.min(1.3,this.mediumButtonSize);
+                    ctx.lineWidth = 5;
+                    roundRect(-130,-20,260,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Medium',0,50);
+                    ctx.restore();
+                    //medium button
+
+                    ctx.save();
+                    ctx.scale(this.hardButtonSize,this.hardButtonSize);
+                    ctx.strokeStyle = 'white';
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(370,630,260,100,20)) {
+                        ctx.fillStyle = 'rgb(50,50,50)';
+                        this.hardButtonSize += 0.03;
+                        this.hardButtonSize *= 0.978;
+                        if(Mouse.click) {
+                            click = 'hard';
+                            this.hardButtonSize = 1;
+                        }
+                    } else {
+                        this.hardButtonSize -= 0.03;
+                        this.hardButtonSize *= 1.022;
+                    }
+                    this.hardButtonSize = Math.max(1,this.hardButtonSize);
+                    this.hardButtonSize = Math.min(1.3,this.hardButtonSize);
+                    ctx.lineWidth = 5;
+                    roundRect(-130,130,260,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Hard',0,200);
+                    ctx.restore();
+                    //hard button
+
+                    ctx.save();
+                    ctx.scale(this.backButtonSize,this.backButtonSize);
+                    ctx.strokeStyle = 'white';
+                    ctx.fillStyle = 'black';
+                    if(Mouse.inBox(370,780,260,100,20)) {
+                        ctx.fillStyle = 'rgb(50,50,50)';
+                        this.backButtonSize += 0.03;
+                        this.backButtonSize *= 0.978;
+                        if(Mouse.click) {
+                            page = 'menu';
+                            this.backButtonSize = 1;
+                        }
+                    } else {
+                        this.backButtonSize -= 0.03;
+                        this.backButtonSize *= 1.022;
+                    }
+                    this.backButtonSize = Math.max(1,this.backButtonSize);
+                    this.backButtonSize = Math.min(1.3,this.backButtonSize);
+                    ctx.lineWidth = 5;
+                    roundRect(-130,280,260,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('Back',0,350);
+                    ctx.restore();
+                    //back button
+
+                    ctx.restore();
+
+                    if(click!==false) {
+                        game.mode = click;
+                        if(click=='easy') {
+                            game.timelimit = 12000;
+                            game.numberofghosts = 3;
+                        } else if(click=='medium') {
+                            game.timelimit = 9000;
+                            game.numberofghosts = 4;
+                        } else if(click=='hard') {
+                            game.timelimit = 6000;
+                            game.numberofghosts = 5;
+                        }
+                        game.reset();
+                        if(tutorial.on) {
+                            page = 'tutorial';
+                            tutorial.on = false;
+                            tutorial.page = 0;
+                        } else {
+                            page = 'game';
+                        }
+                    }
+                },
+                playButtonSize: 1,
+                easyButtonSize: 1,
+                mediumButtonSize: 1,
+                hardButtonSize: 1,
+                backButtonSize: 1
+            }
+
+            var tutorial = {
+                pageImgs: [0,1],
+                pageAnimation: 0,
+                page: 0,
+                on: true,
+                update: function() {
+                    if(this.page!=0) {
+                        ctx.drawImage(imgs[this.pageImgs[this.page-1]],this.pageAnimation-1000,0,1000,1000);
+                    }
+                    ctx.drawImage(imgs[this.pageImgs[this.page]],this.pageAnimation,0,1000,1000);
+                    this.pageAnimation -= (this.pageAnimation+100)/50;
+                    this.pageAnimation = Math.max(0,this.pageAnimation);
+                    if(Mouse.click||Keys.down[32]) {
+                        this.page++;
+                        if(this.page==this.pageImgs.length) {
+                            page = 'game';
+                        }
+                        this.pageAnimation = 1000;
+                    }
+                }
+            }
+
+            var game = {
+                johnbutlergames: false,
+                numberofghosts: 0,
+                timelimit: 0,
+                timeleft: 0,
+                timeupanimation: false,
+                fillanimation: 0,
+                gameovercollected: 0,
+                countdown: 0,
+                movingCandy: [],
+                mode: '',
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(word.endsWith("JOHNBUTLERGAMES")) {
+                        this.johnbutlergames = true;
+                        word = '';
+                    }
+                    cam.update();
+                    if(this.countdown>0) {
+                        this.countdown--;
+                    } else {
+                        this.timeleft -= 1;
+                        this.timeleft = Math.max(this.timeleft,0);
+                        if(this.timeleft>0) {
+                            player.update();
+                            this.objects.update();
+                            this.ghosts.update();
+                            this.candies.update();
+                        } else {
+                            if(this.timeupanimation===false) {
+                                this.gameOver();
+                            }
+                            this.timeupanimation--;
+                            this.timeupanimation = Math.max(0,this.timeupanimation);
+                            //tick timeup animation
+                        }
+                    }
+                },
+                gameOver: function() {
+                    this.timeupanimation = 25;
+                    this.timeleft = 0;
+                    this.movingCandy = [];
+                    var n = 0;
+                    while(n < this.objects.objects.length) {
+                        var o = this.objects.objects[n];
+                        if(o.type=='cauldron') {
+                            this.gameovercollected = o.candy;
+                            break;
+                        }
+                        n++;
+                    }
+                    this.fillanimation = 0;
+                    if(this.mode=='easy') {
+                        easyHighscore = Math.max(easyHighscore,this.gameovercollected);
+                        localStorage.setItem('ghosttowneasyhighscore',easyHighscore);
+                    } else if(this.mode=='medium') {
+                        mediumHighscore = Math.max(mediumHighscore,this.gameovercollected);
+                        localStorage.setItem('ghosttownmediumhighscore',mediumHighscore);
+                    } else if(this.mode=='hard') {
+                        hardHighscore = Math.max(hardHighscore,this.gameovercollected);
+                        localStorage.setItem('ghosttownhardhighscore',hardHighscore);
+                    }
+                },
+                gameOverMenu: function() {
+                    ctx.save();
+                    ctx.globalAlpha = 1-this.timeupanimation/25;
+                    ctx.translate(0,(this.timeupanimation**2));
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.fillRect(200,200,600,600);
+                    ctx.strokeRect(200,200,600,600);
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'center';
+                    ctx.font = "80px Comic Sans MS";
+                    ctx.fillText("Time's Up!",500,300);
+                    //title and box
+
+                    ctx.drawImage(imgs[14],350,325,200,200);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(450,425,85,0,2*Math.PI);
+                    ctx.clip();
+                    ctx.fillStyle = 'purple';
+                    ctx.drawImage(imgs[17],350,425-this.fillanimation+Math.sin(t/40)*2,200,200);
+                    ctx.restore();
+                    ctx.drawImage(imgs[15],350,325,200,200);
+                    if(this.fillanimation<this.gameovercollected*3&&this.timeupanimation==0&&this.fillanimation<99) {
+                        this.fillanimation+=0.3;
+                    }
+                    //cauldron
+
+                    ctx.fillStyle = 'black';
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillText(this.gameovercollected,700,450);
+                    var w = ctx.measureText(this.gameovercollected).width;
+                    ctx.drawImage(imgs[2],620-w/2,400,75,75);
+                    //amount of candy
+
+                    ctx.textAlign = 'center';
+
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    if(Mouse.inBox(350,540,300,100)&&this.timeupanimation==0) {
+                        ctx.fillStyle = 'rgb(230,230,230)';
+                        if(Mouse.click) {
+                            game.reset();
+                        }
+                    }
+                    roundRect(350,540,300,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Retry',500,610);
+
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    if(Mouse.inBox(350,670,300,100)&&this.timeupanimation==0) {
+                        ctx.fillStyle = 'rgb(230,230,230)';
+                        if(Mouse.click) {
+                            page = 'menu';
+                            menu.reset();
+                        }
+                    }
+                    roundRect(350,670,300,100,20);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Quit',500,740);
+                    //buttons
+
+                    ctx.restore();
+                },
+                draw: function() {
+                    ctx.save();
+                    ctx.translate(500,500);
+                    this.drawBackground();
+                    //background
+
+                    this.objects.draw();
+                    this.candies.draw();
+                    //objects
+
+                    player.draw();
+                    //player
+
+                    this.ghosts.draw();
+                    //ghosts
+
+                    var n2 = 0;
+                    while(n2 < this.objects.objects.length) {
+                        var o = this.objects.objects[n2];
+                        if(o.type=='cauldron') {
+                            var n = 0;
+                            while(n < this.movingCandy.length) {
+                                var c = this.movingCandy[n];
+                                c.x = c.x*0.97+(c.target.x)*0.03;
+                                c.y = c.y*0.97+(c.target.y)*0.03;
+                                ctx.globalAlpha = distTo(c.target.x,c.target.y,c.x,c.y);
+                                if(c.number==0) {
+                                    ctx.drawImage(imgs[2],c.x-cam.x,c.y-cam.y,35,35);
+                                } else if(c.number==1) {
+                                    ctx.drawImage(imgs[24],c.x-cam.x,c.y-cam.y,35,35);
+                                } else if(c.number==2) {
+                                    ctx.drawImage(imgs[25],c.x-cam.x,c.y-cam.y,35,35);
+                                } else if(c.number==3) {
+                                    ctx.drawImage(imgs[26],c.x-cam.x,c.y-cam.y,35,35);
+                                }
+                                if(distTo(c.target.x,c.target.y,c.x,c.y)<0.3) {
+                                    this.movingCandy.splice(n,1);
+                                    n--;
+                                }
+                                n++;
+                            }
+                            ctx.globalAlpha = 1;
+                        }
+                        n2++;
+                    }
+                    //draw moving candy
+
+                    ctx.restore();
+                    this.drawLabels();
+                    //labels
+
+                    if(this.countdown>0) {
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        var offset = this.countdown%100;
+                        if(offset>90) {
+                            offset -= 90;
+                            offset /= 10;
+                        } else if(offset<10) {
+                            offset /= 10;
+                            offset = offset-1;
+                        } else {
+                            offset = 0;
+                        }
+                        ctx.globalAlpha = 1-Math.abs(offset);
+                        if(this.countdown>100) {
+                            ctx.fillText(Math.floor(this.countdown/100),500+offset*50,500);
+                        } else {
+                            ctx.fillText('Go!',500,500);
+                        }
+                        ctx.globalAlpha = 1;
+                    }
+                    if(this.timeleft==0) {
+                        this.gameOverMenu();
+                    }
+                    //3 2 1 go text
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var cauldron = false;
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            if(o.type=='cauldron') {
+                                cauldron = o;
+                            }
+                            this.drawObject(o);
+                            n++;
+                        }
+                        if(cauldron) {
+                            var c = {x:cauldron.x-cam.x-10,y:cauldron.y-cam.y-10,w:cauldron.w+20,h:cauldron.h+20};
+                            var s = {x:-500,y:-420,w:1000,h:940};
+                            var s2 = {x:-450,y:-370,w:900,h:840};
+                            if(!blocksColliding(c,s)) {
+                                c.x += c.w/2;
+                                c.y += c.h/2;
+                                var cors = {x:Math.min(Math.max(s2.x,c.x),s2.x+s2.w),y:Math.min(Math.max(s2.y,c.y),s2.y+s2.h)}
+                                var dir = dirTo(cors.x,cors.y,c.x,c.y);
+                                ctx.save();
+                                ctx.translate(cors.x,cors.y);
+                                ctx.rotate(dir*Math.PI/180);
+                                ctx.strokeStyle = 'rgb(115,17,176)';
+                                ctx.lineCap = 'round';
+                                ctx.lineJoin = 'round';
+                                ctx.lineWidth = 10;
+                                ctx.beginPath();
+                                ctx.moveTo(0,0);
+                                ctx.lineTo(0,80);
+                                ctx.moveTo(0,0);
+                                ctx.lineTo(-20,20);
+                                ctx.moveTo(0,0);
+                                ctx.lineTo(20,20);
+                                ctx.stroke();
+                                ctx.restore();
+                                //cauldron is offscreen
+                            }
+                        }
+                    },
+                    drawObject: function(o,minimap) {
+                        if(minimap) {
+                            if(o.type=='house') {
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(o.x-cam.x-20,o.y-cam.y-50,o.w+40,o.h+40);
+                            }
+                            if(o.type=='cauldron') {
+                                ctx.fillStyle = 'rgb(115,17,176)';
+                                ctx.beginPath();
+                                ctx.arc(o.x-cam.x+o.w/2,o.y-cam.y+o.h/2-20,o.w*0.75,0,2*Math.PI);
+                                ctx.fill();
+                            }
+                            return;
+                        }
+                        var rect = {x:cam.x-500,y:cam.y-500,w:1000,h:1000};
+                        if(blocksColliding(rect,o)) {
+                            if(o.type=='house') {
+                                ctx.save();
+                                ctx.translate(o.x-cam.x+100,o.y-cam.y+130);
+                                if(game.johnbutlergames) {
+                                    ctx.rotate(Math.PI);
+                                }
+                                ctx.translate(-120,-180);
+                                if(o.treated) {
+                                    ctx.drawImage(imgs[19+o.color*2],0,0,o.w+40,o.h+40);
+                                } else {
+                                    ctx.drawImage(imgs[18+o.color*2],0,0,o.w+40,o.h+40);
+                                }
+                                ctx.restore();
+                            } else if(o.type=='cauldron') {
+                                cauldron = o;
+                                ctx.save();
+                                ctx.translate(o.x-cam.x-10,o.y-cam.y-10);
+                                ctx.drawImage(imgs[16],0,0,o.w+20,o.h+20);
+                                ctx.restore();
+                                ctx.textAlign = 'center';
+                                ctx.font = '30px Comic Sans MS';
+                                var w = ctx.measureText(o.candy).width;
+                                ctx.fillStyle = 'white';
+                                ctx.fillText(o.candy,o.x+o.w/2-cam.x,o.y-20-cam.y);
+                                ctx.drawImage(imgs[2],o.x+o.w/2-cam.x-w/2-40,o.y-45-cam.y,35,35);
+                            } else if(o.type=='roadTile') {
+                                ctx.fillStyle = 'rgb(18,28,20)';
+                                ctx.fillRect(o.x+30-cam.x,o.y+30-cam.y,o.w-60,o.h-60);
+                                if(o.neighbors[0]) {
+                                    ctx.fillRect(o.x-cam.x,o.y+30-cam.y,o.w-60,o.h-60);
+                                }
+                                if(o.neighbors[1]) {
+                                    ctx.fillRect(o.x+30-cam.x,o.y-cam.y,o.w-60,o.h-60);
+                                }
+                                if(o.neighbors[2]) {
+                                    ctx.fillRect(o.x+60-cam.x,o.y+30-cam.y,o.w-60,o.h-60);
+                                }
+                                if(o.neighbors[3]) {
+                                    ctx.fillRect(o.x+30-cam.x,o.y+60-cam.y,o.w-60,o.h-60);
+                                }
+                            }
+                        }
+                    }
+                },
+                ghosts: {
+                    ghosts: [],
+                    spawnTime: 0,
+                    update: function() {
+                        if(this.spawnTime==0&&this.ghosts.length<game.numberofghosts) {
+                            this.spawn();
+                        }
+                        this.spawnTime++;
+                        this.spawnTime%=300;
+                        var n = 0;
+                        while(n < this.ghosts.length) {
+                            var ghost = this.ghosts[n];
+                            if(ghost.despawn===false) {
+                                if(distTo(ghost.x,ghost.y,player.x,player.y)>800) {
+                                    ghost.despawn = 1;
+                                    game.ghosts.spawn();
+                                }
+                                ghost.img = 0;
+                                var targets = [];
+                                var n2 = 0;
+                                while(n2 < game.candies.candies.length) {
+                                    var candy = game.candies.candies[n2];
+                                    var dist = distTo(candy.x+candy.w/2,candy.y+candy.h/2,ghost.x,ghost.y);
+                                    if(dist<500) {
+                                        targets.push(candy);
+                                    }
+                                    n2++;
+                                }
+                                if(player.candy>0&&distTo(ghost.x,ghost.y,player.x+player.w/2,player.y+player.h/2)<300&&player.invulnerable==0) {
+                                    targets.push(player);
+                                }
+                                var target = [false,Infinity];
+                                var n2 = 0;
+                                while(n2 < targets.length) {
+                                    var dist = distTo(ghost.x,ghost.y,targets[n2].x+targets[n2].w/2,targets[n2].y+targets[n2].h/2);
+                                    if(dist<target[1]) {
+                                        target = [n2,dist];
+                                    }
+                                    n2++;
+                                }
+                                if(target[0]!==false) {
+                                    target = targets[target[0]];
+                                    ghost.direction = dirTo(ghost.x,ghost.y,target.x+target.w/2,target.y+target.h/2);
+                                    ghost.distToTarget = distTo(ghost.x,ghost.y,target.x+target.w/2,target.y+target.h/2);
+                                    if(distTo(ghost.x,ghost.y,target.x+target.w/2,target.y+target.h/2)<40) {
+                                        if(target.type=='candy') {
+                                            if(target.thrown==0) {
+                                                ghost.despawn = 100;
+                                                var n2 = 0;
+                                                while(n2 < game.candies.candies.length) {
+                                                    var candy = game.candies.candies[n2];
+                                                    if(candy.id==target.id) {
+                                                        game.candies.candies.splice(n2,1);
+                                                        break;
+                                                    }
+                                                    n2++;
+                                                }
+                                            }
+                                        } else {
+                                            player.loseCandy();
+                                        }
+                                    }
+                                } else {
+                                    ghost.img = 2;
+                                    ghost.distToTarget = Infinity;
+                                    ghost.randomTurnTime++;
+                                    ghost.randomTurnTime %= 200;
+                                    if(ghost.randomTurnTime==0) {
+                                        if(distTo(ghost.x,ghost.y,player.x+player.w/2,player.y+player.h/2)>300) {
+                                            ghost.direction = dirTo(ghost.x,ghost.y,player.x+player.w/2,player.y+player.h/2)+Math.random()*60-30;
+                                        } else {
+                                            ghost.direction = Math.random()*360;
+                                        }
+                                    }
+                                }
+                            } else {
+                                ghost.img = 1;
+                                ghost.despawn--;
+                                if(ghost.despawn==0) {
+                                    this.ghosts.splice(n,1);
+                                    n--;
+                                }
+                            }
+                            var n2 = 0;
+                            while(n2 < this.ghosts.length) {
+                                var ghost2 = this.ghosts[n2];
+                                var dist1 = distTo(ghost.x,ghost.y,ghost2.x,ghost2.y);
+                                var move1 = distToMove(ghost.speed,ghost.direction);
+                                var move2 = distToMove(ghost2.speed,ghost2.direction);
+                                var dist2 = distTo(ghost.x+move1[0],ghost.y+move1[1],ghost2.x+move2[0],ghost2.y+move2[1]);
+                                if(dist2<dist1&&distTo(ghost.x,ghost.y,ghost2.x,ghost2.y)<100) {
+                                    var dir;
+                                    dir = dirTo(ghost.x,ghost.y,ghost2.x,ghost2.y);
+                                    var t = turn(ghost.direction,dir);
+                                    ghost.direction -= t/10;
+                                    ghost2.direction += t/10;
+                                    //ghosts are headed towards each other
+                                }
+                                n2++;
+                            }
+                            var move = distToMove(ghost.speed,ghost.direction);
+                            ghost.x += move[0];
+                            ghost.y += move[1];
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.ghosts.length) {
+                            var ghost = this.ghosts[n];
+                            if(ghost.despawn!==false) {
+                                ctx.globalAlpha = ghost.despawn/100;
+                            }
+                            var move = distToMove(1,ghost.direction);
+                            if(move[0]>0) {
+                                ctx.save();
+                                ctx.translate(ghost.x-cam.x,ghost.y-cam.y-100);
+                                if(game.johnbutlergames) {
+                                    ctx.rotate(Math.PI);
+                                    ctx.translate(0,-200);
+                                }
+                                ctx.translate(50,50);
+                                ctx.scale(-1,1);
+                                ctx.drawImage(imgs[ghost.img+3],0,0,100,100);
+                                ctx.restore();
+                            } else {
+                                ctx.save();
+                                ctx.translate(ghost.x-cam.x,ghost.y-cam.y-100);
+                                if(game.johnbutlergames) {
+                                    ctx.rotate(Math.PI);
+                                    ctx.translate(0,-200);
+                                }
+                                ctx.translate(-50,50);
+                                ctx.drawImage(imgs[ghost.img+3],0,0,100,100);
+                                ctx.restore();
+                            }
+                            ctx.globalAlpha = 1;
+                            n++;
+                        }
+                    },
+                    spawn: function() {
+                        var ghost = {};
+                        ghost.img = 2;
+                        ghost.despawn = false;
+                        ghost.randomTurnTime = 0;
+                        var direction = Math.random()*360;
+                        var move = distToMove(707,direction);
+                        ghost.x = player.x+move[0];
+                        ghost.y = player.y+move[1];
+                        ghost.direction = Math.random()*360;
+                        ghost.speed = 1;
+                        this.ghosts.push(ghost);
+                    }
+                },
+                candies: {
+                    candies: [],
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.candies.length) {
+                            var candy = this.candies[n];
+                            if(candy.number==0) {
+                                ctx.drawImage(imgs[2],candy.x-cam.x,candy.y-cam.y,35,35);
+                            } else if(candy.number==1) {
+                                ctx.drawImage(imgs[24],candy.x-cam.x,candy.y-cam.y,35,35);
+                            } else if(candy.number==2) {
+                                ctx.drawImage(imgs[25],candy.x-cam.x,candy.y-cam.y,35,35);
+                            } else if(candy.number==3) {
+                                ctx.drawImage(imgs[26],candy.x-cam.x,candy.y-cam.y,35,35);
+                            }
+                            n++;
+                        }
+                    },
+                    update: function() {
+                        var n = 0;
+                        while(n < this.candies.length) {
+                            var candy = this.candies[n];
+                            candy.x += candy.xmove;
+                            candy.y += candy.ymove;
+                            candy.id = n;
+                            candy.w = 35;
+                            candy.h = 35;
+                            candy.xmove *= 0.98;
+                            candy.ymove *= 0.98;
+                            candy.thrown--;
+                            candy.thrown = Math.max(candy.thrown,0);
+                            updateBlock(candy,game.objects.objects);
+                            n++;
+                        }
+                    },
+                    throw: function() {
+                        if(player.candy>0) {
+                            player.candy--;
+                            var candy = {};
+                            candy.x = player.x;
+                            candy.y = player.y;
+                            candy.type = 'candy';
+                            candy.number = Math.floor(Math.random()*4);
+                            move = distToMove(2,Math.random()*360);
+                            candy.xmove = move[0];
+                            candy.ymove = move[1];
+                            candy.thrown = 50;
+                            this.candies.push(candy);
+                        }
+                    }
+                },
+                drawBackground: function() {
+                    ctx.fillStyle = 'rgb(45,52,52)';
+                    ctx.fillRect(-500,-500,1000,1000);
+                },
+                drawLabels: function() {
+                    if(this.timeleft<1000) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                        ctx.fillRect(0,80,550,60);
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'left';
+                        ctx.font = '40px Comic Sans MS';
+                        ctx.fillText('Quick! Deposit your candy!',20,120);
+                    }
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0,0,1000,80);
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(0,80);
+                    ctx.lineTo(1000,80);
+                    ctx.stroke();
+                    //white box
+
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'black';
+                    if(this.timeleft<1000) {
+                        ctx.fillStyle = 'red';
+                    }
+                    ctx.font = '60px Comic Sans MS';
+                    ctx.fillText(Math.floor(this.timeleft/100),20,60);
+                    //time left
+                    
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'black';
+                    ctx.font = '60px Comic Sans MS';
+                    var modeText;
+                    if(this.mode=='easy') {
+                        modeText = 'Easy';
+                    } else if(this.mode=='medium') {
+                        modeText = 'Medium';
+                    } else if(this.mode=='hard') {
+                        modeText = 'Hard';
+                    }
+                    ctx.fillText('Mode: '+modeText,150,60);
+                    //game mode text
+                    
+                    this.drawMinimap();
+                    //minimap
+                },
+                drawMinimap: function() {
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.fillRect(800,70,200,210);
+                    ctx.strokeRect(800,80,200,200);
+                    ctx.save();
+                    ctx.rect(800,80,200,200);
+                    ctx.clip();
+                    ctx.translate(800,80);
+                    ctx.scale(0.1,0.1);
+                    ctx.translate(1000,1000);
+                    var n = 0;
+                    while(n < this.objects.objects.length) {
+                        var o = this.objects.objects[n];
+                        this.objects.drawObject(o,true);
+                        n++;
+                    }
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(player.x-cam.x-15,player.y-cam.y-45,60,60);
+                    ctx.restore();
+                },
+                reset: function() {
+                    this.johnbutlergames = false;
+                    player.xmove = 0;
+                    player.ymove = 0;
+                    player.x = 2000;
+                    player.y = 1900;
+                    player.trickOrTreatTime = 100;
+                    player.invulnerable = 0;
+                    player.candy = 0;
+                    player.nextToHouseTime = {houseId:0,time:0};
+                    player.notMoveTime = 0;
+                    this.countdown = 400;
+                    this.timeleft = this.timelimit;
+                    this.candy = 0;
+                    this.movingCandy = [];
+                    this.gameovercollected = 0;
+                    this.timeupanimation = false;
+                    this.generateNewLevel();
+                    this.ghosts.ghosts = [];
+                    this.candies.candies = [];
+                    this.ghosts.spawnTime = 0;
+                },
+                generateNewLevel: function() {
+                    this.objects.objects = [];
+                    var maze = generateMaze({width:10,height:10});
+                    var n = 0;
+                    while(n < 60) {
+                        var x = Math.floor(Math.random()*9)*2+1;
+                        var y = Math.floor(Math.random()*8)*2+2;
+                        maze[x][y] = 0;
+                        n++;
+                    }
+                    maze[9][8] = 0;
+                    maze[9][10] = 0;
+                    maze[8][9] = 0;
+                    maze[10][9] = 0;
+                    var x = 0;
+                    while(x < maze.length) {
+                        var y = 0;
+                        while(y < maze.length) {
+                            if(maze[x][y]!==0) {
+                                var house = {};
+                                house.type = 'house';
+                                house.treated = false;
+                                house.w = 200;
+                                house.h = 200;
+                                house.x = x*200;
+                                house.y = y*200;
+                                house.color = Math.floor(Math.random()*3);
+                                house.collide = true;
+                                this.objects.objects.push(house);
+                            } else {
+                                var tile = {};
+                                tile.type = 'roadTile';
+                                tile.w = 200;
+                                tile.h = 200;
+                                tile.x = x*200;
+                                tile.y = y*200;
+                                tile.neighbors = [!maze[x-1][y],!maze[x][y-1],!maze[x+1][y],!maze[x][y+1]];
+                                tile.collide = false;
+                                this.objects.objects.push(tile);
+                            }
+                            y++;
+                        }
+                        x++;
+                    }
+                    var cauldron = {};
+                    cauldron.type = 'cauldron';
+                    cauldron.w = 100;
+                    cauldron.h = 100;
+                    cauldron.x = -150+2000;
+                    cauldron.y = -150+2000;
+                    cauldron.collide = true;
+                    cauldron.candy = 0;
+                    this.objects.objects.push(cauldron);
+                }
+            }
+
+            var player = {
+                type: 'player',
+                x: 0,
+                y: 0,
+                w: 50,
+                h: 50,
+                xmove: 0,
+                ymove: 0,
+                direction: 0,
+                trickOrTreatTime: 100,
+                collectingFromHouse: false,
+                invulnerable: 0,
+                candy: 0,
+                move: [0,0],
+                nextToHouseTime: {houseId:0,time:0},
+                notMoveTime: 0,
+                update: function() {
+                    if(this.invulnerable>0) {
+                        this.invulnerable--;
+                    }
+                    this.move = [0,0];
+                    if(this.trickOrTreatTime==100) {
+                        var toMove = [0,0];
+                        if(Keys.keys[37]||Keys.keys[65]) {
+                            toMove[0] -= 0.1;
+                            this.move[0]--;
+                            //move left
+                        }
+                        if(Keys.keys[39]||Keys.keys[68]) {
+                            toMove[0] += 0.1;
+                            this.move[0]++;
+                            //move right
+                        }
+                        if(Keys.keys[38]||Keys.keys[87]) {
+                            toMove[1] -= 0.1;
+                            this.move[1]--;
+                            //move up
+                        }
+                        if(Keys.keys[40]||Keys.keys[83]) {
+                            toMove[1] += 0.1;
+                            this.move[1]++;
+                            //move down
+                        }
+                        if(toMove[0]==0&&toMove[1]==0) {
+                            this.notMoveTime++;
+                        } else {
+                            this.notMoveTime = 0;
+                        }
+                        this.xmove += toMove[0];
+                        this.ymove += toMove[1];
+                        this.xmove *= 0.97;
+                        this.ymove *= 0.97;
+                    } else {
+                        this.xmove = 0;
+                        this.ymove = 0;
+                    }
+                    if(this.move[0]!=0||this.move[1]!=0) {
+                        this.direction = dirTo(0,0,this.move[0],this.move[1]);
+                    }
+                    var trickOrTreating = Keys.keys[32];
+                    var nextToHouse = false;
+                    var n = 0;
+                    while(n < game.objects.objects.length) {
+                        var o = game.objects.objects[n];
+                        if(o.type=='house') {
+                            var dist = distTo(o.x+o.w/2,o.y+o.h/2,this.x+this.w/2,this.y+this.h/2);
+                            if(dist<170) {
+                                nextToHouse = n;
+                                break;
+                            }
+                        }
+                        n++;
+                    }
+                    if(nextToHouse!==false&&this.trickOrTreatTime==0) {
+                        var house = game.objects.objects[nextToHouse];
+                        player.candy++;
+                        house.treated = true;
+                    }
+                    if(nextToHouse!==false) {
+                        if(game.objects.objects[nextToHouse].treated===true) {
+                            trickOrTreating = false;
+                            this.nextToHouseTime.time = 0;
+                        }
+                    } else {
+                        this.nextToHouseTime.time = 0;
+                        trickOrTreating = false;
+                    }
+                    if(trickOrTreating) {
+                        this.trickOrTreatTime--;
+                        this.collectingFromHouse = nextToHouse;
+                        this.nextToHouseTime.time = 0;
+                    } else {
+                        if(nextToHouse!==false) {
+                            this.nextToHouseTime.houseId = nextToHouse;
+                            this.nextToHouseTime.time++;
+                        }
+                        this.trickOrTreatTime = 100;
+                        this.collectingFromHouse = false;
+                    }
+                    var n = 0;
+                    while(n < game.candies.candies.length) {
+                        var candy = game.candies.candies[n];
+                        if(distTo(this.x+this.w/2,this.y+this.h/2,candy.x+candy.w/2,candy.y+candy.h/2)<20&&candy.thrown==0) {
+                            player.candy++;
+                            game.candies.candies.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    //collect candies on ground
+
+                    var n = 0;
+                    while(n < game.objects.objects.length) {
+                        var o = game.objects.objects[n];
+                        if(o.type=='cauldron') {
+                            var dist = distTo(o.x+o.w/2,o.y+o.h/2,this.x+this.w/2,this.y+this.h/2);
+                            if(dist<100) {
+                                var n2 = 0;
+                                while(n2 < this.candy) {
+                                    var candy = {};
+                                    candy.target = {};
+                                    var move = distToMove(Math.random()*o.w/3,Math.random()*360);
+                                    candy.target.x = o.x+o.w/3+move[0];
+                                    candy.target.y = o.y+o.h/3+move[1];
+                                    candy.w = 35;
+                                    candy.h = 35;
+                                    candy.x = player.x;
+                                    candy.y = player.y;
+                                    candy.number = Math.floor(Math.random()*4);
+                                    game.movingCandy.push(candy);
+                                    n2++;
+                                }
+                                o.candy += this.candy;
+                                this.candy = 0;
+                            }
+                        }
+                        n++;
+                    }
+                    updateBlock(this,game.objects.objects);
+                },
+                draw: function() {
+                    if(this.invulnerable>0) {
+                        ctx.globalAlpha = Math.floor(this.invulnerable/25)%2/2+0.5;
+                    }
+                    if(this.direction<0) {
+                        this.direction += 360;
+                    }
+                    this.direction %= 360;
+                    var imgNum;
+                    if(this.direction>=337.5||this.direction<22.5) {
+                        imgNum = 6;
+                    }
+                    if(this.direction>=22.5&&this.direction<67.5) {
+                        imgNum = 7;
+                    }
+                    if(this.direction>=67.5&&this.direction<112.5) {
+                        imgNum = 8;
+                    }
+                    if(this.direction>=112.5&&this.direction<157.5) {
+                        imgNum = 9;
+                    }
+                    if(this.direction>=157.5&&this.direction<202.5) {
+                        imgNum = 10;
+                    }
+                    if(this.direction>=202.5&&this.direction<247.5) {
+                        imgNum = 11;
+                    }
+                    if(this.direction>=247.5&&this.direction<292.5) {
+                        imgNum = 12;
+                    }
+                    if(this.direction>=292.5&&this.direction<337.5) {
+                        imgNum = 13;
+                    }
+                    ctx.drawImage(imgs[imgNum],this.x-cam.x-this.w*1.75,this.y-cam.y-this.h*2,this.w*4,this.h*4);
+                    ctx.globalAlpha = 1;
+                    //draw player image
+
+                    if(this.candy>0) {
+                        ctx.textAlign = 'center';
+                        ctx.font = '30px Comic Sans MS';
+                        var w = ctx.measureText(this.candy).width;
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(this.candy,this.x+this.w/2-cam.x,this.y+80-cam.y);
+                        ctx.drawImage(imgs[2],this.x+this.w/2-cam.x-w/2-40,this.y+55-cam.y,35,35);
+                    }
+                    //draw player candy count
+
+                    if(this.invulnerable>0) {
+                        ctx.textAlign = 'center';
+                        ctx.font = '30px Comic Sans MS';
+                        ctx.fillStyle = 'white';
+                        ctx.fillText("Quick! Collect",this.x+this.w/2-cam.x,this.y-90-cam.y);
+                        ctx.fillText("your candy!",this.x+this.w/2-cam.x,this.y-60-cam.y);
+                    } else if(this.notMoveTime>300) {
+                        ctx.textAlign = 'center';
+                        ctx.font = '30px Comic Sans MS';
+                        ctx.fillStyle = 'white';
+                        ctx.fillText("WASD or Arrows",this.x+this.w/2-cam.x,this.y-90-cam.y);
+                        ctx.fillText("to move...",this.x+this.w/2-cam.x,this.y-60-cam.y);
+                    }
+
+                    if(this.trickOrTreatTime!==100) {
+                        var house = game.objects.objects[this.collectingFromHouse];
+                        ctx.fillStyle = 'lime';
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.arc(house.x+house.w/2-cam.x,house.y+house.h/2-cam.y,40,0,2*Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath();
+                        ctx.arc(house.x+house.w/2-cam.x,house.y+house.h/2-cam.y,38,-0.5*Math.PI,2*Math.PI*this.trickOrTreatTime/100-0.5*Math.PI);
+                        ctx.lineTo(house.x+house.w/2-cam.x,house.y+house.h/2-cam.y);
+                        ctx.fill();
+                    }
+                    //draw trick or treat timer
+
+                    if(this.nextToHouseTime.time>100) {
+                        var house = game.objects.objects[this.nextToHouseTime.houseId];
+                        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                        ctx.fillRect(house.x-cam.x-10,house.y+house.h/2-cam.y-50,220,80);
+                        ctx.fillStyle = 'white';
+                        ctx.font = '30px Comic Sans MS';
+                        ctx.textAlign = 'center';
+                        ctx.fillText("Press Space to",house.x+house.w/2-cam.x,house.y+house.h/2-cam.y-20);
+                        ctx.fillText("Trick or Treat",house.x+house.w/2-cam.x,house.y+house.h/2-cam.y+20);
+                    }
+                },
+                loseCandy: function() {
+                    this.invulnerable = 200;
+                    var n = 0;
+                    while(this.candy > 0 && n < 5) {
+                        game.candies.throw();
+                        n++;
+                    }
+                }
+            }
+
+            var cam = {
+                x: 0,
+                y: 0,
+                update: function() {
+                    this.x = (player.x+player.w/2)*0.1+this.x*0.9;
+                    this.y = (player.y+player.h/2)*0.1+this.y*0.9;
+                }
+            }
+
+            var t = 0;
+            var easyHighscore = 0;
+            var mediumHighscore = 0;
+            var hardHighscore = 0;
+            if(localStorage.getItem('ghosttowneasyhighscore')!=null) {
+                easyHighscore = localStorage.getItem('ghosttowneasyhighscore');
+            }
+            if(localStorage.getItem('ghosttownmediumhighscore')!=null) {
+                mediumHighscore = localStorage.getItem('ghosttownmediumhighscore');
+            }
+            if(localStorage.getItem('ghosttownhardhighscore')!=null) {
+                hardHighscore = localStorage.getItem('ghosttownhardhighscore');
+            }
+            var page = 'menu';
+            menu.reset();
+
+            /*
+                To Do:
+                add pause menu
+                add music
+                upgrade artwork
+                add more types of houses
+                upgrade tutorials
+                add upgrades menu
+                    power ups
+                    bonuses
+                    currency
+                add different types of ghosts
+                */
+        </script>
+    </body>
+</html>

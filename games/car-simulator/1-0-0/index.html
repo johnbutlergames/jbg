@@ -1,0 +1,327 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script src='geometric.min.js'></script>
+        <script>
+            document.title = "Car Simulation";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = ["images/car.png"];
+            var keys = [];
+            var canvas = document.createElement('canvas');
+            var _canvas = canvas.getContext('2d');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin: 0px;';
+            canvas.style = 'position:absolute;margin:0px;background-color:white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                document.body.appendChild(img);
+                img.style = 'display: none;';
+                imgs[n] = img;
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+                event.preventDefault();
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+                _mouse.up = false;
+            });
+            canvas.addEventListener('mouseup',function() {
+                _mouse.up = true;
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            var _mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                up: false,
+                click: false
+            }
+            function main() {try{
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                program();
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+            }catch(err){window.alert(err.message)}}
+            window.setInterval(main,20);
+            function program() {
+                car.update();
+                _canvas.lineWidth = 2;
+                _canvas.beginPath();
+                _canvas.strokeStyle = 'black';
+                drawGrid(0,0,1000,500,20,10,car.x,car.y);
+                _canvas.stroke();
+                car.draw();
+                map.draw();
+                if(keys[37]||keys[38]||keys[39]||keys[40]) {
+                    instructions = false;
+                }
+                if(instructions) {
+                    _canvas.fillStyle = 'white';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 2;
+                    _canvas.fillRect(250,100,500,70);
+                    _canvas.strokeRect(250,100,500,70);
+                    _canvas.fillStyle = 'black';
+                    _canvas.font = "50px Arial";
+                    _canvas.fillText("Arrow Keys To Move",270,150);
+                }
+            }
+            function drawGrid(x,y,w,h,xnum,ynum,xstart,ystart) {
+                xstart%=w/xnum;
+                ystart%=h/ynum;
+                var n = 0;
+                while(n <= ynum) {
+                    _canvas.moveTo(x,y+n*(h/ynum)+ystart);
+                    _canvas.lineTo(x+w,y+n*(h/ynum)+ystart);
+                    n++;
+                }
+                n = 0;
+                while(n <= xnum) {
+                    _canvas.moveTo(x+n*(w/xnum)+xstart,y);
+                    _canvas.lineTo(x+n*(w/xnum)+xstart,y+h);
+                    n++;
+                }
+            }
+            var car = {
+                x: 0,
+                y: 0,
+                xmove: 0,
+                ymove: 0,
+                resistance: 0.02,
+                traction: 1,
+                draw: function() {
+                    _canvas.save();
+                    _canvas.translate(500,250);
+                    _canvas.rotate(this.direction*Math.PI/180);
+                    _canvas.drawImage(imgs[0],-12.5,-22.5,25,45);
+                    _canvas.restore();
+                    _canvas.font = '30px Arial';
+                    _canvas.fillStyle = 'black';
+                    _canvas.fillText("X: "+Math.round(car.x)+" Y: "+Math.round(car.y),10,50);
+                },
+                update: function() {
+                    var turn = 0;
+                    if(keys[37]) {
+                        turn -= Math.max(Math.min(distanceTo(0,0,car.xmove,car.ymove),2),0);
+                    }
+                    if(keys[39]) {
+                        turn += Math.max(Math.min(distanceTo(0,0,car.xmove,car.ymove),2),0);
+                    }
+                    car.direction += turn;
+                    var poly = [];
+                    poly[0] = rotate(car.x,car.y,car.x-22,car.y-10,90-car.direction);
+                    poly[1] = rotate(car.x,car.y,car.x-22,car.y+10,90-car.direction);
+                    poly[2] = rotate(car.x,car.y,car.x+22,car.y+10,90-car.direction);
+                    poly[3] = rotate(car.x,car.y,car.x+22,car.y-10,90-car.direction);
+                    poly[4] = rotate(car.x,car.y,car.x-22,car.y-10,90-car.direction);
+                    if(map.touchingObject(poly).length>0) {
+                        car.direction -= turn;
+                    }
+                    if(keys[38]) {
+                        car.speed += 0.1;
+                    }
+                    if(keys[40]) {
+                        car.speed -= 0.1;
+                    }
+                    if(car.speed>10) {
+                        car.speed = 10;
+                    }
+                    if(car.speed<-10) {
+                        car.speed = -10;
+                    }
+                    if(car.speed>0) {
+                        car.speed-=car.resistance;
+                    }
+                    if(car.speed<0) {
+                        car.speed+=car.resistance;
+                    }
+                    if((car.speed<car.resistance&&car.speed>0)||(car.speed>car.resistance&&car.speed<0)) {
+                        car.speed = 0;
+                    }
+                    poly[0] = rotate(car.x,car.y,car.x-22,car.y-10,90-car.direction);
+                    poly[1] = rotate(car.x,car.y,car.x-22,car.y+10,90-car.direction);
+                    poly[2] = rotate(car.x,car.y,car.x+22,car.y+10,90-car.direction);
+                    poly[3] = rotate(car.x,car.y,car.x+22,car.y-10,90-car.direction);
+                    poly[4] = rotate(car.x,car.y,car.x-22,car.y-10,90-car.direction);
+                    if(map.touchingObject(poly).length>0) {
+                        car.x += -car.xmove;
+                        car.y += -car.ymove;
+                        car.xmove *= -0.5;
+                        car.ymove *= -0.5;
+                        car.speed*=-0.5;
+                    }
+                    var move = distanceToMovePoint(car.speed,car.direction);
+                    car.xmove = averageWeighted([1,car.xmove,car.traction,move[0]]);
+                    car.ymove = averageWeighted([1,car.ymove,car.traction,move[1]]);
+                    car.x += car.xmove;
+                    car.y += car.ymove;
+                },
+                speed: 0,
+                direction: 0
+            }
+            var map = {
+                objects: [],
+                update: function() {
+                },
+                touchingObject: function(poly) {
+                    var ids = [];
+                    var n = 0;
+                    while(n < this.objects.length) {
+                        if(geometric.polygonIntersectsPolygon(this.objects[n].object,poly)) {
+                            ids.push(n);
+                        }
+                        n++;
+                    }
+                    return ids;
+                },
+                draw: function() {
+                    var n = 0;
+                    while(n < this.objects.length) {
+                        _canvas.fillStyle = 'rgba(0,0,0,0.5)';
+                        _canvas.strokeStyle = 'black';
+                        _canvas.lineWidth = 2;
+                        var n2 = 0;
+                        var arr = [];
+                        while(n2 < this.objects[n].object.length) {
+                            arr.push([-this.objects[n].object[n2][0]+car.x+500,-this.objects[n].object[n2][1]+car.y+250]);
+                            n2++;
+                        }
+                        draw3DObj(arr,this.objects[n].z,this.objects[n].height);
+                        n++;
+                    }
+                },
+                generate: function(obn) {
+                    this.objects = [];
+                    var n = 0;
+                    while(n < obn) {
+                        var x = random(-1000,1000);
+                        var y = random(-1000,1000);
+                        var w = random(50,200);
+                        var h = random(50,200);
+                        this.objects.push({object:[[x,y],[x+w,y],[x+w,y+h],[x,y+h],[x,y]],z:0,height:10});
+                        n++;
+                    }
+                }
+            }
+            function distanceToMovePoint(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function distanceTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function random(min, max) {
+                return Math.floor(Math.random() * (max - min + 1) ) + min;
+            }
+            function averageWeighted(arr) {
+                var num = 0;
+                var num2 = 0;
+                var num3 = 0;
+                while(num < arr.length) {
+                    num3 += arr[num];
+                    num2 += arr[num]*arr[num+1];
+                    num += 2;
+                }
+                return num2/num3;
+            }
+            function draw3DObj(arr,z,h) {
+                var cor = cor3D(arr[0][0],arr[0][1],z);
+                _canvas.beginPath();
+                _canvas.moveTo(cor[0],cor[1]);
+                var n = 1;
+                while(n < arr.length) {
+                    cor = cor3D(arr[n][0],arr[n][1],z);
+                    _canvas.lineTo(cor[0],cor[1]);
+                    n++;
+                }
+                _canvas.fill();
+                _canvas.stroke();
+                n = 1;
+                while(n < arr.length) {
+                    _canvas.beginPath();
+                    cor = cor3D(arr[n-1][0],arr[n-1][1],z);
+                    _canvas.moveTo(cor[0],cor[1]);
+                    cor = cor3D(arr[n][0],arr[n][1],z);
+                    _canvas.lineTo(cor[0],cor[1]);
+                    cor = cor3D(arr[n][0],arr[n][1],z+h);
+                    _canvas.lineTo(cor[0],cor[1]);
+                    cor = cor3D(arr[n-1][0],arr[n-1][1],z+h);
+                    _canvas.lineTo(cor[0],cor[1]);
+                    cor = cor3D(arr[n-1][0],arr[n-1][1],z);
+                    _canvas.lineTo(cor[0],cor[1]);
+                    _canvas.fill();
+                    _canvas.stroke();
+                    n++;
+                }
+                cor = cor3D(arr[0][0],arr[0][1],z+h);
+                _canvas.beginPath();
+                _canvas.moveTo(cor[0],cor[1]);
+                var n = 1;
+                while(n < arr.length) {
+                    cor = cor3D(arr[n][0],arr[n][1],z+h);
+                    _canvas.lineTo(cor[0],cor[1]);
+                    n++;
+                }
+                _canvas.fill();
+                _canvas.stroke();
+            }
+            function cor3D(x,y,z) {
+                return [(x-500)*(1+z/10)+500,(y-250)*(1+z/10)+250];
+            }
+            map.generate(50);
+            var instructions = true;
+        </script>
+    </body>
+</html>

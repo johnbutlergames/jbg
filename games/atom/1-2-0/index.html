@@ -1,0 +1,436 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="elements.js"></script>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Atom";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                atom.update();
+
+                ctx.save();
+                ctx.translate(500,500);
+                atom.draw();
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(865,125);
+                atom.drawSymbol();
+                ctx.restore();
+
+                updateUI();
+
+                t++;
+            }
+
+            var atom = {
+                nucleons: [{type:"proton"}],
+                electrons: [{}],
+                dynamicElectrons: true,
+                dynamicNucleus: true,
+                zoom: 1,
+                shellsActive: 0,
+                valenceShell: 0,
+                valenceElectronCount: 0,
+                nucleusRadius: 0,
+                showElectronRings: true,
+                atomRadius: 0,
+                maxElectronsInShells: [
+                    2,
+                    8,
+                    8,
+                    8,
+                    8,
+                    8,
+                    8,
+                    8
+                ],
+                setParticleNumbers: function(protons,neutrons,electrons) {
+                    this.nucleons = ("p".repeat(protons)+"n".repeat(neutrons)).split("").map(e=>e=="p"?{type:"proton"}:{type:"neutron"});
+                    this.electrons = "e".repeat(electrons).split("").map(e=>({}));
+                },
+                loadElement: function(atomicNumber) {
+                    var element = elements.find(e=>e.atomicNumber==atomicNumber);
+                    if(!element) return;
+                    this.setParticleNumbers(atomicNumber,element.massNumber-atomicNumber,atomicNumber);
+                },
+                update: function() {
+                    this.updateNucleons();
+                    this.updateElectrons();
+
+                    this.atomRadius = this.nucleusRadius+(this.shellsActive)*100;
+                    this.zoom = 500/(this.atomRadius);
+                    
+                    this.dynamicNucleus = this.nucleons.length<100;
+                },
+                add: function(type) {
+                    if(!this.canAdd(type)) return;
+                    if(type=="proton") this.nucleons.push({type:"proton"});
+                    if(type=="neutron") this.nucleons.push({type:"neutron"});
+                    if(type=="electron") this.electrons.push({});
+                },
+                remove: function(type) {
+                    if(type=="proton") {
+                        var index = this.nucleons.findIndex(e=>e.type=="proton");
+                        if(index==-1) return;
+                        this.nucleons.splice(index,1);
+                    }
+                    if(type=="neutron") {
+                        var index = this.nucleons.findIndex(e=>e.type=="neutron");
+                        if(index==-1) return;
+                        this.nucleons.splice(index,1);
+                    }
+                    if(type=="electron") this.electrons.shift();
+                },
+                canRemove: function(type) {
+                    if(type=="proton") return this.nucleons.some(e=>e.type=="proton");
+                    if(type=="neutron") return this.nucleons.some(e=>e.type=="neutron");
+                    if(type=="electron") return this.electrons.length>0;
+                },
+                canAdd: function(type) {
+                    if(type=="proton") return true;
+                    if(type=="neutron") return true;
+                    if(type=="electron") return this.electrons.length<this.maxElectronsInShells.reduce((a,b)=>a+b);
+                },
+                updateNucleons: function() {
+                    if(this.dynamicNucleus) {
+                        for(var n=0;n<this.nucleons.length;n++) {
+                            var o = this.nucleons[n];
+                            if(!o.x) o.x = Math.random();
+                            if(!o.y) o.y = Math.random();
+                            if(!o.xmove) o.xmove = 0;
+                            if(!o.ymove) o.ymove = 0;
+                        }
+                        for(var n=0;n<this.nucleons.length;n++) {
+                            var o = this.nucleons[n];
+                            o.x += o.xmove;
+                            o.y += o.ymove;
+
+                            var dir = dirTo(o.x,o.y,0,0);
+                            var move = distToMove(0.05,dir);
+                            o.xmove += move.x;
+                            o.ymove += move.y;
+
+                            o.xmove *= 0.8;
+                            o.ymove *= 0.8;
+                            for(var n2=n+1;n2<this.nucleons.length;n2++) {
+                                var o2 = this.nucleons[n2];
+                                var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                if(dist>20) continue;
+                                var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                                var move = distToMove(20-dist,dir);
+                                o.x -= move.x/2;
+                                o.y -= move.y/2;
+                                o2.x += move.x/2;
+                                o2.y += move.y/2;
+                            }
+                        }
+                    } else {
+                        var rings = [];
+                        var count = this.nucleons.length;
+                        while(count>0) {
+                            var ring = {};
+                            ring.dist = rings.length*18;
+                            ring.count = Math.floor(ring.dist*Math.PI/12)+1;
+                            ring.origCount = ring.count;
+                            rings.push(ring);
+                            count -= ring.count;
+                        }
+                        for(var n=0;n<this.nucleons.length;n++) {
+                            var ring = rings[0];
+                            var o = this.nucleons[n];
+                            var move = distToMove(ring.dist,ring.count/ring.origCount*360);
+                            o.x = move.x;
+                            o.y = move.y;
+
+                            ring.count--;
+                            if(ring.count==0) rings.shift();
+                        }
+                    }
+
+                    this.nucleusRadius = Math.max(0,...(this.nucleons.map(e=>distTo(0,0,e.x,e.y))));
+                },
+                updateElectrons: function() {
+                    if(this.electrons.length==0) return;
+
+                    var e = 0;
+                    for(var n=0;n<this.maxElectronsInShells.length;n++) {
+                        e += this.maxElectronsInShells[n];
+                        if(this.electrons.length>=e) {
+                            this.valenceShell = n+2;
+                            this.valenceElectronCount = this.electrons.length-e;
+                        }
+                    }
+
+                    var electronsInShells = {};
+                    for(var n=0;n<this.electrons.length;n++) {
+                        var o = this.electrons[n];
+                        if(!o.angle) o.angle = 0;
+                        o.type = "electron";
+                        o.valence = false;
+
+                        var e = 0;
+                        for(var n2=0;n2<this.maxElectronsInShells.length;n2++) {
+                            e += this.maxElectronsInShells[n2];
+                            if(n<e) {
+                                o.shell = n2+1;
+                                if(o.shell==this.valenceShell) {
+                                    o.valence = true;
+                                    o.valenceAngle = n/this.valenceElectronCount*360;
+                                }
+                                break;
+                            }
+                        }
+                        if(!electronsInShells[o.shell]) electronsInShells[o.shell] = 0;
+                        if(o.valence) {
+                            o.shellAngle = o.valenceAngle;
+                        } else {
+                            o.shellAngle = electronsInShells[o.shell]/this.maxElectronsInShells[o.shell-1]*360;
+                        }
+                        electronsInShells[o.shell]++;
+                        var move = distToMove(o.shell*100+this.nucleusRadius,o.shellAngle);
+                        o.x = move.x;
+                        o.y = move.y;
+                    }
+                    this.shellsActive = Math.max(...(this.electrons.map(e=>e.shell)));
+
+                    if(this.dynamicElectrons) {
+                        for(var o of this.electrons) {
+                            o.angle = t*(0.9+o.shell/10);
+                            var move = distToMove(-50+o.shell*100+this.nucleusRadius,o.shellAngle+o.angle);
+                            o.x = move.x;
+                            o.y = move.y;
+                        }
+                    }
+                },
+                draw: function() {
+                    ctx.scale(this.zoom,this.zoom);
+                    for(var n=0;n<this.nucleons.length;n++) {
+                        var o = this.nucleons[n];
+
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        this.drawParticle(o);
+                        ctx.restore();
+                    }
+
+                    if(this.showElectronRings&&this.electrons.length>0) {
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 1;
+                        for(var n=0;n<this.shellsActive;n++) {
+                            ctx.beginPath();
+                            ctx.arc(0,0,-50+100*(n+1)+this.nucleusRadius,0,2*Math.PI);
+                            ctx.stroke();
+                        }
+                    }
+
+                    for(var n=0;n<this.electrons.length;n++) {
+                        var o = this.electrons[n];
+
+                        ctx.save();
+                        ctx.translate(o.x,o.y);
+                        this.drawParticle(o);
+                        ctx.restore();
+                    }
+                },
+                drawParticle: function(o) {
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 1;
+                    if(o.type=="proton") {
+                        ctx.fillStyle = "red";
+                        ctx.beginPath();
+                        ctx.arc(0,0,10,0,2*Math.PI);
+                        ctx.fill();
+                        if(atom.zoom<0.7) return;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.moveTo(0,-6);
+                        ctx.lineTo(0,6);
+                        ctx.moveTo(-6,0);
+                        ctx.lineTo(6,0);
+                        ctx.stroke();
+                    } else if(o.type=="neutron") {
+                        ctx.fillStyle = "yellow";
+                        ctx.beginPath();
+                        ctx.arc(0,0,10,0,2*Math.PI);
+                        ctx.fill();
+                        if(atom.zoom<0.7) return;
+                        ctx.stroke();
+                    } else if(o.type=="electron") {
+                        ctx.fillStyle = "blue";
+                        ctx.beginPath();
+                        ctx.arc(0,0,5,0,2*Math.PI);
+                        ctx.fill();
+                        if(atom.zoom<0.7) return;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.moveTo(-3,0);
+                        ctx.lineTo(3,0);
+                        ctx.stroke();
+                    }
+                },
+                drawSymbol: function() {
+                    var protonCount = this.nucleons.filter(e=>e.type=="proton").length;
+                    var massNumber = this.nucleons.length;
+                    var ion = protonCount-this.electrons.length;
+                    var e = elements.find(e=>e.atomicNumber==protonCount);
+                    if(!e) e = {symbol:"?",name:"Unknown",};
+
+                    var totalWidth = 0;
+                    ctx.font = "80px Arial";
+                    var w = ctx.measureText(e.symbol).width;
+                    totalWidth += w;
+                    ctx.font = "30px Arial";
+                    totalWidth += Math.max(ctx.measureText(massNumber).width,ctx.measureText(protonCount).width);
+                    if(ion) totalWidth += ctx.measureText(ion).width;
+                    totalWidth = Math.max(totalWidth,ctx.measureText(e.name).width);
+                    var width = Math.max(170,totalWidth+50);
+                    ctx.strokeStyle = "black";
+                    ctx.fillStyle = "white";
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(-width/2,-85,width,170);
+                    ctx.strokeRect(-width/2,-85,width,170);
+
+                    ctx.font = "80px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = "black";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(e.symbol,0,-10);
+
+                    ctx.font = "30px Arial";
+                    ctx.fillText(e.name,0,55);
+
+                    ctx.textAlign = "right";
+                    ctx.font = "30px Arial";
+                    ctx.font = Math.min(30,1000/ctx.measureText(massNumber).width)+"px Arial";
+                    ctx.fillText(massNumber,-5-w/2,-40);
+
+                    ctx.fillText(protonCount,-5-w/2,15);
+
+                    if(ion) {
+                        var text = "+";
+                        if(ion<0) {
+                            text = "-";
+                        }
+                        if(Math.abs(ion)>1) {
+                            text += ion;
+                        }
+                        ctx.textAlign = "left";
+                        ctx.fillText(ion,5+w/2,-40);
+                    }
+                }
+            }
+
+            function updateUI() {
+                ctx.save();
+                ctx.translate(0,900);
+
+                for(var n=0;n<3;n++) {
+                    var o = {type:["proton","neutron","electron"][n]};
+                    var x = n*75+50;
+                    var y = -15;
+                    ctx.save();
+                    ctx.translate(x,y);
+                    ctx.scale(2,2);
+                    atom.drawParticle(o);
+                    ctx.restore();
+                }
+                for(var n=0;n<6;n++) {
+                    var x = Math.floor(n/2)*75+25;
+                    var y = (n%2)*125-100;
+                    if(Mouse.clickInBox(0+x,900+y,50,50)) {
+                        if(n==0) {
+                            atom.add("proton");
+                        } else if(n==1) {
+                            atom.remove("proton");
+                        } else if(n==2) {
+                            atom.add("neutron");
+                        } else if(n==3) {
+                            atom.remove("neutron");
+                        } else if(n==4) {
+                            atom.add("electron");
+                        } else if(n==5) {
+                            atom.remove("electron");
+                        }
+                    }
+                    
+                    ctx.save();
+                    ctx.translate(x,y);
+                    ctx.fillStyle = "white";
+                    if(Mouse.inBox(0+x,900+y,50,50)) {
+                        ctx.fillStyle = "rgb(230,230,230)";
+                    }
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 3;
+                    ctx.roundRect(0,0,50,50,10);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "50px Arial";
+                    if(n%2==0) {
+                        ctx.fillText("+",25,27);
+                    } else {
+                        ctx.fillText("-",25,25);
+                    }
+                    ctx.restore();
+                }
+
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(800,225);
+
+                ctx.fillStyle = "white";
+                if(Mouse.inBox(800+0,225+0,50,50)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                    if(Mouse.click) {
+                        var protonCount = atom.nucleons.filter(e=>e.type=="proton").length;
+                        atom.loadElement(protonCount-1);
+                    }
+                }
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.roundRect(0,0,50,50,10);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.font = "30px Arial";
+                ctx.fillText("<",25,37);
+
+                ctx.fillStyle = "white";
+                if(Mouse.inBox(800+75,225+0,50,50)) {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                    if(Mouse.click) {
+                        var protonCount = atom.nucleons.filter(e=>e.type=="proton").length;
+                        atom.loadElement(protonCount+1);
+                    }
+                }
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.roundRect(75,0,50,50,10);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = "black";
+                ctx.fillText(">",100,37);
+
+                ctx.restore();
+            }
+
+            var t = 0;
+        </script>
+    </body>
+</html>

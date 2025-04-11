@@ -1,0 +1,509 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            var dimensions = {width:500,height:500,offset:{x:0,y:0},zoom:1};
+            if(Number(localStorage.getItem("dontshrinkhighscore"))) {
+                var highscore = localStorage.getItem("dontshrinkhighscore");
+            } else {
+                var highscore = 0;
+                localStorage.setItem("dontshrinkhighscore",0);
+            }
+            var audiosrcs = ["https://media1.vocaroo.com/mp3/1507YerGRIjK","https://media1.vocaroo.com/mp3/1gsAvhlGCJPo","https://media1.vocaroo.com/mp3/1k9D03fLEHAL"];
+            var audios = [];
+            var imgsrcs = [];
+            var imgs = [];
+            var name = "Don't Shrink";
+            var keysdown = [];
+            var clickCors = [];
+            var mouseCors = [0,0];
+            document.title = name;
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin: 0px;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgsrcs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgsrcs[n];
+                document.body.appendChild(img);
+                img.style.display = 'none';
+                imgs.push(img);
+                n = n + 1;
+            }
+            n = 0;
+            while(n < audiosrcs.length) {
+                break;
+                var aud = document.createElement('AUDIO');
+                aud.src = audiosrcs[n];
+                document.body.appendChild(aud);
+                aud.type = "audio/mpeg";
+                audios.push(aud);
+                n = n + 1;
+            }
+            window.addEventListener('keydown',function(event) {
+                keysdown[event.keyCode] = true;
+                event.preventDefault();
+            });
+            canvas.addEventListener('mousedown',function() {
+                md = 1;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                md = 0;
+                clickCors[0] = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                clickCors[1] = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                mouseCors[0] = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                mouseCors[1] = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var size;
+            var md = 0;
+            var xyoffset = [];
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    var response = false;
+                    if(mouseCors[0] >= x && mouseCors[0] <= x+w && mouseCors[1] >= y && mouseCors[1] <= y+h) {
+                        response = true;
+                    }
+                    return response;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    var response = false;
+                    if(clickCors[0] >= x && clickCors[0] <= x+w && clickCors[1] >= y && clickCors[1] <= y+h) {
+                        response = true;
+                    }
+                    return response;
+                }
+            }
+            function doAll() {try{
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                ac();
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                keysdown = [];
+                clickCors = [];
+            }catch(err){window.alert(err.message)}}
+
+            //start the program
+            window.setInterval(doAll,20);
+
+            function ac() {
+                if(menu) {
+                    updateMenu();
+                } else {
+                    playGame();
+                }
+            }
+            function updateMenu() {
+                _canvas.lineWidth = 5;
+                if(keysdown.length>0) {
+                    menuCircles.push([250,250,1]);
+                }
+                _canvas.fillStyle = 'rgb(200,0,0)';
+                _canvas.font = "60px Comic Sans MS";
+                _canvas.fillText("Don't Shrink",70,100);
+                _canvas.font = "40px Comic Sans MS";
+                _canvas.fillText("Highscore: "+highscore,130,400);
+                _canvas.fillStyle = 'white';
+                _canvas.fillRect(70+animation,50,370-animation,60);
+                if(animation < 390) {
+                    animation+=8;
+                }
+                _canvas.strokeStyle = 'rgb(0,0,100)';
+                _canvas.fillStyle = 'rgba(0,0,0,0.3)';
+                _canvas.lineCap = 'round';
+                _canvas.beginPath();
+                _canvas.moveTo(250,250);
+                _canvas.lineTo(250,190);
+                _canvas.arc(250,250,60,-90*Math.PI/180,Math.min(animation-90,270)*Math.PI/180);
+                _canvas.lineTo(250,250);
+                if(distanceTo(250,250,mouseCors[0],mouseCors[1])<=60) {
+                    _canvas.fill();
+                }
+                if(animation<360) {
+                    _canvas.stroke();
+                }
+                if(animation>=360) {
+                    _canvas.beginPath();
+                    _canvas.arc(250,250,60,-90,animation-90);
+                    _canvas.stroke();
+                }
+                _canvas.beginPath();
+                _canvas.moveTo(250+Math.max(animation-340,0)/2,250);
+                _canvas.lineTo(250-Math.max(animation-340,0)/3,250+Math.max(animation-340,0)/2.6);
+                _canvas.lineTo(250-Math.max(animation-340,0)/3,250-Math.max(animation-340,0)/2.6);
+                _canvas.lineTo(250+Math.max(animation-340,0)/2,250);
+                _canvas.fillStyle = 'white';
+                _canvas.fill();
+                _canvas.stroke();
+                if(md&&distanceTo(250,250,mouseCors[0],mouseCors[1])<=60) {
+                    menuCircles.push([250,250,1]);
+                }
+                updateMenuCircles();
+                if(deathAnimation >=0) {
+                    deathAnimation-=5;
+                }
+                _canvas.fillStyle = 'black';
+                _canvas.fillRect(-1,0,deathAnimation*5,500);
+            }
+            function updateMenuCircles() {
+                var num = 0;
+                while(num < menuCircles.length) {
+                    _canvas.fillStyle = 'rgb(0,0,100)';
+                    _canvas.beginPath();
+                    _canvas.arc(menuCircles[num][0],menuCircles[num][1],menuCircles[num][2],0,2*Math.PI);
+                    _canvas.fill();
+                    menuCircles[num][2]*=1.1;
+                    if(menuCircles[num][2]>600) {
+                        menu = 0;
+                        reset();
+                    }
+                    num++;
+                }
+            }
+            function playGame() {
+                updateFadeCircles();
+                updatePerfectBalls();
+                drawScore();
+                if(!gameOver) {
+                    updateCircle(true);
+                } else {
+                    updateCircle(false);
+                }
+                if(animation>0) {
+                    animation -= 5;
+                    _canvas.fillStyle = 'rgb(0,0,100)';
+                    _canvas.fillRect(-1,0,animation*5,500);
+                }
+                if((keysdown.length>0||clickCors.length>0)&&!gameOver) {
+                    setCircleWidth();
+                    timeSincePlay = 0;
+                }
+                if(circleWidth<30) {
+                    if(!gameOver) {
+                        //audios[1].play();
+                    }
+                    gameOver = 1;
+                    if(score>highscore) {
+                        highscore = score;
+                    }
+                    localStorage.setItem("dontshrinkhighscore",highscore);
+                }
+                if(gameOver) {
+                    updateDeathAnimation();
+                } else {
+                    _canvas.fillStyle = 'rgba(0,0,0,'+Math.min(Math.max((timeSincePlay-200)/100,0),1)+')';
+                    _canvas.font = "30px Comic Sans MS";
+                    _canvas.fillText("Press any key or click to play...",35,430);
+                    timeSincePlay++;
+                }
+            }
+            function drawScore() {
+                _canvas.font = "40px Comic Sans MS";
+                _canvas.fillStyle = 'rgb('+perfect*2.55+','+perfect*2.55+',0)';
+                _canvas.fillText(score,10,40);
+                _canvas.fillStyle = 'black';
+                _canvas.fillText("High: "+highscore,300,40);
+                if(perfectStreak>0) {
+                    _canvas.font = "20px Comic Sans MS";
+                    _canvas.fillText("Perfect Multiplier: "+(perfectStreak*5),10,480);
+                }
+                if(perfect) {
+                    perfect -= 1;
+                    _canvas.fillStyle = 'rgba(255,255,0,'+perfect/100+')';
+                    _canvas.font = "50px Comic Sans MS";
+                    var perfectTexts = ["Perfect","Double Perfect","On Fire","Extreme Accuracy","Perfect Accuracy"];
+                    var w = _canvas.measureText(perfectTexts[Math.min(perfectStreak-1,4)]+"!").width;
+                    _canvas.fillText(perfectTexts[Math.min(perfectStreak-1,4)]+"!",250-w/2,120);
+                }
+            }
+            function updateCircle(update) {
+                _canvas.fillStyle = color;
+                _canvas.beginPath();
+                _canvas.arc(250,250,circleWidth,0,2*Math.PI);
+                _canvas.fill();
+                _canvas.save();
+                _canvas.beginPath();
+                _canvas.fillStyle = 'rgba(0,0,0,0.4)';
+                _canvas.arc(250,250,pulseCircle[0],0,2*Math.PI);
+                _canvas.clip();
+                if(perfectStreak==4) {
+                    var d = new Date();
+                    _canvas.fillStyle = 'hsl('+((d/10)%360)+',100%,50%)';
+                }
+                if(perfectStreak>4) {
+                    var x = 0;
+                    while(x < 10) {
+                        var y = 0;
+                        while(y < 10) {
+                            var f = x;
+                            if(y%2) {
+                                f++;
+                            }
+                            f%=2;
+                            var d = new Date();
+                            if(f) {
+                                _canvas.fillStyle = 'hsl('+((d/10+60)%360)+',100%,50%)';
+                            } else {
+                                _canvas.fillStyle = 'hsl('+((d/10)%360)+',100%,50%)';
+                            }
+                            _canvas.fillRect(x*50,y*50,50,50);
+                            y++;
+                        }
+                        x++;
+                    }
+                } else {
+                    _canvas.fillRect(0,0,500,500);
+                }
+                _canvas.restore();
+                if(update) {
+                    if(countDown == 0) {
+                        if(pulseCircle[1]==0) {
+                            pulseCircle[0]-=speed;
+                        } else {
+                            pulseCircle[0]+=speed;
+                        }
+                        if(pulseCircle[0]<=0) {
+                            pulseCircle[0] = 0;
+                            pulseCircle[1] = 1;
+                        }
+                        if(pulseCircle[0]>=circleWidth) {
+                            pulseCircle[0] = circleWidth;
+                            pulseCircle[1] = 0;
+                        }
+                        if(score > 30&&random(0,100)==0) {
+                            countDown = random(30,50);
+                        }
+                    } else {
+                        countDown--;
+                    }
+                }
+                if(deathAnimation[1]==0) {
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 4+deathAnimation[0];
+                    _canvas.beginPath();
+                    _canvas.arc(250,250,Math.max(30-deathAnimation[0]/2,0),0,360);
+                    _canvas.stroke();
+                } else {
+                    _canvas.fillStyle = 'black';
+                    _canvas.beginPath();
+                    _canvas.arc(250,250,deathAnimation[0],0,360);
+                    _canvas.fill();
+                    if(deathAnimation[0]>600) {
+                        _canvas.fillStyle = 'rgba(200,0,0,'+(3-Math.abs((deathAnimation[0]-700)/33))+')';
+                        _canvas.font = "40px Comic Sans MS";
+                        _canvas.fillText("Your score was: "+score,50,250);
+                    }
+                }
+            }
+            function setCircleWidth() {
+                if(pulseCircle[0]<=circleWidth-2) {
+                    perfectStreak = 0;
+                    perfect = 0;
+                    fadeCircles.push([1,circleWidth,pulseCircle[0],false]);
+                    circleWidth = pulseCircle[0];
+                    if(pulseCircle[0]>=30) {
+                        score++;
+                        //audios[0].currentTime = 0;
+                        //audios[0].play();
+                    }
+                } else {
+                    perfectStreak++;
+                    //audios[2].currentTime = 0;
+                    //audios[2].play();
+                    fadeCircles.push([1,circleWidth,Math.max(pulseCircle[0]-10,0),true]);
+                    circleWidth += 5;
+                    circleWidth = Math.min(circleWidth,100);
+                    perfect = 100;
+                    score+=5*perfectStreak;
+                    var d = random(0,360);
+                    var m = distanceToMovePoint(circleWidth+10,d);
+                    var s = Math.min(perfectStreak,5);
+                    var m2 = distanceToMovePoint(5+s,d);
+                    perfectBalls.push([m[0]+250,m[1]+250,m2[0],m2[1],s]);
+                }
+                if(score>40) {
+                    speed += 0.1;    
+                }
+            }
+            function reset() {
+                timeSinceLastPlay = 0;
+                perfectBalls = [];
+                speed = 2;
+                countDown = 0;
+                deathAnimation = [1,0];
+                animation = 100;
+                score = 0;
+                circleWidth = 100;
+                gameOver = 0;
+                color = 'hsl('+random(0,360)+',100%,50%)';
+            }
+            function updateFadeCircles() {
+                var num = 0;
+                while(num < fadeCircles.length) {
+                    _canvas.beginPath();
+                    if(fadeCircles[num][3]) {
+                        _canvas.fillStyle = 'rgba(255,255,0,'+fadeCircles[num][0]+')';
+                    } else {
+                        var c = color.split('');
+                        c.pop();
+                        c = c.join('');
+                        c += ','+fadeCircles[num][0]+')';
+                        _canvas.fillStyle = c;
+                    }
+                    _canvas.arc(250,250,fadeCircles[num][1],0,2*Math.PI);
+                    _canvas.fill();
+                    _canvas.fillStyle = 'white';
+                    _canvas.beginPath();
+                    _canvas.arc(250,250,fadeCircles[num][2],0,2*Math.PI);
+                    _canvas.fill();
+                    fadeCircles[num][0]-=0.03;
+                    fadeCircles[num][1]+=1;
+                    fadeCircles[num][2]+=1;
+                    if(fadeCircles[num][0]<=0) {
+                        fadeCircles.splice(num,1);
+                    } else {
+                        num++;
+                    }
+                }
+            }
+            function updateDeathAnimation() {
+                if(deathAnimation[0]<=600) {
+                    deathAnimation[0]*=1.1;
+                    if(deathAnimation[0]>600) {
+                        deathAnimation[0]=601;
+                    }
+                } else {
+                    deathAnimation[0]+=1;
+                    if(keysdown.length>0||clickCors.length>0) {
+                        deathAnimation[0]=801;
+                    }
+                }
+                if(deathAnimation[0]>=29&&deathAnimation[1]==0) {
+                    deathAnimation[1] = 1;
+                }
+                if(deathAnimation[0]>800) {
+                    menu = 1;
+                    animation = 370;
+                    menuCircles = [];
+                    deathAnimation = 100;
+                }
+            }
+            function updatePerfectBalls() {
+                var num = 0;
+                while(num < perfectBalls.length) {
+                    var b = perfectBalls[num];
+                    if(b[4]==1) {
+                        _canvas.fillStyle = 'rgb(255,255,0)';
+                    } else if(b[4]==2) {
+                        _canvas.fillStyle = 'rgb(0,0,255)';
+                    } else if(b[4]==3) {
+                        _canvas.fillStyle = 'rgb(255,'+random(0,255)+',0)';
+                    } else if(b[4]==4) {
+                        var d = new Date();
+                        _canvas.fillStyle = 'hsl('+((d/10)%360)+',100%,50%)';
+                    } else if(b[4]==5) {
+                        _canvas.fillStyle = 'hsl('+random(0,360)+',100%,50%)';
+                    }
+                    if(b[4]==1||b[4]==2||b[4]==3||b[4]==4||b[4]==5) {
+                        _canvas.beginPath();
+                        _canvas.arc(b[0],b[1],10,0,2*Math.PI);
+                        _canvas.fill();
+                    }
+                    b[0] += b[2];
+                    b[1] += b[3];
+                    if(distanceTo(250,250,b[0],b[1])<10+circleWidth) {
+                        var d = -90-directionToPoint(250,250,b[0],b[1]);
+                        var d2 = distanceTo(0,0,b[2],b[3]);
+                        b[2] = distanceToMovePoint(d2,d)[0];
+                        b[3] = distanceToMovePoint(d2,d)[1];
+                        b[0] += b[2];
+                        b[1] += b[3];
+                    }
+                    if(b[0]<=10) {
+                        b[0]=20-b[0];
+                        b[2]=-b[2];
+                    }
+                    if(b[1]<=10) {
+                        b[1]=20-b[1];
+                        b[3]=-b[3];
+                    }
+                    if(b[0]>=490) {
+                        b[0]=980-b[0];
+                        b[2]=-b[2];
+                    }
+                    if(b[1]>=490) {
+                        b[1]=980-b[1];
+                        b[3]=-b[3];
+                    }
+                    num++;
+                }
+            }
+            function directionToPoint(x1,y1,x2,y2) {
+                return -(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI)+180;
+            }
+            function distanceToMovePoint(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function random(min, max) {
+                return Math.floor(Math.random() * (max - min + 1) ) + min;
+            }
+            function distanceTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function pointInBox(px,py,x,y,w,h) {
+                var response = false;
+                if(px>=x&&px<=x+w&&py>=y&&py<=y+h) {
+                    response = true;
+                }
+                return response;
+            }
+            var perfectStreak = 0;
+            var timeSincePlay = 0;
+            var perfectBalls = [];
+            var speed = 2;
+            var countDown = 0;
+            var deathAnimation = [1,0];
+            var perfect = 0;
+            var perfectCircle = [0,0];
+            var fadeCircles = [];
+            var pulseCircle = [100,0];
+            var color = '';
+            var circleWidth = 100;
+            var score = 0;
+            var animation = 0;
+            var menuCircles = [];
+            var menu = true;
+            var count = 0;
+            var gameOver = 0;
+        </script>
+    </body>
+</html>

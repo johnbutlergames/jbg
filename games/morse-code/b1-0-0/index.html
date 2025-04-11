@@ -1,0 +1,143 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Morse Code</title>
+        <style>
+            font {
+                overflow-wrap: break-word;
+            }
+        </style>
+    </head>
+    <body>
+        <font id="morse">Morse:</font>
+        <br>
+        <font id="text">Text:</font>
+        <script>
+            function splitBits(bits) {
+                while(bits[0]=="0") {
+                    bits = bits.slice(1);
+                }
+                while(bits[bits.length-1]=="0") {
+                    bits = bits.slice(0,bits.length-1);
+                }
+                var split = [];
+                for(var n=0;n<bits.length;n++) {
+                    if(bits[n-1]!=bits[n]) split.push("");
+                    split[split.length-1] += bits[n];
+                }
+                return split;
+            }
+            
+            function convertBitsToMorse(bits){
+                var split = splitBits(bits);
+                var estSpeed = estimateSpeed(split);
+                estSpeed = Math.floor(estSpeed);
+                var decodedBits = [];
+                for(var bit of split) {
+                    var length = bit.length/estSpeed;
+                    var type = bit[0];
+                    if(type==0&&length<=3) decodedBits.push(" ")
+                    if(type==0&&length>3&&length<10) decodedBits.push("   ")
+                    if(type==0&&length>=10) decodedBits.push("       ")
+                    if(type==1&&length<=1.5) decodedBits.push(".")
+                    if(type==1&&length>1.5) decodedBits.push("_")
+                }
+                return decodedBits.join("");
+            }
+
+            function estimateSpeed(split) {
+                split = split.filter(e=>e.indexOf("1")!=-1);
+                split = split.map(e=>e.length);
+                var min = Math.min(...split);
+                var max = Math.max(...split);
+                return min;
+            }
+
+            function decodeMorse(morseCode){
+                var words = morseCode.split("       ");
+                for(var n in words) {
+                    words[n] = decodeMorseWord(words[n]);
+                }
+                return words.join(" ");
+            }
+
+            function decodeMorseWord(word) {
+                var characters = word.split("   ");
+                for(var n in characters) {
+                    while(characters[n].indexOf(" ")!=-1) {
+                        characters[n] = characters[n].replace(" ","");
+                    }
+                    characters[n] = decodeMorseChar(characters[n]);
+                }
+                return characters.join("");
+            }
+
+            function decodeMorseChar(c) {
+                return _morse[c];
+            }
+            function convertBitsToText(bits) {
+                return decodeMorse(convertBitsToMorse(bits));
+            }
+            var _morse = {
+                "._":"A",
+                "_...":"B",
+                "_._.":"C",
+                "_..":"D",
+                ".":"E",
+                ".._.":"F",
+                "__.":"G",
+                "....":"H",
+                "..":"I",
+                ".___":"J",
+                "_._":"K",
+                "._..":"L",
+                "__":"M",
+                "_.":"N",
+                "___":"O",
+                ".__.":"P",
+                "__._":"Q",
+                "._.":"R",
+                "...":"S",
+                "_":"T",
+                ".._":"U",
+                "..._":"V",
+                ".__":"W",
+                "_.._":"X",
+                "_.__":"Y",
+                "__..":"Z"
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            function update() {
+                main();
+                Keys.down = [];
+                Keys.up = [];
+            }
+            var updateInt = window.setInterval(update,10);
+
+            function main() {
+                if(Keys.keys[32]) {
+                    bits += 1;
+                } else {
+                    bits += 0;
+                }
+                var morse = convertBitsToMorse(bits);
+                document.getElementById("morse").innerHTML = "Morse: "+morse.replaceAll(" ","&nbsp");
+                var text = decodeMorse(morse);
+                document.getElementById("text").innerHTML = "Text: "+text.replaceAll(" ","&nbsp");
+            }
+            var bits = "";
+        </script>
+    </body>
+</html>

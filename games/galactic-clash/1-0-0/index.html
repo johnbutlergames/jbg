@@ -1,0 +1,222 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Galactic Clash";
+            var dimensions = {width:2000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            Loading.loaded = true;
+            Loading.intro = 0;
+            window.setInterval(update,10);
+
+            function main() {
+                menu.tick();
+            }
+
+            var menu = {
+                page: "title screen",
+                switchPage: "title screen",
+                switchPageAnimation: 0,
+                switchPageAnimationThreshold: 100,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    if(this.page!=this.switchPage) {
+                        this.switchPageAnimation++;
+                        if(this.switchPageAnimation>=this.switchPageAnimationThreshold) {
+                            this.page = this.switchPage;
+                        }
+                    } else {
+                        if(this.switchPageAnimation>0) {
+                            this.switchPageAnimation--;
+                        }
+                        if(this.switchPageAnimation<0) {
+                            this.switchPageAnimation = 0;
+                        }
+                        this.userInteractions(this.page);
+                    }
+                    this.updatePage(this.page);
+                },
+                draw: function() {
+                    this.drawPage(this.page);
+
+                    if(this.switchPageAnimation) {
+                        var a = this.switchPageAnimation/this.switchPageAnimationThreshold;
+                        //switch page animation
+                    }
+                },
+                userInteractions: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.update();
+                    }
+                },
+                drawPage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.draw();
+                    }
+                },
+                updatePage: function(page) {
+                    if(page=="title screen") {
+
+                    } else if(page=="game") {
+                        game.updateEffects();
+                    }
+                }
+            }
+
+            var game = {
+                update: function() {
+                    this.objects.update();
+                    this.cam.update();
+                    this.particles.update();
+                },
+                reset: function() {
+                    this.particles.reset();
+                    this.objects.reset();
+                    this.cam.reset();
+                    this.background.reset();
+                },
+                updateEffects: function() {
+                    this.particles.update();
+                },
+                draw: function() {
+                    this.background.draw();
+
+                    ctx.save();
+                    ctx.translate(-this.cam.x,-this.cam.y);
+                    ctx.scale(this.cam.zoom,this.cam.zoom);
+                    ctx.translate(1000,500);
+                    this.particles.draw();
+                    this.objects.draw();
+                    ctx.restore();
+                },
+                background: {
+                    objects: [],
+                    update: function() {
+                    },
+                    draw: function() {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(0,0,2000,1000);
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            this.drawObject(o);
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(o.type="ship") {
+                            game.particles.create({x:o.x,y:o.y,type:"exhaust particle"});
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.type=="ship") {
+                            ctx.beginPath();
+                            ctx.fillStyle = "blue";
+                            ctx.arc(o.x,o.y,20,0,2*Math.PI);
+                            ctx.fill();
+                        }
+                    },
+                    create: function(o) {
+                        this.objects.push(o);
+                    },
+                    reset: function() {
+                        this.objects = [];
+
+                        this.objects.push({type:"ship",x:0,y:0});
+                    }
+                },
+                particles: {
+                    objects: [],
+                    update: function() {
+                        for(var o of this.objects) {
+                            this.updateObject(o);
+                        }
+                    },
+                    draw: function() {
+                        for(var o of this.objects) {
+                            this.drawObject(o);
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(o.decay) o.alpha -= o.decay;
+                        if(o.xmove) o.x += o.xmove;
+                        if(o.ymove) o.y += o.ymove;
+                        if(o.damping) {
+                            o.xmove *= o.damping;
+                            o.ymove *= o.damping;
+                        }
+                    },
+                    drawObject: function(o) {
+                        ctx.save();
+                        if(o.alpha) ctx.globalAlpha = Math.max(Math.min(o.alpha,1),0);
+                        if(o.pointPosition) {
+                            ctx.translate(o.x,o.y);
+                        }
+                        if(o.size) {
+                            ctx.scale(o.size,o.size);
+                        }
+                        if(o.type=="exhaust particle") {
+                            ctx.beginPath();
+                            ctx.fillStyle = o.color;
+                            ctx.arc(0,0,5,0,2*Math.PI);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    },
+                    create: function(o) {
+                        if(o.type=="exhaust particle") {
+                            o.xmove = Math.random()-0.5;
+                            o.ymove = Math.random()-0.5;
+                            o.alpha = 2;
+                            o.decay = 0.01;
+                            o.pointPosition = true;
+                            o.color = "red";
+                        }
+                        this.objects.push(o);
+                    },
+                    reset: function() {
+                        this.objects = [];
+                    }
+                },
+                cam: {
+                    x: 0,
+                    y: 0,
+                    zoom: 1,
+                    update: function() {
+                    },
+                    reset: function() {
+                        this.x = 0;
+                        this.y = 0;
+                        this.zoom = 1;
+                    }
+                }
+            }
+
+            menu.page = "game";
+            menu.switchPage = "game";
+            game.reset();
+        </script>
+    </body>
+</html>

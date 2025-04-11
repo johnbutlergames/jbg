@@ -1,0 +1,553 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.title = "Maze";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var loads = 0;
+            var loadingScreen = true;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = ['https://i.ibb.co/sKnpgR8/maze.png'];
+            var audios = [];
+            if(audios.length+imgs.length==0) {
+                loadingScreen = false;
+            }
+            var keys = [];
+            var keysdown = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin:0px;overflow:hidden;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+                keysdown[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                down: false
+            }
+            var _math = {
+                rectsTouching: function(x1,y1,x2,y2,x3,y3,x4,y4) {
+                    return ((x1>=x3&&x1<=x4)||(x2>=x3&&x2<=x4)||(x1<=x3&&x2>=x4))&&((y1>=y3&&y1<=y4)||(y2>=y3&&y2<=y4)||(y1<=y3&&y2>=y4));
+                },
+                random: function(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1) ) + min;
+                },
+                distanceTo: function(x1,y1,x2,y2) {
+                    return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+                },
+                average: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    while(num < arr.length) {
+                        num2 = num2 + arr[num];
+                        num = num + 1;
+                    }
+                    return num2/arr.length;
+                },
+                averageWeighted: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    var num3 = 0;
+                    while(num < arr.length) {
+                        num3 += arr[num];
+                        num2 += arr[num]*arr[num+1];
+                        num += 2;
+                    }
+                    return num2/num3;
+                },
+                directionTo: function(cx, cy, ex, ey) {
+                    var dy = ey - cy;
+                    var dx = ex - cx;
+                    var theta = Math.atan2(dy, dx);
+                    theta *= 180 / Math.PI;
+                    theta += 90;
+                    return -theta;
+                },
+                rotate: function(cx, cy, x, y, angle) {
+                    var radians = (Math.PI / 180) * angle,
+                        cos = Math.cos(radians),
+                        sin = Math.sin(radians),
+                        nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                        ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                    return [nx, ny];
+                }
+            }
+            function generateMaze(data) {
+                if(data===undefined) {
+                    data = {};
+                }
+                if(!data.width) {
+                    data.width = 10;
+                }
+                if(!data.height) {
+                    data.height = 10;
+                }
+                var blocks = [];
+                var y = 0;
+                while(y < data.height*2-1) {
+                    blocks.push([]);
+                    var x = 0;
+                    while(x < data.width*2-1) {
+                        blocks[y].push(0);
+                        x++;
+                    }
+                    y++;
+                }
+                var pos = [1,1];
+                while(true) {
+                    blocks[pos[0]][pos[1]]++;
+                    var cors = [[-2,0],[2,0],[0,-2],[0,2]];
+                    var n = 0;
+                    while(n < cors.length) {
+                        var x = cors[n][0]+pos[0];
+                        var y = cors[n][1]+pos[1];
+                        if(x<1||x>(data.width-1)*2||y<1||y>(data.height-1)*2) {
+                            cors.splice(n,1);
+                        } else {
+                            cors[n] = [x,y];
+                            n++;
+                        }
+                    }
+                    var needToBacktrack = true;
+                    var n = 0;
+                    while(n < cors.length) {
+                        if(blocks[cors[n][0]][cors[n][1]]==0) {
+                            needToBacktrack = false;
+                            break;
+                        }
+                        n++;
+                    }
+                    var cor = false;
+                    var n = 0;
+                    while(n < cors.length) {
+                        var b = blocks[cors[n][0]][cors[n][1]];
+                        if(b>1) {
+                            cors.splice(n,1);
+                            n--;
+                        } else if(needToBacktrack==true) {
+                            var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                            var n2 = 0;
+                            while(n2 < cors2.length) {
+                                var x = cors2[n2][0]+pos[0];
+                                var y = cors2[n2][1]+pos[1];
+                                if(blocks[x][y]===1) {
+                                    cor = [cors2[n2][0]*2+pos[0],cors2[n2][1]*2+pos[1]];
+                                    break;
+                                }
+                                n2++;
+                            }
+                            break;
+                        } else if(needToBacktrack==false&&b==1) {
+                            cors.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    var justBacktracked = false;
+                    var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                    var n2 = 0;
+                    while(n2 < cors2.length) {
+                        var x = cors2[n2][0]+pos[0];
+                        var y = cors2[n2][1]+pos[1];
+                        var x2 = cors2[n2][0]*2+pos[0];
+                        var y2 = cors2[n2][1]*2+pos[1];
+                        if(x2>0&&x2<blocks.length&&y2>0&&y2<blocks.length&&blocks[x][y]!==1) {
+                            if(blocks[x2][y2]==2) {
+                                justBacktracked = true;
+                            }
+                        }
+                        n2++;
+                    }
+                    if(needToBacktrack&&!justBacktracked) {
+                        blocks[pos[0]][pos[1]]++;
+                    }
+                    if(justBacktracked&&!needToBacktrack) {
+                        blocks[pos[0]][pos[1]]--;
+                    }
+                    if(!needToBacktrack) {
+                        if(cors.length===0) {
+                            break;
+                        }
+                        cor = cors[Math.floor(Math.random()*cors.length)];
+                    } else if(cor===false) {
+                        break;
+                    }
+                    blocks[(pos[0]+cor[0])/2][(pos[1]+cor[1])/2]++;
+                    pos = cor;
+                }
+                var y = 0;
+                while(y < blocks.length) {
+                    var x = 0;
+                    while(x < blocks[y].length) {
+                        if(blocks[x][y]==0) {
+                            blocks[x][y] = 1;
+                        } else {
+                            blocks[x][y] = 0;
+                        }
+                        x++;
+                    }
+                    y++;
+                }
+                blocks[pos[0]][pos[1]] = 4;
+                return blocks;
+            }
+            function doAll() {
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                if(!loadingScreen) {
+                    program();
+                } else {
+                    _canvas.font = "40px Arial";
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Loading "+Math.floor(loads/(audios.length+imgs.length)*100)+"%",500,200);
+                    _canvas.fillStyle = 'green';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(400,250,loads/(audios.length+imgs.length)*200,50);
+                    _canvas.strokeRect(400,250,200,50);
+                    if(!navigator.onLine) {
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("No Internet",500,450);
+                    }
+                    if(loads==audios.length+imgs.length) {
+                        _canvas.strokeRect(437,350,125,50);
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("PLAY",500,390);
+                        _canvas.fillStyle = 'rgb(0,0,0,0.5)';
+                        if(_mouse.InBox(437,350,125,50)) {
+                            _canvas.fillRect(437,350,125,50);
+                            if(_mouse.click) {
+                                loadingScreen = false;
+                            }
+                        }
+                    }
+                }
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+                keysdown = [];
+            }
+            window.setInterval(doAll,20);
+            function roundRect(x,y,w,h,r,e2) {
+                var e;
+                if(e2===undefined) {
+                    e = [1,1,1,1];
+                } else {
+                    e = JSON.parse(JSON.stringify(e2));
+                }
+                _canvas.moveTo(x+r,y);
+                if(e[0]) {
+                    _canvas.arcTo(x+w,y,x+w,y+h-r,r);
+                } else {
+                    _canvas.lineTo(x+w,y);
+                    _canvas.lineTo(x+w,y+h-r);
+                }
+                if(e[1]) {
+                    _canvas.arcTo(x+w,y+h,x+r,y+h,r);
+                } else {
+                    _canvas.lineTo(x+w,y+h);
+                    _canvas.lineTo(x+r,y+h);
+                }
+                if(e[2]) {
+                    _canvas.arcTo(x,y+h,x,y+r,r);
+                } else {
+                    _canvas.lineTo(x,y+h);
+                    _canvas.lineTo(x,y+r);
+                }
+                if(e[3]) {
+                    _canvas.arcTo(x,y,x+r,y,r);
+                } else {
+                    _canvas.lineTo(x,y);
+                    _canvas.lineTo(x+r,y);
+                }
+            }
+            function program() {
+                t++;
+                if(page=='menu'||page=='select type'||paused) {
+                    _canvas.imageSmoothingEnabled = false;
+                    var x = -t%1000;
+                    var y = -(t/2)%1000;
+                    _canvas.drawImage(imgs[0],x,y,2000,2000);
+                    _canvas.filter = 'none';
+                    _canvas.fillStyle = 'rgba(255,255,255,0.7)';
+                    _canvas.fillRect(280,0,440,500);
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.lineWidth = 3;
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineJoin = 'round';
+                }
+                if(page=='menu') {
+                    _canvas.font = '100px Comic Sans MS';
+                    _canvas.fillText('Maze',500,100);
+                    _canvas.fillText('Craze',500,200);
+                    _canvas.font = '50px Comic Sans MS';
+                    _canvas.fillText('Play',500,300);
+                    _canvas.strokeRect(400,250,200,70);
+                    _canvas.fillText('Level Editor',500,400);
+                    _canvas.strokeRect(350,350,300,70);
+                    _canvas.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(_mouse.InBox(400,250,200,70)) {
+                        _canvas.fillRect(400,250,200,70);
+                        if(_mouse.click) {
+                            page = 'select type';
+                        }
+                    }
+                    if(_mouse.InBox(350,350,300,70)) {
+                        _canvas.fillRect(350,350,300,70);
+                        if(_mouse.click) {
+                            page = 'level editor';
+                        }
+                    }
+                } else if(page=='select type') {
+                    _canvas.font = '50px Comic Sans MS';
+                    _canvas.fillText('Infinite Maze',500,170);
+                    _canvas.strokeRect(320,120,360,70);
+                    _canvas.fillStyle = 'rgba(0,0,0,0.3)';
+                    if(_mouse.InBox(320,120,360,70)) {
+                        _canvas.fillRect(320,120,360,70);
+                        if(_mouse.click) {
+                            page = 'infinite maze';
+                        }
+                    }
+                } else if(page=='infinite maze') {
+                    infinite.update();
+                } else if(page=='play') {
+                    game.update();
+                } else if(page=='level editor') {
+
+                }
+            }
+            var infinite = {
+                update: function() {
+                    this.loadChunks();
+                    var left = false;
+                    var right = false;
+                    var up = false;
+                    var down = false;
+                    if(keys[37]) {
+                        left = true;
+                        this.player.x -= 3;
+                    }
+                    if(keys[38]) {
+                        up = true;
+                        this.player.y -= 3;
+                    }
+                    if(keys[39]) {
+                        right = true;
+                        this.player.x += 3;
+                    }
+                    if(keys[40]) {
+                        down = true;
+                        this.player.y += 3;
+                    }
+                    _canvas.fillStyle = 'red';
+                    _canvas.fillRect(495,245,10,10);
+                    var rect = {x:495,y:245,w:10,h:10}
+                    var inBlocks = this.draw();
+                    var n = 0;
+                    while(n < inBlocks.length) {
+                        var r = inBlocks[n];
+                        while(_math.rectsTouching(rect.x,rect.y,rect.x+rect.w,rect.y+rect.h,r.x,r.y,r.x+r.w,r.y+r.h)) {
+                            var rx = rect.x+rect.w/2;
+                            var ry = rect.y+rect.h/2;
+                            var rx2 = r.x+r.w/2;
+                            var ry2 = r.y+r.h/2;
+                            if(rx>r.x&&rx<r.x+r.w) {
+                                if(ry>ry2) {
+                                    rect.y++;
+                                    this.player.y++;
+                                } else {
+                                    rect.y--;
+                                    this.player.y--;
+                                }
+                            } else {
+                                if(rx>rx2) {
+                                    rect.x++;
+                                    this.player.x++;
+                                } else {
+                                    rect.x--;
+                                    this.player.x--;
+                                }
+                            }
+                        }
+                        n++;
+                    }
+                },
+                draw: function() {
+                    var inBlocks = [];
+                    var n = 0;
+                    _canvas.fillStyle = 'black';
+                    while(n < this.loadedChunks.length) {
+                        var c = this.loadedChunks[n];
+                        var xoff = (c.x*this.chunkWidth)-this.player.x;
+                        var yoff = (c.y*this.chunkHeight)-this.player.y;
+                        var x = 0;
+                        while(x < c.blocks.length) {
+                            var y = 0;
+                            while(y < c.blocks[x].length) {
+                                var b = c.blocks[x][y];
+                                if(b) {
+                                    var r = {x:xoff+x*20,y:yoff+y*20,w:20,h:20}
+                                    if(_math.rectsTouching(r.x,r.y,r.x+r.w,r.y+r.h,495,245,505,255)) {
+                                        inBlocks.push(r);
+                                        //c.blocks[x][y] = 0;
+                                    }
+                                    _canvas.fillRect(r.x,r.y,r.w,r.h);
+                                }
+                                y++;
+                            }
+                            x++;
+                        }
+                        n++;
+                    }
+                    return inBlocks;
+                },
+                loadChunks: function() {
+                    this.loadedChunks = [];
+                    var chunkX = Math.floor(this.player.x/this.chunkWidth);
+                    var chunkY = Math.floor(this.player.y/this.chunkHeight);
+                    var x = -1;
+                    while(x <= 1) {
+                        var y = -1;
+                        while(y <= 1) {
+                            this.loadChunk(chunkX+x,chunkY+y);
+                            y++;
+                        }
+                        x++;
+                    }
+                },
+                loadChunk: function(x,y) {
+                    var f = this.findChunk(x,y);
+                    if(f===false) {
+                        this.chunks.push(this.generateChunk(x,y));
+                        this.loadedChunks.push(this.chunks[this.chunks.length-1]);
+                    } else {
+                        this.loadedChunks.push(this.chunks[f]);
+                    }
+                },
+                findChunk: function(x,y) {
+                    var n = 0;
+                    while(n < this.chunks.length) {
+                        if(this.chunks[n].x==x&&this.chunks[n].y==y) {
+                            return n;
+                        }
+                        n++;
+                    }
+                    return false;
+                },
+                generateChunk: function(x,y) {
+                    var chunk = {x:x,y:y};
+                    var maze = generateMaze({width:48,height:48});
+                    maze.pop();
+                    var n = 0;
+                    while(n < maze.length) {
+                        maze[n].pop();
+                        n++;
+                    }
+                    maze[1][1] = 0;
+                    var n = 0;
+                    while(n < Math.random()*4) {
+                        maze[0][Math.floor(Math.random()*47)*2+1] = 0;
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < Math.random()*4) {
+                        maze[Math.floor(Math.random()*47)*2+1][0] = 0;
+                        n++;
+                    }
+                    chunk.blocks = maze;
+                    return chunk;
+                },
+                loadedChunks: [],
+                chunks: [],
+                player: {
+                    x: 10,
+                    y: 20
+                },
+                chunkWidth: 1880,
+                chunkHeight: 1880
+            }
+            var t = 0;
+            var paused = false;
+            var page = 'menu';
+        </script>
+    </body>
+</html>

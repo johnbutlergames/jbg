@@ -1,0 +1,617 @@
+<html> 
+    <body>
+        <h1>Translator</h1>
+        <font for='type'>Translator Type:</font> 
+        <select name='type' id='encodeType'>
+            <option>Rail Cypher</option>
+            <option>Reverse Rail Cypher</option>
+            <option>Shift Cypher</option>
+            <option>Substitution Cypher</option>
+            <option>Enigma Cypher</option>
+            <option>Pig Latin</option>
+            <option>Binary</option>
+            <option>Random Language</option>
+        </select> <br> <div id='descriptions'>
+        <div id='rail'> <h3>Rail Cypher:</h3>
+            <font>Rail Number: </font>
+            <input id='railNumber' type='number'>
+            <br>
+            <br>
+        </div>
+        <div id='reverse_rail'>
+            <h3>Reverse Rail Cypher:</h3>
+            <font>Rail Number: </font>
+            <input id='reverseRailNumber' type='number'>
+            <br>
+            <br>
+        </div>
+        <div id='shift'>
+            <h3>Shift Cypher:</h3>
+            <font>Shift Number: </font>
+            <input id='shiftNumber' type='number'>
+            <br>
+            <br>
+        </div>
+        <div id='substitution'>
+            <h3>Substitution Cypher:</h3>
+            <font>Substitution Alphabet:</font>
+            <input id='subAlpha'>
+            <br>
+            <br>
+        </div>
+        <div id='enigma'>
+            <h3>Enigma Cypher:</h3>
+            <font>Substitution Alphabets (seperate with a space):</font>
+            <input id='subAlphas'>
+            <br>
+            <br>
+        </div>
+        <div id='pig_latin'>
+            <h3>Pig Latin:</h3>
+            <font>Pig Latin does not decode 100% correct as "ay" and "yay" both encode into "ay-yay".</font>
+            <br>
+            <br>
+            <font for='sylOrWord'>Encode Every: </font>
+            <select name='sylOrWord' id='sylOrWord'>
+                <option>Syllable</option>
+                <option>Word</option>
+            </select>
+            <br>
+            <br>
+        </div>
+        <div id='binary'>
+            <h3>Binary:</h3>
+        </div>
+        <div id='random_language'>
+            <h3>Random Language:</h3>
+            <font>You cannot decode from random language as it is random.</font>
+            <br>
+            <br>
+        </div>
+        </div>
+        <div id='encodeDecode'>
+            <select id='encodeOrDecode'>
+                <option>Encode</option>
+                <option>Decode</option>
+            </select>
+            <font>&nbsp;Text:</font>
+            <br>
+            <br>
+            <button id='encodeButton'>Encode:</button>
+            <br>
+            <br>
+            <font>Starting Text:</font>
+            <br> <textarea id='toEncode'></textarea>
+            <br> <br> <font>Result:</font>
+            <br> <textarea id='result'></textarea>
+        </div>
+        <script>
+            document.body.style.backgroundColor = 'white';
+            document.title = 'Encoder';
+            var encodeTypeSelect = document.getElementById('encodeType');
+            var encodeOrDecodeSelect = document.getElementById('encodeOrDecode');
+            var encodeButton = document.getElementById('encodeButton');
+            var encodeType;
+            var codeType = 'encode';
+            var consonants = 'bcdfghjklmnpqrstvwxyz'.split('');
+            var vowels = 'a e i o u oo ee ai ou'.split(' ');
+            var dictionary = {};
+            encodeTypeSelect.onchange = function() {
+                var type = encodeTypeSelect.value.slice(0, -7).toLowerCase().replace(' ', '_');
+                if (type == 'pi') {
+                    type = 'pig_latin';
+                }
+                if (type == '') {
+                    type = 'binary';
+                }
+                if(type == 'random_l') {
+                    type = 'random_language';
+                }
+                changeDecoderType(type);
+            };
+            encodeOrDecodeSelect.onchange = function() {
+                encodeButton.innerHTML = encodeOrDecodeSelect.value + ':';
+                codeType = encodeOrDecodeSelect.value.toLowerCase();
+            };
+            encodeButton.onclick = function() {
+                var data = {};
+                data.text = document.getElementById('toEncode').value;
+                data.type = encodeType;
+                if (data.type == 'rail') {
+                    data.railNumber = document.getElementById('railNumber').value;
+                } else {
+                    data.railNumber = document.getElementById('reverseRailNumber').value;
+                }
+                if (document.getElementById('sylOrWord').value == 'Word') {
+                    data.everyWord = false;
+                } else {
+                    data.everyWord = true;
+                }
+                data.subReplace = [];
+                var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                var subAlpha = document.getElementById('subAlpha').value.toUpperCase();
+                var charN = 0;
+                var n = 0;
+                while (n < subAlpha.length) {
+                    if (letters.indexOf(subAlpha[n]) != -1) {
+                        letters.splice(letters.indexOf(subAlpha[n]), 1);
+                        var arr = [];
+                        if (codeType == 'encode') {
+                            arr.push(String.fromCharCode(charN + 65));
+                            arr.push(subAlpha[n]);
+                        } else {
+                            arr.push(subAlpha[n]);
+                            arr.push(String.fromCharCode(charN + 65));
+                        }
+                        data.subReplace.push(arr);
+                        charN++;
+                    }
+                    n++;
+                }
+                n = 0;
+                while (data.subReplace.length < 26) {
+                    var arr = [];
+                    if (codeType == 'encode') {
+                        arr.push(String.fromCharCode(charN + 65));
+                        arr.push(letters[n]);
+                    } else {
+                        arr.push(letters[n]);
+                        arr.push(String.fromCharCode(charN + 65));
+                    }
+                    data.subReplace.push(arr);
+                    charN++;
+                    n++;
+                }
+                data.subAlphas = [];
+                data.subReplaces = [];
+                var alphas = document.getElementById('subAlphas').value.split(' ');
+                var n = 0;
+                while (n < alphas.length) {
+                    var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                    var subAlpha = alphas[n].toUpperCase();
+                    var alpha = [];
+                    var charN = 0;
+                    var n2 = 0;
+                    while (n2 < subAlpha.length) {
+                        if (letters.indexOf(subAlpha[n2]) != -1) {
+                            letters.splice(letters.indexOf(subAlpha[n2]), 1);
+                            var arr = [];
+                            if (codeType == 'encode') {
+                                arr.push(String.fromCharCode(charN + 65));
+                                arr.push(subAlpha[n2]);
+                            } else {
+                                arr.push(subAlpha[n2]);
+                                arr.push(String.fromCharCode(charN + 65));
+                            }
+                            alpha.push(arr);
+                            charN++;
+                        }
+                        n2++;
+                    }
+                    n2 = 0;
+                    while (alpha.length < 26) {
+                        var arr = [];
+                        if (codeType == 'encode') {
+                            arr.push(String.fromCharCode(charN + 65));
+                            arr.push(letters[n2]);
+                        } else {
+                            arr.push(letters[n2]);
+                            arr.push(String.fromCharCode(charN + 65));
+                        }
+                        alpha.push(arr);
+                        charN++;
+                        n2++;
+                    }
+                    data.subAlphas[n] = alpha;
+                    n++;
+                }
+                data.shiftNumber = document.getElementById('shiftNumber').value;
+                data.shiftNumber = Number(data.shiftNumber);
+                data.railNumber = Number(data.railNumber);
+                if (isNaN(data.railNumber) || data.railNumber <= 0) {
+                    data.railNumber = 1;
+                }
+                if (isNaN(data.shiftNumber)) {
+                    data.shiftNumber = 0;
+                }
+                var result = '';
+                if (codeType == 'encode') {
+                    result = encode(data);
+                } else {
+                    result = decode(data);
+                }
+                document.getElementById('result').value = result;
+            };
+            function changeDecoderType(type) {
+                encodeType = type;
+                var children = document.getElementById('descriptions').children;
+                var n = 0;
+                while (n < children.length) {
+                    children[n].style.display = 'none';
+                    n++;
+                }
+                document.getElementById(type).style.display = 'block';
+            }
+            function encode(data) {
+                var t = data.text;
+                var result = '';
+                switch (data.type) {
+                    case 'rail':
+                        var restart = 1;
+                        var r = data.railNumber;
+                        var n = 0;
+                        while (result.length < t.length) {
+                            result += t[n];
+                            n += r;
+                            if (n >= t.length) {
+                                n = restart;
+                                restart++;
+                            }
+                        }
+                        break;
+                    case 'reverse_rail':
+                        var restart = 1;
+                        var r = Math.ceil(t.length / data.railNumber);
+                        var n = 0;
+                        while (result.length < t.length) {
+                            result += t[n];
+                            n += r;
+                            if (n >= t.length) {
+                                n = restart;
+                                restart++;
+                            }
+                        }
+                        break;
+                    case 'shift':
+                        var n = 0;
+                        while (n < t.length) {
+                            var num = t.charCodeAt(n);
+                            num += data.shiftNumber;
+                            num %= 255;
+                            if (num < 0) {
+                                num = 255 + num;
+                            }
+                            result += String.fromCharCode(num);
+                            n++;
+                        }
+                        break;
+                    case 'substitution':
+                        var upper = t.toUpperCase();
+                        var n = 0;
+                        while (n < data.subReplace.length) {
+                            var e = RegExp(data.subReplace[n][0], "g");
+                            while (upper.indexOf(data.subReplace[n][0]) != -1) {
+                                upper = upper.replace(data.subReplace[n][0], data.subReplace[n][1].toLowerCase());
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while (n < upper.length) {
+                            if (isUpper(t[n])) {
+                                result += upper[n].toUpperCase();
+                            } else {
+                                result += upper[n];
+                            }
+                            n++;
+                        }
+                        break;
+                    case 'enigma':
+                        var upper = t.toUpperCase();
+                        var lower = '';
+                        var n = 0;
+                        while (n < upper.length) {
+                            var c = upper[n];
+                            var n2 = 0;
+                            var subAlpha = data.subAlphas[n % data.subAlphas.length];
+                            var replaced = false;
+                            while (n2 < subAlpha.length) {
+                                if (subAlpha[n2][0] == upper[n]) {
+                                    lower += subAlpha[n2][1].toLowerCase();
+                                    replaced = true;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if (!replaced) {
+                                lower += upper[n];
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while (n < lower.length) {
+                            if (isUpper(t[n])) {
+                                result += lower[n].toUpperCase();
+                            } else {
+                                result += lower[n];
+                            }
+                            n++;
+                        }
+                        break;
+                    case 'pig_latin':
+                        var words = t.split(' ');
+                        var n = 0;
+                        while (n < words.length) {
+                            if (data.everyWord) {
+                                var syllables = getSyllables(words[n]);
+                                var newWord = '';
+                                var n2 = 0;
+                                while (n2 < syllables.length) {
+                                    if (n2 != 0) {
+                                        newWord += '-';
+                                    }
+                                    newWord += pigLatin(syllables[n2]);
+                                    n2++;
+                                }
+                                words[n] = newWord;
+                            } else {
+                                words[n] = pigLatin(words[n]);
+                            }
+                            n++;
+                        }
+                        result = words.join(' ');
+                        break;
+                    case 'binary':
+                        var n = 0;
+                        while (n < t.length) {
+                            result += toBin(t[n]);
+                            n++;
+                        }
+                        break;
+                    case 'random_language':
+                        return translateToRandom(t);
+                        break;
+                }
+                return result;
+            }
+            function decode(data) {
+                var t = data.text;
+                var result = '';
+                switch (data.type) {
+                    case 'rail':
+                        data.type = 'reverse_rail';
+                        result = encode(data);
+                        break;
+                    case 'reverse_rail':
+                        data.type = 'rail';
+                        result = encode(data);
+                        break;
+                    case 'shift':
+                        data.type = 'shift';
+                        data.shiftNumber *= -1;
+                        result = encode(data);
+                        break;
+                    case 'substitution':
+                        result = encode(data);
+                        break;
+                    case 'enigma':
+                        result = encode(data);
+                        break;
+                    case 'pig_latin':
+                        var words = t.split(' ');
+                        var n = 0;
+                        while (n < words.length) {
+                            var parts = words[n].split('-');
+                            var word = '';
+                            var currentSyllable = '';
+                            var n2 = 0;
+                            while (n2 < parts.length) {
+                                if ((n2 + 1) % 2 == 0) {
+                                    if (parts[n2] != 'yay') {
+                                        currentSyllable = parts[n2][0] + currentSyllable;
+                                    }
+                                    word += currentSyllable;
+                                    currentSyllable = '';
+                                } else {
+                                    currentSyllable += parts[n2];
+                                }
+                                n2++;
+                            }
+                            words[n] = word;
+                            n++;
+                        }
+                        result = words.join(' ');
+                        break;
+                    case 'binary':
+                        var n = 0;
+                        var arr = [];
+                        while (n < t.length) {
+                            if (n % 8 == 0) {
+                                arr.push('');
+                            }
+                            arr[Math.floor(n / 8)] += t[n];
+                            n++;
+                        }
+                        var n = 0;
+                        while (n < arr.length) {
+                            if (arr[n].length != 8) {
+                                break;
+                            }
+                            var isBin = true;
+                            var n2 = 0;
+                            while (n2 < arr[n].length) {
+                                if (arr[n][n2] != '0' && arr[n][n2] != '1') {
+                                    isBin = false;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if (!isBin) {
+                                continue;
+                            }
+                            result += toChar(arr[n]);
+                            n++;
+                        }
+                        break;
+                    case 'random_language':
+                        return '';
+                        break;
+                }
+                return result;
+            }
+            function isUpper(text) {
+                return text === text.toUpperCase();
+            }
+            function isVowel(c) {
+                var l = c.toLowerCase();
+                if (l == 'a' || l == 'e' || l == 'i' || l == 'o' || l == 'u') {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            function getSyllables(word) {
+                return word.match(/[^aeiouy]*[aeiouy]+(?:[^aeiouy]*$|[^aeiouy](?=[^aeiouy]))?/gi);
+            }
+            function pigLatin(s) {
+                var result = s;
+                var alphabetic = true;
+                var n2 = 0;
+                while (n2 < s.length) {
+                    var char = s[n2].toUpperCase().charCodeAt(0);
+                    if (char < 65 || char > 90) {
+                        alphabetic = false;
+                        break;
+                    }
+                    n2++;
+                }
+                if (alphabetic) {
+                    result = result + '-';
+                    var firstChar = result[0];
+                    var upper = isUpper(firstChar);
+                    result = result.toLowerCase();
+                    var startsWithVowel = true;
+                    var hasVowel = false;
+                    var n = 0;
+                    while (n < result.length) {
+                        if (isVowel(result[n])) {
+                            hasVowel = true;
+                            break;
+                        }
+                        n++;
+                    }
+                    while (!isVowel(result[0]) && hasVowel) {
+                        startsWithVowel = false;
+                        result = result + result[0];
+                        result = result.slice(1);
+                    }
+                    if (!hasVowel) {
+                        startsWithVowel = false;
+                    }
+                    if (startsWithVowel) {
+                        result = result + 'y';
+                    }
+                    result = result + 'ay';
+                }
+                return result;
+            }
+            function toBin(char) {
+                return getBinString(char.charCodeAt(0));
+            }
+            function toChar(bin) {
+                return String.fromCharCode(getNum(bin));
+            }
+            function getNum(binstr) {
+                var r = 0;
+                var n = 1;
+                var n2 = 0;
+                while (n2 < binstr.length) {
+                    if (binstr[binstr.length - n2 - 1] == '1') {
+                        r += n;
+                    }
+                    n *= 2;
+                    n2++;
+                }
+                return r;
+            }
+            function getBinString(num) {
+                var str = '';
+                var n = 128;
+                while (n >= 1) {
+                    if (num >= n) {
+                        num -= n;
+                        str += '1';
+                    } else {
+                        str += '0';
+                    }
+                    n /= 2;
+                }
+                return str;
+            }
+            function translateWordToRandom(word) {
+                var length = Math.max(word.length+rand(2)-1,1);
+                if(dictionary[word]===undefined) {
+                    dictionary[word] = generateRandomWord(length);
+                }
+                return dictionary[word];
+            }
+            function translateToRandom(text) {
+                var words = [];
+                var wordsAreWords = [];
+                var alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+                var n = 0;
+                while(n < text.length) {
+                    var char = text[n].toLowerCase();
+                    var alpha = alphabet.indexOf(char)!=-1;
+                    var alpha2 = words.length>0&&words[words.length-1].length>0&&alphabet.indexOf(words[words.length-1][0])!=-1;
+                    alpha2 = alpha2||(words.length>0&&words[words.length-1].length==0);
+                    if(char==' ') {
+                        words.push(' ');
+                    } else if((alpha&&!alpha2)||(!alpha&&alpha2)) {
+                        words.push(char);
+                        if(alpha) {
+                            wordsAreWords.push(true);
+                        } else {
+                            wordsAreWords.push(false);
+                        }
+                    } else {
+                        words[words.length-1] += char;
+                        if(wordsAreWords.length!=words.length) {
+                            if(alpha) {
+                                wordsAreWords.push(true);
+                            } else {
+                                wordsAreWords.push(false);
+                            }
+                        }
+                    }
+                    n++;
+                }
+                var sentence = '';
+                n = 0;
+                while(n < words.length) {
+                    if(wordsAreWords[n]&&words[n]!=' ') {
+                        sentence += translateWordToRandom(words[n]);
+                    } else {
+                        sentence += words[n];
+                    }
+                    n++;
+                }
+                return sentence;
+            }
+            function generateRandomWord(length) {
+                var word = '';
+                var n = 0;
+                var n2 = rand(2);
+                if(length==1) {
+                    n2 = 0;
+                }
+                while(n < length) {
+                    if(n2%2!=0) {
+                        word += randInArr(consonants);
+                    } else {
+                        word += randInArr(vowels);
+                    }
+                    n2++;
+                    n++;
+                }
+                return word;
+            }
+            function randInArr(arr) {
+                return arr[rand(arr.length)];
+            }
+            function rand(n) {
+                return Math.floor(Math.random()*n);
+            }
+            changeDecoderType('rail');
+        </script>
+    </body> 
+</html>

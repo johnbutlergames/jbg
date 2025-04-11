@@ -1,0 +1,809 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var fps = 0;
+            var lastTime = new Date().getTime();
+            var title = 'Solar System Simulator';
+            var dimensions = {width:1000,height:1000};
+            var imgs = ["sun.png","planet.png","moon.png","sun-large.png"];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = false;
+            var intro = 300;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = "images/"+imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.w3spaces.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function resolveCollision(b1,b2,e) {
+                var d = distTo(b1.x,b1.y,b2.x,b2.y);
+                var dx = b2.x-b1.x;
+                var dy = b2.y-b1.y;
+                var nx = dx/d;
+                var ny = dy/d;
+                var s = b1.r + b2.r - d;
+                var k = -2 * ((b2.xmove - b1.xmove) * nx + (b2.ymove - b1.ymove) * ny) / (1/b1.mass + 1/b2.mass);
+                b1.xmove -= k * e * nx / b1.mass;
+                b1.ymove -= k * e * ny / b1.mass;
+                b2.xmove += k * e * nx / b2.mass;
+                b2.ymove += k * e * ny / b2.mass;
+                var xmove = nx*s;
+                var ymove = ny*s;
+                b1.x -= xmove * (1-(b1.mass)/(b1.mass+b2.mass));
+                b1.y -= ymove * (1-(b1.mass)/(b1.mass+b2.mass));
+                b2.x += xmove * (1-(b2.mass)/(b1.mass+b2.mass));
+                b2.y += ymove * (1-(b2.mass)/(b1.mass+b2.mass));
+            }
+            function blend(c1,c2,p) {
+                if(p<=0) {
+                    return c1;
+                } else if(p>=1) {
+                    return c2;
+                } else {
+                    return [c1[0]*(1-p)+c2[0]*p,c1[1]*(1-p)+c2[1]*p,c1[2]*(1-p)+c2[2]*p];
+                }
+            }
+            function rgb(r,g,b) {
+                return 'rgb('+r+','+g+','+b+')';
+            }
+            function update() {
+                var newTime = new Date().getTime();
+                fps = 600/(newTime-lastTime);
+                lastTime = newTime;
+                if(!game.trails) {
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                }
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s)/2;
+                var y = (dimensions.height-s)/2;
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                game.tick();
+            }
+
+            var game = {
+                trails: false,
+                instructions: true,
+                paused: false,
+                createCors: false,
+                grid: true,
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    cam.update();
+                    if(!this.paused) {
+                        this.objects.update();
+                        this.updateBodies();
+                    }
+                },
+                draw: function() {
+                    this.drawBackground();
+
+                    ctx.save();
+                    ctx.translate(500,500);
+                    ctx.scale(cam.zoom,cam.zoom);
+                    ctx.translate(-cam.x,-cam.y);
+
+                    this.objects.draw();
+
+                    ctx.restore();
+
+                    this.drawMenu();
+                },
+                drawBackground: function() {
+                    if(game.trails) {
+                        ctx.fillStyle = 'rgb(0,0,0,0.05)';
+                    } else {
+                        ctx.fillStyle = 'black';
+                    }
+                    ctx.fillRect(0,0,1000,1000);
+                    if(this.grid) {
+                        this.drawGrid();
+                    }
+                },
+                drawGrid: function() {
+                    ctx.strokeStyle = 'rgb(100,100,100)';
+                    ctx.lineWidth = 2;
+                    var xoff = (-cam.x*cam.zoom)%100;
+                    var yoff = (-cam.y*cam.zoom)%100;
+                    var n = 0;
+                    while(n < 11) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*100+xoff,0);
+                        ctx.lineTo(n*100+xoff,1000);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(0,n*100+yoff);
+                        ctx.lineTo(1000,n*100+yoff);
+                        ctx.stroke();
+                        n++;
+                    }
+                },
+                drawMenu: function() {
+                    if(Mouse.down) {
+                        if(this.createCors===false) {
+                            this.createCors = {x:Mouse.x,y:Mouse.y};
+                            this.createRadius = 300+Math.random()*300;
+                        }
+                    }
+                    if(this.createCors) {
+                        var o = {};
+                        o.x = (this.createCors.x-500)/cam.zoom+cam.x;
+                        o.y = (this.createCors.y-500)/cam.zoom+cam.y;
+                        o.life = 100;
+                        o.r = this.createRadius;
+                        o.mass = o.r**2*Math.PI;
+                        var x = (Mouse.x-500)/cam.zoom+cam.x;
+                        var y = (Mouse.y-500)/cam.zoom+cam.y;
+                        o.xmove = (o.x-x)/30;
+                        o.ymove = (o.y-y)/30;
+                        ctx.save();
+                        ctx.translate(500,500);
+                        ctx.scale(cam.zoom,cam.zoom);
+                        ctx.translate(-cam.x,-cam.y);
+                        this.objects.drawObject(o);
+                        ctx.beginPath();
+                        ctx.lineWidth = 5/cam.zoom;
+                        ctx.strokeStyle = 'white';
+                        ctx.setLineDash([25/cam.zoom,25/cam.zoom]);
+                        ctx.moveTo(o.x,o.y);
+                        ctx.lineTo(o.x+o.xmove*100,o.y+o.ymove*100);
+                        ctx.stroke();
+                        ctx.restore();
+                        if(!Mouse.down) {
+                            if(cam.clamp) {
+                                o.xmove += this.objects.objects[cam.clampObj].xmove;
+                                o.ymove += this.objects.objects[cam.clampObj].ymove;
+                            }
+                            game.objects.objects.push(o);
+                            this.createCors = false;
+                        }
+                    }
+                    //create objects with mouse
+
+                    if(Keys.down[67]) {
+                        cam.clamp = !cam.clamp;
+                    }
+                    if(Keys.down[84]) {
+                        this.trails = !this.trails;
+                    }
+                    if(Keys.down[73]) {
+                        this.instructions = !this.instructions;
+                    }
+                    if(Keys.down[71]) {
+                        this.grid = !this.grid;
+                    }
+                    if(Keys.down[90]) {
+                        game.speed /= 2;
+                    }
+                    if(Keys.down[88]) {
+                        game.speed *= 2;
+                    }
+                    if(Keys.down[8]) {
+                        game.objects.objects = [];
+                    }
+                    game.speed = Math.min(Math.max(game.speed,0.25),16);
+                    if(Keys.down[32]) {
+                        this.paused = !this.paused;
+                    }
+                    var n = 0;
+                    while(n < 4) {
+                        if(Keys.down[49+n]) {
+                            reset(n);
+                        }
+                        n++;
+                    }
+                    if(this.instructions) {
+                        ctx.fillStyle = "white";
+                        ctx.font = "30px Arial";
+                        ctx.fillText("[G] Grid: "+(this.grid?"On":"Off"),20,40);
+                        ctx.fillText("[T] Trails: "+(this.trails?"On":"Off"),20,80);
+                        ctx.fillText("[C] Clamp: "+(cam.clamp?"On":"Off"),20,160);
+                        ctx.fillText("[+] Zoom In",20,200);
+                        ctx.fillText("[-] Zoom Out",20,240);
+                        ctx.fillText("[Arrows/WASD] Move Camera",20,280);
+                        ctx.fillText("[Space] "+(this.paused?"Unpause":"Pause"),20,360);
+                        ctx.fillText("[ZX] Speed: "+game.speed+"x",20,400);
+                        ctx.fillText("[Click] Spawn Planet",20,480);
+                        ctx.fillText("[Backspace] Clear",20,520);
+                        ctx.fillText("[1-4] Presets",20,560);
+                        ctx.fillText("[I] Hide Instructions",20,640);
+                        ctx.fillText("FPS: "+Math.round(fps),20,680);
+                        ctx.fillText("Entities: "+this.objects.objects.length,20,720);
+                        ctx.fillRect(20,110,200,5);
+                        ctx.fillRect(20,310,200,5);
+                        ctx.fillRect(20,430,200,5);
+                        ctx.fillRect(20,590,200,5);
+                    } else {
+                        ctx.fillStyle = "white";
+                        ctx.fillText("[I] Show Instructions",20,40);
+                    }
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            if(!o.init) {
+                                if(o.lastCollide===undefined) {
+                                    o.lastCollide = 0;
+                                }
+                                if(o.split===undefined) {
+                                    o.split = 0;
+                                }
+                                if(o.mass===undefined) {
+                                    o.mass = o.r**2*Math.PI;
+                                }
+                                if(o.xmove===undefined) {
+                                    o.xmove = 0;
+                                }
+                                if(o.ymove===undefined) {
+                                    o.ymove = 0;
+                                }
+                                if(o.collide===undefined) {
+                                    o.collide = true;
+                                }
+                                o.init = true;
+                            }
+                            o.pressure = 0;
+
+                            o.x += o.xmove*game.speed;
+                            o.y += o.ymove*game.speed;
+                            //move
+
+                            o.life = o.life||0;
+                            o.life++;
+
+                            if(o.lastCollide>0) {
+                                o.lastCollide -= game.speed;
+                            }
+                            if(o.split>0) {
+                                o.split -= game.speed;
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            o.gravity = {x:0,y:0};
+                            var count = 0;
+                            var n2 = 0;
+                            while(n2 < this.objects.length) {
+                                var o2 = this.objects[n2];
+                                if(n!=n2) {
+                                    if(o.mass!==undefined&&o2.mass!==undefined) {
+                                        var massRatio = o.mass/o2.mass;
+                                        var dir = dirTo(o.x,o.y,o2.x,o2.y);
+                                        var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                        if(dist<o.r*3) count++;
+                                        var force = (o.mass+o2.mass)/4000/(dist+1)/Math.max(1,massRatio);
+                                        var move = distToMove(force,dir);
+                                        o.gravity.x += move[0];
+                                        o.gravity.y += move[1];
+                                        o.pressure += force*10;
+                                    }
+                                }
+                                n2++;
+                            }
+                            if(count>30) o.split = 10;
+                            o.xmove += o.gravity.x*game.speed;
+                            o.ymove += o.gravity.y*game.speed;
+                            n++;
+                        }
+                        //gravity
+
+                        var add = [];
+                        var toDelete = [];
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            o.id = n;
+                            var n2 = 0;
+                            while(n2 < this.objects.length&&toDelete.indexOf(n)==-1) {
+                                var o2 = this.objects[n2];
+                                if(o2.id!==o.id&&toDelete.indexOf(n2)==-1&&o.collide&&o2.collide) {
+                                    var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                    if(dist<o2.r+o.r) {
+                                        var speedDif = distTo(o.xmove,o.ymove,o2.xmove,o2.ymove);
+                                        if(speedDif>10000/(o.mass+o2.mass)/game.speed) {
+                                            if(o.r>80&&o.split===0&&o.mass/o2.mass<2) {
+                                                toDelete.push(n);
+                                                var a = Math.random()*360;
+                                                var n3 = 0;
+                                                while(n3 < 4) {
+                                                    var o3 = {};
+                                                    var r = rotate(o.x,o.y,o.x,o.y-o.r*0.9,n3*90+a);
+                                                    o3.x = r[0];
+                                                    o3.y = r[1];
+                                                    o3.split = 10;
+                                                    o3.mass = o.mass/4;
+                                                    o3.r = Math.sqrt(o3.mass/Math.PI);
+                                                    o3.xmove = o.xmove;
+                                                    o3.ymove = o.ymove;
+                                                    o3.gravity = {x:0,y:0};
+                                                    o3.lastCollide = 100;
+                                                    o3.collide = true;
+                                                    add.push(o3);
+                                                    n3++;
+                                                }
+                                            }
+                                            if(o2.r>80&&o2.split===0&&o2.mass/o.mass<2) {
+                                                toDelete.push(n2);
+                                                var a = Math.random()*360;
+                                                var n3 = 0;
+                                                while(n3 < 4) {
+                                                    var o3 = {};
+                                                    var r = rotate(o2.x,o2.y,o2.x,o2.y-o2.r*0.9,n3*90+a);
+                                                    o3.x = r[0];
+                                                    o3.y = r[1];
+                                                    o3.split = 10;
+                                                    o3.mass = o2.mass/4;
+                                                    o3.r = Math.sqrt(o3.mass/Math.PI);
+                                                    o3.xmove = o2.xmove;
+                                                    o3.ymove = o2.ymove;
+                                                    o3.gravity = {x:0,y:0};
+                                                    o3.lastCollide = 100;
+                                                    o3.collide = true;
+                                                    add.push(o3);
+                                                    n3++;
+                                                }
+                                            }
+                                            resolveCollision(o2,o,0.9);
+                                        } else {
+                                            resolveCollision(o2,o,0.9);
+                                        }
+                                    }
+                                }
+                                n2++;
+                            }
+                            //collisions
+
+                            n++;
+                        }
+                        toDelete.sort(function(a,b){return b-a});
+                        var n = 0;
+                        while(n < toDelete.length) {
+                            this.objects.splice(toDelete[n],1);
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < add.length) {
+                            this.objects.push(add[n]);
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            this.drawObject(o);
+                            n++;
+                        }
+                    },
+                    drawObject: function(o) {
+                        if(o.life>100&&o.r>100) {
+                            if(o.r>1300) {
+                                o.img = 3;
+                            } else if(o.r>700) {
+                                o.img = 0;
+                            } else if(o.r>300) {
+                                o.img = 1;
+                            } else{
+                                o.img = 2;
+                            }
+                        }
+                        if(o.img!==undefined) {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                            ctx.clip();
+                            ctx.drawImage(imgs[o.img],o.x-o.r,o.y-o.r,o.r*2,o.r*2);
+                            ctx.restore();
+                        } else {
+                            ctx.fillStyle = this.getColor(o.mass);
+                            ctx.beginPath();
+                            ctx.arc(o.x,o.y,o.r,0,2*Math.PI);
+                            ctx.fill();
+                        }
+                    },
+                    getColor: function(r) {
+                        r = Math.sqrt(r/Math.PI);
+                        var color = [255,255,255];
+                        if(r>5) {
+                            color = blend([255,255,255],[200,200,200],(r-5)/25);
+                        }
+                        if(r>30) {
+                            color = blend([200,200,200],[200,120,40],(r-30)/70);
+                        }
+                        if(r>250) {
+                            color = blend([200,120,40],[255,255,0],(r-250)/500);
+                        }
+                        if(r>750) {
+                            color = blend([255,255,0],[255,255,255],(r-750)/1500);
+                        }
+                        if(r>2250) {
+                            color = blend([255,255,255],[50,50,255],(r-2250)/2500);
+                        }
+                        return rgb(color[0],color[1],color[2]);
+                    }
+                },
+                updateBodies: function() {
+                    var bodies = JSON.parse(JSON.stringify(game.objects.objects));
+                    var bodiesColliding = true;
+                    var n = 0;
+                    while(n < bodies.length) {
+                        var body = bodies[n];
+                        body.ax = body.x*body.mass;
+                        body.ay = body.y*body.mass;
+                        body.xmove *= body.mass;
+                        body.ymove *= body.mass;
+                        n++;
+                    }
+                    while(bodiesColliding) {
+                        bodiesColliding = false;
+                        var n = 0;
+                        while(n < bodies.length) {
+                            var body = bodies[n];
+                            body.ax /= body.mass;
+                            body.ay /= body.mass;
+                            body.xmove /= body.mass;
+                            body.ymove /= body.mass;
+                            body.x = body.ax;
+                            body.y = body.ay;
+                            body.ax = body.x*body.mass;
+                            body.ay = body.y*body.mass;
+                            body.xmove *= body.mass;
+                            body.ymove *= body.mass;
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < bodies.length) {
+                            var body = bodies[n];
+                            var n2 = n+1;
+                            while(n2 < bodies.length) {
+                                var body2 = bodies[n2];
+                                var dist = distTo(body.x,body.y,body2.x,body2.y);
+                                var x1 = body.xmove/body.mass;
+                                var x2 = body2.xmove/body2.mass;
+                                var y1 = body.ymove/body.mass;
+                                var y2 = body2.ymove/body2.mass;
+                                var speedDif = distTo(x1,y1,x2,y2);
+                                if(dist<body.r+body2.r+20&&(speedDif<2||!body.collide||!body2.collide)) {
+                                    body2.mass += body.mass;
+                                    body2.ax += body.ax;
+                                    body2.ay += body.ay;
+                                    body2.xmove += body.xmove;
+                                    body2.ymove += body.ymove;
+                                    body2.r = Math.sqrt(body2.mass/Math.PI);
+                                    body2.collide = body2.collide&&body.collide;
+                                    if(!body2.life) {
+                                        body2.life = body.life;
+                                    } else if(body.life) {
+                                        body2.life = Math.max(body2.life,body.life);
+                                    }
+                                    body2.split = 10;
+                                    bodies.splice(n,1);
+                                    bodiesColliding = true;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            n++;
+                        }
+                    }
+                    game.objects.objects = [];
+                    var n = 0;
+                    while(n < bodies.length) {
+                        var body = bodies[n];
+                        body.ax /= body.mass;
+                        body.ay /= body.mass;
+                        body.xmove /= body.mass;
+                        body.ymove /= body.mass;
+                        body.x = body.ax;
+                        body.y = body.ay;
+
+                        var o = {};
+                        o.x = body.x;
+                        o.y = body.y;
+                        o.r = body.r;
+                        if(!body.collide) {
+                            o.r = 20;
+                        }
+                        o.mass = body.mass;
+                        o.xmove = body.xmove;
+                        o.ymove = body.ymove;
+                        o.collide = body.collide;
+                        o.life = body.life;
+                        o.img = body.img;
+                        game.objects.objects.push(o);
+                        n++;
+                    }
+                },
+                speed: 1
+            }
+
+            var cam = {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                clamp: false,
+                clampObj: 0,
+                update: function() {
+                    if(this.clamp) {
+                        var biggest = [false,0]
+                        var n = 0;
+                        while(n < game.objects.objects.length) {
+                            var o = game.objects.objects[n];
+                            if(o.mass>biggest[1]||biggest[0]===false) {
+                                biggest = [n,o.mass];
+                            }
+                            n++;
+                        }
+                        if(biggest[0]!==false) {
+                            this.clampObj = biggest[0];
+                            var o = game.objects.objects[biggest[0]];
+                            this.x = o.x;
+                            this.y = o.y;
+                        }
+                    } else {
+                        if(Keys.keys[37]||Keys.keys[65]) {
+                            this.x-=5/this.zoom;
+                        }
+                        if(Keys.keys[39]||Keys.keys[68]) {
+                            this.x+=5/this.zoom;
+                        }
+                        if(Keys.keys[38]||Keys.keys[87]) {
+                            this.y-=5/this.zoom;
+                        }
+                        if(Keys.keys[40]||Keys.keys[83]) {
+                            this.y+=5/this.zoom;
+                        }
+                    }
+                    //move cam
+
+                    if(Keys.keys[187]) {
+                        this.zoom *= 1.01;
+                    }
+                    if(Keys.keys[189]) {
+                        this.zoom *= 0.99;
+                    }
+                    //zoom
+                }
+            }
+
+            function reset(n) {
+                game.objects.objects = [];
+                cam.x = 0;
+                cam.y = 0;
+                if(n==0) {
+                    game.objects.objects.push({x:0,y:0,r:800,xmove:0,ymove:0,mass:800**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:3000,r:40,xmove:-22,ymove:0,mass:40**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:5000,r:50,xmove:-22,ymove:0,mass:40**2*Math.PI,life:500});
+                    game.objects.objects.push({x:-200,y:9000,r:80,xmove:-21.5,ymove:0,mass:80**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:9000,r:20,xmove:-21.5,ymove:5,mass:80**2*Math.PI,life:500});
+                    cam.zoom = 0.05;
+                } else if(n==1) {
+                    var n = 0;
+                    while(n < 100) {
+                        var o = {};
+                        o.x = Math.random()*10000-5000;
+                        o.y = Math.random()*10000-5000;
+                        o.r = 20;
+                        o.mass = o.r**2*Math.PI
+                        o.xmove = 0;
+                        o.ymove = 0;
+                        game.objects.objects.push(o);
+                        n++;
+                    }
+                    cam.zoom = 0.1;
+                } else if(n==2) {
+                    game.objects.objects.push({x:-7000,y:0,r:500,xmove:50,ymove:0,mass:500**2*Math.PI,life:500});
+                    game.objects.objects.push({x:7000,y:0,r:500,xmove:-50,ymove:0,mass:500**2*Math.PI,life:500});
+                    cam.zoom = 0.05;
+                } else if(n==3) {
+                    game.objects.objects.push({x:0,y:-3000,r:1000,xmove:25,ymove:0,mass:1000**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:3000,r:1000,xmove:-25,ymove:0,mass:1000**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:20000,r:300,xmove:-40,ymove:0,mass:300**2*Math.PI,life:500});
+                    game.objects.objects.push({x:15000,y:0,r:200,xmove:0,ymove:40,mass:200**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:-10000,r:100,xmove:40,ymove:0,mass:100**2*Math.PI,life:500});
+                    game.objects.objects.push({x:0,y:10000,r:200,xmove:-40,ymove:0,mass:200**2*Math.PI,life:500});
+                    cam.zoom = 0.02;
+                }
+            }
+            reset(0);
+
+
+            /*
+            Ideas:
+            Actual solar system preset
+            Clamp onto planets
+            Supernova/Black Hole?
+            Density = Color
+            */
+        </script>
+    </body>
+</html>

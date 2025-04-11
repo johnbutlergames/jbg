@@ -1,0 +1,708 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'First Person Shooter';
+            var dimensions = {width:1000,height:1000};
+            var imgs = [];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.addEventListener('mousemove',function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            });
+            canvas.addEventListener('click',function(event) {
+                Mouse.click = true;
+            });
+            canvas.addEventListener('mousedown',function(event) {
+                Mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                Mouse.down = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            });
+            window.addEventListener('keyup',function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            });
+            var loads = 0;
+            var loaded = false;
+            if(imgs.length+audios.length==0) {
+                loaded = true;
+            }
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function rotate(cx, cy, x, y, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            }
+            function distToSeg(x, y, x1, y1, x2, y2) {
+                var A = x - x1;
+                var B = y - y1;
+                var C = x2 - x1;
+                var D = y2 - y1;
+                var dot = A * C + B * D;
+                var len_sq = C * C + D * D;
+                var param = -1;
+                if (len_sq != 0) {
+                    param = dot / len_sq;
+                }
+                var xx, yy;
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+
+                var dx = x - xx;
+                var dy = y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            function maze(data) {
+                if(data===undefined) {
+                    data = {};
+                }
+                if(!data.width) {
+                    data.width = 10;
+                }
+                if(!data.height) {
+                    data.height = 10;
+                }
+                if(!data.walls) {
+                    data.walls = [];
+                }
+                var blocks = [];
+                var y = 0;
+                while(y < data.height*2-1) {
+                    blocks.push([]);
+                    var x = 0;
+                    while(x < data.width*2-1) {
+                        blocks[y].push(0);
+                        x++;
+                    }
+                    y++;
+                }
+                var pos = [1,1];
+                while(true) {
+                    blocks[pos[0]][pos[1]]++;
+                    var cors = [[-2,0],[2,0],[0,-2],[0,2]];
+                    var n = 0;
+                    while(n < cors.length) {
+                        var x = cors[n][0]+pos[0];
+                        var y = cors[n][1]+pos[1];
+                        if(x<1||x>(data.width-1)*2||y<1||y>(data.height-1)*2) {
+                            cors.splice(n,1);
+                        } else {
+                            cors[n] = [x,y];
+                            n++;
+                        }
+                    }
+                    var needToBacktrack = true;
+                    var n = 0;
+                    while(n < cors.length) {
+                        if(blocks[cors[n][0]][cors[n][1]]==0) {
+                            needToBacktrack = false;
+                            break;
+                        }
+                        n++;
+                    }
+                    var cor = false;
+                    var n = 0;
+                    while(n < cors.length) {
+                        var b = blocks[cors[n][0]][cors[n][1]];
+                        if(b>1) {
+                            cors.splice(n,1);
+                            n--;
+                        } else if(needToBacktrack==true) {
+                            var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                            var n2 = 0;
+                            while(n2 < cors2.length) {
+                                var x = cors2[n2][0]+pos[0];
+                                var y = cors2[n2][1]+pos[1];
+                                if(blocks[x][y]===1) {
+                                    cor = [cors2[n2][0]*2+pos[0],cors2[n2][1]*2+pos[1]];
+                                    break;
+                                }
+                                n2++;
+                            }
+                            break;
+                        } else if(needToBacktrack==false&&b==1) {
+                            cors.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    var justBacktracked = false;
+                    var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                    var n2 = 0;
+                    while(n2 < cors2.length) {
+                        var x = cors2[n2][0]+pos[0];
+                        var y = cors2[n2][1]+pos[1];
+                        var x2 = cors2[n2][0]*2+pos[0];
+                        var y2 = cors2[n2][1]*2+pos[1];
+                        if(x2>0&&x2<blocks.length&&y2>0&&y2<blocks.length&&blocks[x][y]!==1) {
+                            if(blocks[x2][y2]==2) {
+                                justBacktracked = true;
+                            }
+                        }
+                        n2++;
+                    }
+                    if(needToBacktrack&&!justBacktracked) {
+                        blocks[pos[0]][pos[1]]++;
+                    }
+                    if(justBacktracked&&!needToBacktrack) {
+                        blocks[pos[0]][pos[1]]--;
+                    }
+                    if(!needToBacktrack) {
+                        if(cors.length===0) {
+                            break;
+                        }
+                        cor = cors[Math.floor(Math.random()*cors.length)];
+                    } else if(cor===false) {
+                        break;
+                    }
+                    blocks[(pos[0]+cor[0])/2][(pos[1]+cor[1])/2]++;
+                    pos = cor;
+                }
+                var y = 0;
+                while(y < blocks.length) {
+                    var x = 0;
+                    while(x < blocks[y].length) {
+                        if(blocks[x][y]==0) {
+                            blocks[x][y] = 1;
+                        } else {
+                            blocks[x][y] = 0;
+                        }
+                        x++;
+                    }
+                    y++;
+                }
+                return blocks;
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if(loaded) {
+                    main();
+                } else {
+                    var percent = loads/(imgs.length+audios.length);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'black';
+                    ctx.font = '120px Arial';
+                    ctx.fillText(title.toUpperCase(),500,300);
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,840,820,120);
+                    ctx.fillStyle = 'green';
+                    ctx.fillRect(100,850,800*percent,100);
+                    ctx.fillStyle = 'black';
+                    if(percent===1) {
+                        ctx.fillRect(300,635,400,150);
+                        if(Mouse.inBox(300,635,400,150)) {
+                            if(Mouse.click) {
+                                loaded = true;
+                            }
+                            ctx.fillStyle = 'rgb(200,200,200)';
+                        } else {
+                            ctx.fillStyle = 'white';
+                        }
+                        ctx.fillRect(310,645,380,130);
+                        ctx.fillStyle = 'black';
+                        ctx.fillText('Play',500,745);
+                    } else {
+                        ctx.fillText('Loading...',500,750);
+                    }
+                }
+                Mouse.click = false;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=='game') {
+                    game.tick();
+                } else if(page=='menu') {
+                    menu.update();
+                }
+            }
+
+            var menu = {
+                update: function() {
+                }
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    player.update();
+                    this.objects.update();
+                },
+                draw: function() {
+                    var h = 25000/player.view;
+                    var grd = ctx.createLinearGradient(500,1000,500,500+h);
+                    grd.addColorStop(0,'black');
+                    grd.addColorStop(1,'rgba(0,0,0,0)');
+                    ctx.fillStyle = grd;
+                    ctx.fillRect(0,500+h,1000,500-h);
+                    //ground
+
+                    var objects = this.objects.objectsInRadius(player.x,player.y,player.view);
+                    var distances = [];
+                    var hits = [];
+                    var angle = player.angle-50;
+                    while(angle < player.angle+50) {
+                        var distanceTraveled = 0;
+                        var move = distToMove(1,angle);
+                        var ray = {x:player.x,y:player.y,xmove:move[0],ymove:move[1]};
+                        while(distanceTraveled < player.view) {
+                            var distance = this.objects.getMaxDist(ray.x,ray.y,objects);
+                            ray.x += ray.xmove*distance;
+                            ray.y += ray.ymove*distance;
+                            distanceTraveled += distance;
+                            if(distance<0.1) {
+                                break;
+                            }
+                        }
+                        hits.push(this.objects.closestObject(ray.x,ray.y));
+                        distances.push(distanceTraveled);
+                        angle += 0.5;
+                    }
+                    var n = 0;
+                    while(n < distances.length) {
+                        var dist = distances[n];
+                        var h = 50000/dist*hits[n].h;
+
+                        var r = rotate(0,0,0,1,(n/distances.length)*180-90);
+                        h *= 1-r[1]/5;
+                        //anti fish-eye
+
+                        if(dist<player.view) {
+                            var s = dist/player.view*255;
+                            ctx.fillStyle = 'rgb('+s+','+s+','+s+')';
+                            ctx.fillRect(n*5,500-h/2,5,h);
+                        }
+                        n++;
+                    }
+                    //draw 3d walls
+
+                    var objects = this.objects.objectsInRadius(player.x,player.y,player.view,this.objects.dynamic);
+                    var distances2 = [];
+                    var hits2 = [];
+                    var angle = player.angle-50;
+                    while(angle < player.angle+50) {
+                        var distanceTraveled = 0;
+                        var move = distToMove(1,angle);
+                        var ray = {x:player.x,y:player.y,xmove:move[0],ymove:move[1]};
+                        while(distanceTraveled < player.view) {
+                            var distance = this.objects.getMaxDist(ray.x,ray.y,objects);
+                            ray.x += ray.xmove*distance;
+                            ray.y += ray.ymove*distance;
+                            distanceTraveled += distance;
+                            if(distance<0.1) {
+                                break;
+                            }
+                        }
+                        hits2.push(this.objects.closestObject(ray.x,ray.y,objects));
+                        distances2.push(distanceTraveled);
+                        angle += 0.5;
+                    }
+                    var n = 0;
+                    while(n < distances2.length) {
+                        var dist = distances2[n];
+                        if(dist<distances[n]) {
+                            var h = 50000/dist*hits2[n].h;
+
+                            var r = rotate(0,0,0,1,(n/distances2.length)*180-90);
+                            h *= 1-r[1]/5;
+                            //anti fish-eye
+
+                            if(dist<player.view) {
+                                var s = dist/player.view*255;
+                                ctx.fillStyle = 'rgb('+255+','+s+','+s+')';
+                                ctx.fillRect(n*5,500-h/2,5,h);
+                            }
+                        }
+                        n++;
+                    }
+                    //draw other 3d objects
+
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(0,0,200,200);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0,0,200,200);
+                    ctx.clip();
+                    ctx.scale(0.2,0.2);
+                    ctx.lineWidth = 10;
+                    ctx.translate(500-player.x,500-player.y);
+                    this.objects.draw();
+                    ctx.restore();
+                    ctx.save();
+                    ctx.translate(100,100);
+                    ctx.rotate(player.angle*Math.PI/180);
+                    ctx.beginPath();
+                    ctx.moveTo(0,-5);
+                    ctx.lineTo(5,5);
+                    ctx.lineTo(-5,5);
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.restore();
+                    ctx.strokeRect(0,0,200,200);
+                    //draw map
+                },
+                objects: {
+                    objects: [],
+                    dynamic: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            this.updateObject(obj);
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < this.dynamic.length) {
+                            var obj = this.dynamic[n];
+                            this.updateDynamicObject(obj);
+                            if(obj.decay!==undefined) {
+                                obj.decay--;
+                                if(obj.decay<=0) {
+                                    this.dynamic.splice(n,1);
+                                    n--;
+                                }
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            this.drawObject(obj);
+                            n++;
+                        }
+                    },
+                    drawObject: function(obj) {
+                        if(obj.type=='circle') {
+                            ctx.beginPath();
+                            ctx.arc(obj.x,obj.y,obj.r,0,2*Math.PI);
+                            ctx.stroke();
+                        }
+                        if(obj.type=='line') {
+                            ctx.beginPath();
+                            ctx.moveTo(obj.x1,obj.y1);
+                            ctx.lineTo(obj.x2,obj.y2);
+                            ctx.stroke();
+                        }
+                    },
+                    updateObject: function(obj) {
+                        if(!obj.init) {
+                            if(obj.h===undefined) {
+                                obj.h = 1;
+                            }
+                            if(obj.type=='line') {
+                                if(!obj.cx||!obj.cy||!obj.r) {
+                                    obj.cx = obj.x1/2+obj.x2/2;
+                                    obj.cy = obj.y1/2+obj.y2/2;
+                                    obj.r = distTo(obj.x1,obj.y1,obj.x2,obj.y2);
+                                }
+                            }
+                            obj.init = true;
+                        }
+                    },
+                    updateDynamicObject: function(obj) {
+                        if(!obj.init) {
+                            if(obj.h===undefined) {
+                                obj.h = 1;
+                            }
+                            obj.init = true;
+                        }
+                        if(obj.objectType=='bullet') {
+                            obj.x += obj.xmove;
+                            obj.y += obj.ymove;
+                        }
+                    },
+                    getMaxDist: function(x,y,objects) {
+                        if(objects===undefined) {
+                            objects = this.objects;
+                        }
+                        var dist = Infinity;
+                        var n = 0;
+                        while(n < objects.length) {
+                            var obj = objects[n];
+                            dist = Math.min(dist,this.distFromObject(obj,x,y));
+                            n++;
+                        }
+                        return dist;
+                    },
+                    distFromObject: function(obj,x,y) {
+                        if(obj.type=='circle') {
+                            return distTo(x,y,obj.x,obj.y)-obj.r;
+                        }
+                        if(obj.type=='line') {
+                            var rough = distTo(x,y,obj.cx,obj.cy);
+                            if(rough<obj.r+20) {
+                                return distToSeg(x,y,obj.x1,obj.y1,obj.x2,obj.y2);
+                            } else {
+                                return rough-obj.r;
+                            }
+                        }
+                    },
+                    closestObject: function(x,y,objects) {
+                        if(objects===undefined) {
+                            objects = this.objects;
+                        }
+                        var closest = false;
+                        var n = 0;
+                        while(n < objects.length) {
+                            var obj = objects[n];
+                            var dist = this.distFromObject(obj,x,y);
+                            if(closest===false) {
+                                closest = [obj,dist];
+                            } else if(dist<closest[1]) {
+                                closest = [obj,dist];
+                            }
+                            n++;
+                        }
+                        if(closest!==false) {
+                            return closest[0];
+                        } else {
+                            return false;
+                        }
+                    },
+                    objectsInRadius: function(x,y,r,objectsToSort) {
+                        if(objectsToSort===undefined) {
+                            objectsToSort = this.objects;
+                        }
+                        var objects = [];
+                        var n = 0;
+                        while(n < objectsToSort.length) {
+                            var obj = objectsToSort[n];
+                            var dist = this.distFromObject(obj,x,y);
+                            if(dist<=r) {
+                                objects.push(obj);
+                            }
+                            n++;
+                        }
+                        return objects;
+                    }
+                }
+            }
+
+            var player = {
+                x: 50,
+                y: 50,
+                angle: 0,
+                speed: 1,
+                view: 250,
+                shootReload: 0,
+                shootReloadReset: 100,
+                update: function() {
+                    if(this.shootReload>0) {
+                        this.shootReload--;
+                    }
+                    if(Keys.keys[32]&&this.shootReload==0) {
+                        this.shootReload = this.shootReloadReset;
+                        var bullet = {x:this.x,y:this.y,r:5,h:0.1,type:'circle',objectType:'bullet',decay:100};
+                        var move = distToMove(5,this.angle);
+                        bullet.xmove = move[0];
+                        bullet.ymove = move[1];
+                        game.objects.dynamic.push(bullet);
+                    }
+                    if(Keys.keys[37]) {
+                        this.angle -= 1;
+                    }
+                    if(Keys.keys[39]) {
+                        this.angle += 1;
+                    }
+                    var move = [0,0];
+                    if(Keys.keys[38]||Keys.keys[87]) {
+                        var m = distToMove(this.speed,this.angle);
+                        move[0] += m[0];
+                        move[1] += m[1];
+                    }
+                    if(Keys.keys[40]||Keys.keys[83]) {
+                        var m = distToMove(this.speed,this.angle+180);
+                        move[0] += m[0];
+                        move[1] += m[1];
+                    }
+                    if(Keys.keys[65]) {
+                        var m = distToMove(this.speed,this.angle-90);
+                        move[0] += m[0];
+                        move[1] += m[1];
+                    }
+                    if(Keys.keys[68]) {
+                        var m = distToMove(this.speed,this.angle+90);
+                        move[0] += m[0];
+                        move[1] += m[1];
+                    }
+                    var dist = game.objects.getMaxDist(this.x+move[0],this.y+move[1]);
+                    if(dist>10) {
+                        this.x += move[0];
+                        this.y += move[1];
+                    }
+                }
+            }
+
+            var page = 'game';
+
+            function generateMaze() {
+                var blocks = maze({width:10,height:10});
+                var objects = [];
+                var x = 0;
+                while(x < blocks.length) {
+                    var y = 0;
+                    while(y < blocks[x].length) {
+                        if(blocks[x][y]) {
+                            var left = false;
+                            var right = false;
+                            var up = false;
+                            var down = false;
+                            if(blocks[x-1]&&blocks[x-1][y]===1) {
+                                left = true;
+                            }
+                            if(blocks[x+1]&&blocks[x+1][y]===1) {
+                                right = true;
+                            }
+                            if(blocks[x][y-1]===1) {
+                                up = true;
+                            }
+                            if(blocks[x][y+1]===1) {
+                                down = true;
+                            }
+                            var cx = x*50;
+                            var cy = y*50;
+                            if(left&&right) {
+                                objects.push({type:'line',x1:cx-25,y1:cy,x2:cx+25,y2:cy});
+                            } else {
+                                if(left) {
+                                    objects.push({type:'line',x1:cx-25,y1:cy,x2:cx,y2:cy});
+                                }
+                                if(right) {
+                                    objects.push({type:'line',x1:cx,y1:cy,x2:cx+25,y2:cy});
+                                }
+                            }
+                            if(up&&down) {
+                                objects.push({type:'line',x1:cx,y1:cy-25,x2:cx,y2:cy+25});
+                            } else {
+                                if(up) {
+                                    objects.push({type:'line',x1:cx,y1:cy-25,x2:cx,y2:cy});
+                                }
+                                if(down) {
+                                    objects.push({type:'line',x1:cx,y1:cy,x2:cx,y2:cy+25});
+                                }
+                            }
+                        }
+                        y++;
+                    }
+                    x++;
+                }
+                var n = 0;
+                while(n < objects.length) {
+                    var obj = objects[n];
+                    game.objects.objects.push(obj);
+                    n++;
+                }
+            }
+            generateMaze();
+        </script>
+    </body>
+</html>

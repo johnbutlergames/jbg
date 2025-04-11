@@ -1,0 +1,1195 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Shadows+Into+Light&display=swap" rel="stylesheet">
+        <style>
+            canvas {
+                background-color: white;
+                margin: auto;
+                margin: 0;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                -ms-transform: translate(-50%,-50%);
+                transform: translate(-50%,-50%);
+            }
+            body {
+                background-color: rgb(50,50,50);
+                margin: 0px;
+            }
+        </style>
+        <canvas id='canvas'></canvas>
+        <script>
+            var title = 'The Labyrinth';
+            var dimensions = {width:1000,height:1000};
+            var imgs = ["images/spider.png","images/spider2.png","images/spidereyes.png","images/floorTile.png","images/floorTile2.png"];
+            var audios = [];
+            var canvas = document.getElementById('canvas');
+            var ratio = dimensions.width/dimensions.height;
+            var sizeText = 'min(100vw,100vh)';
+            if(ratio>1) {
+                sizeText = 'min('+(100/ratio)+'vw,100vh)';
+                canvas.style.width = 'calc('+sizeText+' * '+ratio+')';
+                canvas.style.height = sizeText;
+            } else if(ratio<1) {
+                sizeText = 'min(100vw,'+(100*ratio)+'vh)';
+                canvas.style.width = sizeText;
+                canvas.style.height = 'calc('+sizeText+' * '+(1/ratio)+')';
+            } else {
+                canvas.style.width = sizeText;
+                canvas.style.height = sizeText;
+            }
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            document.title = title;
+            var ctx = canvas.getContext('2d');
+            canvas.onmousemove = function(event) {
+                var rect = canvas.getBoundingClientRect();
+                Mouse.x = (event.pageX-rect.x)*canvas.width/rect.width;
+                Mouse.y = (event.pageY-rect.y)*canvas.height/rect.height;
+            }
+            canvas.onclick = function(event) {
+                Mouse.click = true;
+            }
+            canvas.onmousedown = function(event) {
+                Mouse.down = true;
+            }
+            canvas.onmouseup = function(event) {
+                Mouse.down = false;
+            }
+            window.onkeydown = function(event) {
+                Keys.keys[event.keyCode] = true;
+                Keys.down[event.keyCode] = true;
+            }
+            window.onkeyup = function(event) {
+                Keys.keys[event.keyCode] = false;
+                Keys.up[event.keyCode] = true;
+            }
+            canvas.onwheel = function(event) {
+                Mouse.scrollX = event.deltaX;
+                Mouse.scrollY = event.deltaY;
+                event.preventDefault();
+            }
+            var loads = 0;
+            var loaded = true;
+            var intro = 0;
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                imgs[n] = img;
+                img.onload = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                audios[n] = aud;
+                aud.oncanplaythrough = function() {
+                    loads++;
+                }
+                n++;
+            }
+            var logoImg = document.createElement("img");
+            logoImg.src = "https://johnbutlergames.com/logoLarge.png";
+            logoImg.onload = function() {
+                loads++;
+            }
+            var loadAnimation = 0;
+            var Mouse = {
+                x: 0,
+                y: 0,
+                down: false,
+                click: false,
+                scrollX: 0,
+                scrollY: 0,
+                inBox: function(x,y,w,h) {
+                    return this.x>x&&this.x<x+w&&this.y>y&&this.y<y+h;
+                },
+                clickInBox: function(x,y,w,h) {
+                    return this.inBox(x,y,w,h)&&this.click;
+                }
+            }
+            var Keys = {
+                keys: [],
+                down: [],
+                up: []
+            }
+            function dirTo(x1,y1,x2,y2) {
+                return 90+(Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI);
+            }
+            function distToMove(distance,direction) {
+                return [distance*Math.sin(direction*Math.PI/180),-distance*Math.cos(direction*Math.PI/180)];
+            }
+            function distTo(x1,y1,x2,y2) {
+                return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+            }
+            function distToSeg(x, y, x1, y1, x2, y2) {
+                var A = x - x1;
+                var B = y - y1;
+                var C = x2 - x1;
+                var D = y2 - y1;
+                var dot = A * C + B * D;
+                var len_sq = C * C + D * D;
+                var param = -1;
+                if (len_sq != 0) {
+                    param = dot / len_sq;
+                }
+                var xx, yy;
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+
+                var dx = x - xx;
+                var dy = y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            function blocksColliding(b1,b2) {
+                return r(b1.x+b1.w)>r(b2.x)&&r(b1.x)<r(b2.x+b2.w)&&r(b1.y+b1.h)>r(b2.y)&&r(b1.y)<r(b2.y+b2.h);
+            }
+            function blocksCollidingEdge(b1,b2) {
+                return r(b1.x+b1.w)>=r(b2.x)&&r(b1.x)<=r(b2.x+b2.w)&&r(b1.y+b1.h)>=r(b2.y)&&r(b1.y)<=r(b2.y+b2.h);
+            }
+            function r(n) {
+                return Math.round(n*10000)/10000;
+            }
+            function turn(angle,targetAngle) {
+                angle %= 360;
+                targetAngle %= 360;
+                if(angle<0) {
+                    angle += 360;
+                }
+                if(targetAngle<0) {
+                    targetAngle += 360;
+                }
+                var turnRight = targetAngle-angle;
+                var turnLeft = targetAngle-angle;
+                if(turnRight<0) {
+                    turnLeft += 360;
+                } else {
+                    turnLeft -= 360;
+                }
+                if(Math.abs(turnRight)<Math.abs(turnLeft)) {
+                    return turnRight;
+                } else {
+                    return turnLeft;
+                }
+            }
+            function updateBlock(block,staticBlocks) {
+                block.x += block.xmove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide!==false&&blocksColliding(block,b)) {
+                        if(block.x+block.w/2<b.x+b.w/2) {
+                            block.x = b.x-block.w;
+                        } else {
+                            block.x = b.x+b.w;
+                        }
+                        block.xmove = 0;
+                    }
+                    n++;
+                }
+                block.y += block.ymove;
+                var n = 0;
+                while(n < staticBlocks.length) {
+                    var b = staticBlocks[n];
+                    if(b.collide!==false&&blocksColliding(block,b)) {
+                        if(block.y+block.h/2<b.y+b.h/2) {
+                            block.y = b.y-block.h;
+                        } else {
+                            block.y = b.y+b.h;
+                        }
+                        block.ymove = 0;
+                    }
+                    n++;
+                }
+            }
+            function generateMaze(data) {
+                if(data===undefined) {
+                    data = {};
+                }
+                if(!data.width) {
+                    data.width = 10;
+                }
+                if(!data.height) {
+                    data.height = 10;
+                }
+                var blocks = [];
+                var y = 0;
+                while(y < data.height*2-1) {
+                    blocks.push([]);
+                    var x = 0;
+                    while(x < data.width*2-1) {
+                        blocks[y].push(0);
+                        x++;
+                    }
+                    y++;
+                }
+                var pos = [1,1];
+                while(true) {
+                    blocks[pos[0]][pos[1]]++;
+                    var cors = [[-2,0],[2,0],[0,-2],[0,2]];
+                    var n = 0;
+                    while(n < cors.length) {
+                        var x = cors[n][0]+pos[0];
+                        var y = cors[n][1]+pos[1];
+                        if(x<1||x>(data.width-1)*2||y<1||y>(data.height-1)*2) {
+                            cors.splice(n,1);
+                        } else {
+                            cors[n] = [x,y];
+                            n++;
+                        }
+                    }
+                    var needToBacktrack = true;
+                    var n = 0;
+                    while(n < cors.length) {
+                        if(blocks[cors[n][0]][cors[n][1]]==0) {
+                            needToBacktrack = false;
+                            break;
+                        }
+                        n++;
+                    }
+                    var cor = false;
+                    var n = 0;
+                    while(n < cors.length) {
+                        var b = blocks[cors[n][0]][cors[n][1]];
+                        if(b>1) {
+                            cors.splice(n,1);
+                            n--;
+                        } else if(needToBacktrack==true) {
+                            var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                            var n2 = 0;
+                            while(n2 < cors2.length) {
+                                var x = cors2[n2][0]+pos[0];
+                                var y = cors2[n2][1]+pos[1];
+                                if(blocks[x][y]===1) {
+                                    cor = [cors2[n2][0]*2+pos[0],cors2[n2][1]*2+pos[1]];
+                                    break;
+                                }
+                                n2++;
+                            }
+                            break;
+                        } else if(needToBacktrack==false&&b==1) {
+                            cors.splice(n,1);
+                            n--;
+                        }
+                        n++;
+                    }
+                    var justBacktracked = false;
+                    var cors2 = [[-1,0],[1,0],[0,-1],[0,1]];
+                    var n2 = 0;
+                    while(n2 < cors2.length) {
+                        var x = cors2[n2][0]+pos[0];
+                        var y = cors2[n2][1]+pos[1];
+                        var x2 = cors2[n2][0]*2+pos[0];
+                        var y2 = cors2[n2][1]*2+pos[1];
+                        if(x2>0&&x2<blocks.length&&y2>0&&y2<blocks.length&&blocks[x][y]!==1) {
+                            if(blocks[x2][y2]==2) {
+                                justBacktracked = true;
+                            }
+                        }
+                        n2++;
+                    }
+                    if(needToBacktrack&&!justBacktracked) {
+                        blocks[pos[0]][pos[1]]++;
+                    }
+                    if(justBacktracked&&!needToBacktrack) {
+                        blocks[pos[0]][pos[1]]--;
+                    }
+                    if(!needToBacktrack) {
+                        if(cors.length===0) {
+                            break;
+                        }
+                        cor = cors[Math.floor(Math.random()*cors.length)];
+                    } else if(cor===false) {
+                        break;
+                    }
+                    blocks[(pos[0]+cor[0])/2][(pos[1]+cor[1])/2]++;
+                    pos = cor;
+                }
+                var y = 0;
+                while(y < blocks.length) {
+                    var x = 0;
+                    while(x < blocks[y].length) {
+                        if(blocks[x][y]==0) {
+                            blocks[x][y] = 1;
+                        } else {
+                            blocks[x][y] = 0;
+                        }
+                        x++;
+                    }
+                    y++;
+                }
+                return blocks;
+            }
+            function f(s) {
+                ctx.font = s+'px Shadows Into Light';
+            }
+            function inside(point, polygon) {
+                let odd = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; i++) {
+                    if (((polygon[i].y > point.y) !== (polygon[j].y > point.y))
+                        && (point.x < ((polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x))) {
+                        odd = !odd;
+                    }
+                    j = i;
+
+                }
+                return odd;
+            }
+            function update() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                var s = Math.min(dimensions.width,dimensions.height);
+                var x = (dimensions.width-s);
+                var y = (dimensions.height-s);
+                if(loaded) {
+                    if(intro) {
+                        intro--;
+                        ctx.globalAlpha = 1-Math.min(Math.max(Math.abs(intro-150)-50,0),100)/100;
+                        ctx.save();
+                        ctx.scale(s/1000,s/1000);
+                        ctx.translate(x,y);
+                        ctx.drawImage(logoImg,0,0,1000,1000);
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    } else {
+                        main();
+                    }
+                } else {
+                    var percent = loads/(imgs.length+audios.length+1);
+                    if(isNaN(percent)) {
+                        percent = 1;
+                    }
+                    if(percent===1) {
+                        loaded = true;
+                    }
+                    ctx.save();
+                    ctx.scale(s/1000,s/1000);
+                    ctx.translate(x,y);
+                    ctx.textAlign = 'center';
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(90,540,820,30);
+                    ctx.fillStyle = 'blue';
+                    ctx.fillRect(95,545,810*percent,20);
+                    ctx.beginPath();
+                    ctx.rect(95,545,810*percent,20);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.fillStyle = 'rgb(255,100,0)';
+                    var a = loadAnimation%80;
+                    var n = 0;
+                    while(n < 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(n*40+a+10,545);
+                        ctx.lineTo(n*40+a+25,545);
+                        ctx.lineTo(n*40+a+15,565);
+                        ctx.lineTo(n*40+a,565);
+                        ctx.closePath();
+                        ctx.fill();
+                        n++;
+                    }
+                    ctx.restore();
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('Loading...',500,500);
+                    ctx.restore();
+                    loadAnimation+=0.5;
+                }
+                Mouse.click = false;
+                Mouse.scrollX = 0;
+                Mouse.scrollY = 0;
+                Keys.down = [];
+                Keys.up = [];
+            }
+            window.setInterval(update,10);
+
+            function main() {
+                if(page=='game') {
+                    game.tick();
+                } else if(page=='village') {
+                    village.tick();
+                }
+                t++;
+            }
+
+            var game = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    cam.update();
+                    this.objects.update();
+                    this.dynamicObjects.update();
+                    player.update();
+
+                    if(t%200==0&&!player.dead) {
+                        this.level.generate({onlyMoving:true});
+                    }
+
+                    if(this.playerDeathAnimation!==0) {
+                        this.playerDeathAnimation--;
+                        if(this.playerDeathAnimation==0) {
+                            page = 'village';
+                            village.reset();
+                        }
+                    }
+
+                    if(!player.dead) {
+                        player.inventory.update();
+                        //update player inventory selection
+                    }
+                },
+                draw: function() {
+                    var xoff = -(cam.x%1000+1000)%1000;
+                    var yoff = -(cam.y%1000+1000)%1000;
+                    for(x=-1;x<2;x++) {
+                        for(y=-1;y<2;y++) {
+                            ctx.drawImage(imgs[3],x*1000+xoff,y*1000+yoff,1000,1000);
+                        }
+                    }
+                    //tiled background
+
+                    ctx.save();
+                    ctx.translate(500-cam.x,500-cam.y);
+
+                    this.objects.draw('dark',0);
+                    this.objects.draw('dark',1);
+                    this.dynamicObjects.draw('dark');
+                    //draw dark objects
+
+                    var endCors = this.calculateRays();
+                    if(player.dead) {
+                        endCors = [];
+                    }
+                    var actualCors = JSON.parse(JSON.stringify(endCors));
+                    actualCors.push({x:player.x+player.w/2,y:player.y+player.h/2});
+                    actualCors.unshift({x:player.x+player.w/2,y:player.y+player.h/2});
+                    this.dynamicObjects.calculateObjectsInLight(actualCors);
+                    ctx.save();
+                    var clipRegion = new Path2D();
+                    clipRegion.moveTo(player.x+player.w/2,player.y+player.h/2);
+                    var n = 0;
+                    while(n < endCors.length) {
+                        clipRegion.lineTo(endCors[n].x,endCors[n].y);
+                        n++;
+                    }
+                    clipRegion.closePath();
+                    ctx.clip(clipRegion);
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(cam.x-500,cam.y-500,1000,1000);
+                    var xoff = -(cam.x%1000+1000)%1000;
+                    var yoff = -(cam.y%1000+1000)%1000;
+                    for(x=-1;x<2;x++) {
+                        for(y=-1;y<2;y++) {
+                            ctx.drawImage(imgs[4],cam.x-x*1000+xoff,cam.y-y*1000+yoff,1000,1000);
+                        }
+                    }
+                    this.objects.draw('light',0);
+                    this.objects.draw('light',1);
+                    this.dynamicObjects.draw('light');
+                    ctx.restore();
+                    //draw light objects
+
+                    player.draw();
+                    //draw player
+
+                    ctx.restore();
+
+                    var grd = ctx.createRadialGradient(500,500,200,500,500,600);
+                    if(player.health<=player.maxHealth*0.2) {
+                        var red = 105-(player.health/player.maxHealth*500);
+                        grd.addColorStop(0,'rgba('+red+',0,0,0)');
+                        grd.addColorStop(1,'rgba('+red+',0,0,0.7)');
+                    } else {
+                        grd.addColorStop(0,'rgba(0,0,0,0)');
+                        grd.addColorStop(1,'rgba(0,0,0,0.7)');
+                    }
+                    ctx.fillStyle = grd;
+                    ctx.fillRect(0,0,1000,1000);
+                    //darkness and red vision when low health
+
+                    /*ctx.fillStyle = 'white';
+                    ctx.fillRect(0,0,200,200);
+                    ctx.beginPath();
+                    ctx.rect(0,0,200,200);
+                    ctx.save();
+                    ctx.clip();
+                    ctx.scale(0.015,0.015);
+                    ctx.translate(6666-cam.x,6666-cam.y);
+                    var n = 0;
+                    while(n < game.objects.objects.length) {
+                        var o = game.objects.objects[n];
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(o.x,o.y,o.w,o.h);
+                        n++;
+                    }
+                    var n = 0;
+                    while(n < game.dynamicObjects.objects.length) {
+                        var o = game.dynamicObjects.objects[n];
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(o.x,o.y,o.w*5,o.h*5);
+                        n++;
+                    }
+                    ctx.fillStyle = 'rgb(100,100,100)';
+                    ctx.fillRect(player.x-200,player.y-200,400,400);
+                    ctx.restore();*/
+                    //map
+
+                    if(this.playerDeathAnimation!==0) {
+                        ctx.fillStyle = 'red';
+                        f(200);
+                        ctx.textAlign = 'center';
+
+                        ctx.globalAlpha = 1;
+                        var x = 0;
+                        if(this.playerDeathAnimation>250) {
+                            x = 500-(300-this.playerDeathAnimation)*10;
+                            ctx.globalAlpha = (300-this.playerDeathAnimation)/50;
+                        }
+                        if(this.playerDeathAnimation<50) {
+                            x = (this.playerDeathAnimation-50)*10;
+                            ctx.globalAlpha = this.playerDeathAnimation/50;
+                        }
+                        ctx.fillText('You Died',500+x,500);
+                        ctx.globalAlpha = 1;
+                    }
+                    //death animation
+
+                    player.inventory.draw();
+                    //draw player inventory
+                },
+                calculateRays: function() {
+                    var objectsInRadius = [];
+                    var n = 0;
+                    while(n < this.objects.objects.length) {
+                        var o = this.objects.objects[n];
+                        var dist = distTo(player.x,player.y,o.cx,o.cy);
+                        if(dist<750+o.r) {
+                            objectsInRadius.push(o);
+                        }
+                        n++;
+                    }
+
+                    var endCors = [];
+                    var angle = player.angle-45;
+                    while(angle<player.angle+45) {
+                        var ray = {};
+                        var distanceTraveled = 0;
+                        ray.x = player.x+player.w/2;
+                        ray.y = player.y+player.h/2;
+                        ray.angle = angle;
+                        var move = distToMove(1,ray.angle);
+                        ray.xmove = move[0];
+                        ray.ymove = move[1];
+                        while(distanceTraveled<750) {
+                            var dist = this.objects.maxDist(ray.x,ray.y,objectsInRadius);
+                            if(dist<1) {
+                                break;
+                            }
+                            ray.x += ray.xmove*dist;
+                            ray.y += ray.ymove*dist;
+                            distanceTraveled += dist;
+                        }
+                        endCors.push({x:ray.x,y:ray.y});
+                        angle += 1;
+                    }
+                    return endCors;
+                },
+                level: {
+                    floor: 0,
+                    generate: function(data) {
+                        var chamberAreas = [{x:400,y:400,w:1200,h:1200},{x:10800,y:400,w:1200,h:1200},{x:10800,y:10800,w:1200,h:1200},{x:400,y:10800,w:1200,h:1200},{x:5200,y:5200,w:2000,h:2000}];
+                        var objectsAroundPlayer = [];
+                        var dynamicObjectsAroundPlayer = [];
+                        if(data.onlyMoving) {
+                            var n = 0;
+                            while(n < game.objects.objects.length) {
+                                var o = game.objects.objects[n];
+                                var inChamber = false;
+                                var n2 = 0;
+                                while(n2 < chamberAreas.length) {
+                                    if(blocksColliding(chamberAreas[n2],o)) {
+                                        inChamber = true;
+                                        break;
+                                    }
+                                    n2++;
+                                }
+                                var dist = distTo(o.x+o.w/2,o.y+o.h/2,player.x+player.w/2,player.y+player.h/2);
+                                if(dist<1400||inChamber) {
+                                    objectsAroundPlayer.push(o);
+                                }
+                                n++;
+                            }
+                            var n = 0;
+                            while(n < game.dynamicObjects.objects.length) {
+                                var o = game.dynamicObjects.objects[n];
+                                var inChamber = false;
+                                var n2 = 0;
+                                while(n2 < chamberAreas.length) {
+                                    if(blocksColliding(chamberAreas[n2],o)) {
+                                        inChamber = true;
+                                        break;
+                                    }
+                                    n2++;
+                                }
+                                var dist = distTo(o.x+o.w/2,o.y+o.h/2,player.x+player.w/2,player.y+player.h/2);
+                                if(dist<1000||inChamber) {
+                                    dynamicObjectsAroundPlayer.push(o);
+                                }
+                                n++;
+                            }
+                            game.dynamicObjects.objects = dynamicObjectsAroundPlayer;
+                            game.objects.objects = objectsAroundPlayer;
+                        } else {
+                            game.objects.objects = [];
+                            game.objects.dynamicObjects = [];
+                        }
+
+                        var blocks = generateMaze({width:16,height:16});
+                        var objects = [];
+                        var dynamics = [];
+                        var x = 0;
+                        while(x < blocks.length) {
+                            var y = 0;
+                            while(y < blocks[x].length) {
+                                if(blocks[x][y]) {
+                                    objects.push({x:x*400,y:y*400,w:400,h:400});
+                                } else {
+                                    if(distTo(x*400+200,y*400+200,player.x,player.y)<1800) {
+                                        var dynamic = {w:100,h:100,type:'enemy',aggravated:false,health:200}
+                                        dynamic.x = x*400+Math.random()*350;
+                                        dynamic.y = y*400+Math.random()*350;
+                                        dynamics.push(dynamic);
+                                    }
+                                }
+                                y++;
+                            }
+                            x++;
+                        }
+                        var n = 0;
+                        while(n < objects.length) {
+                            var o = objects[n];
+                            var n2 = 0;
+                            while(n2 < chamberAreas.length) {
+                                if(blocksColliding(chamberAreas[n2],o)) {
+                                    objects.splice(n,1);
+                                    n--;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < dynamics.length) {
+                            var o = dynamics[n];
+                            var n2 = 0;
+                            while(n2 < chamberAreas.length) {
+                                if(blocksColliding(chamberAreas[n2],o)) {
+                                    dynamics.splice(n,1);
+                                    n--;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            n++;
+                        }
+                        if(data.onlyMoving) {
+                            var n = 0;
+                            while(n < objects.length) {
+                                var o = objects[n];
+                                var dist = distTo(o.x+o.w/2,o.y+o.h/2,player.x+player.w/2,player.y+player.h/2);
+                                if(dist<1400) {
+                                    objects.splice(n,1);
+                                    n--;
+                                }
+                                n++;
+                            }
+                            var n = 0;
+                            while(n < dynamics.length) {
+                                var o = dynamics[n];
+                                var dist = distTo(o.x+o.w/2,o.y+o.h/2,player.x+player.w/2,player.y+player.h/2);
+                                if(dist<1400) {
+                                    dynamics.splice(n,1);
+                                    n--;
+                                }
+                                n++;
+                            }
+                        }
+                        var n = 0;
+                        while(n < objects.length) {
+                            var obj = objects[n];
+                            obj.type = 'block';
+                            game.objects.objects.push(obj);
+                            n++;
+                        }
+                        var n = 0;
+                        while(n < dynamics.length) {
+                            var obj = dynamics[n];
+                            game.dynamicObjects.objects.push(obj);
+                            n++;
+                        }
+                    }
+                },
+                objects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            this.updateObject(o);
+                            n++;
+                        }
+                    },
+                    draw: function(lighting,layer) {
+                        var screen = {x:cam.x-550,y:cam.y-550,w:1100,h:1100};
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            if(blocksColliding(o,screen)) {
+                                this.drawObject(o,lighting,layer);
+                            }
+                            n++;
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(!o.init) {
+                            if(o.type=='block') {
+                                o.r = distTo(o.x,o.y,o.x+o.w/2,o.y+o.h/2);
+                                o.cx = o.x+o.w/2;
+                                o.cy = o.y+o.h/2;
+                                o.blockLight = true;
+                                o.collide = true;
+                            }
+                            if(o.type=='door') {
+                                o.collide = false;
+                                o.blockLight = false;
+                            }
+                            o.init = true;
+                        }
+                    },
+                    drawObject: function(o,lighting,layer) {
+                        if(o.type=='block'||o.type=='door') {
+                            if(lighting=='light') {
+                                if(layer==0) {
+                                    ctx.fillStyle = 'rgb(150,150,150)';
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x+o.w,o.y);
+                                    ctx.lineTo(o.x+o.w+30,o.y+30);
+                                    ctx.lineTo(o.x+o.w+30,o.y+o.h+30);
+                                    ctx.lineTo(o.x+30,o.y+o.h+30);
+                                    ctx.lineTo(o.x,o.y+o.h);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                } else if(layer==1) {
+                                    ctx.fillStyle = 'rgb(100,100,100)';
+                                    ctx.fillRect(o.x,o.y,o.w,o.h);
+                                }
+                            } else {
+                                if(layer==0) {
+                                    ctx.fillStyle = 'rgb(100,100,100)';
+                                    ctx.beginPath();
+                                    ctx.moveTo(o.x+o.w,o.y);
+                                    ctx.lineTo(o.x+o.w+30,o.y+30);
+                                    ctx.lineTo(o.x+o.w+30,o.y+o.h+30);
+                                    ctx.lineTo(o.x+30,o.y+o.h+30);
+                                    ctx.lineTo(o.x,o.y+o.h);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                } else if(layer==1) {
+                                    ctx.fillStyle = 'rgb(50,50,50)';
+                                    ctx.fillRect(o.x,o.y,o.w,o.h);
+                                }
+                            }
+                        }
+                    },
+                    getDist: function(o,x,y) {
+                        if(o.type=='block') {
+                            var rough = distTo(o.cx,o.cy,x,y);
+                            if(rough<o.r+100) {
+                                var dist = distToSeg(x,y,o.x,o.y,o.x+o.w,o.y);
+                                dist = Math.min(dist,distToSeg(x,y,o.x+o.w,o.y,o.x+o.w,o.y+o.h));
+                                dist = Math.min(dist,distToSeg(x,y,o.x,o.y+o.h,o.x+o.w,o.y+o.h));
+                                dist = Math.min(dist,distToSeg(x,y,o.x,o.y,o.x,o.y+o.h));
+                                return dist;
+                            } else {
+                                return rough-o.r;
+                            }
+                        }
+                    },
+                    maxDist: function(x,y,objects) {
+                        if(objects===undefined) {
+                            objects = this.objects;
+                        }
+                        var dist = 1000;
+                        var n = 0;
+                        while(n < objects.length) {
+                            var o = objects[n];
+                            if(o.blockLight) {
+                                dist = Math.min(dist,this.getDist(o,x,y));
+                            }
+                            n++;
+                        }
+                        return dist;
+                    }
+                },
+                dynamicObjects: {
+                    objects: [],
+                    update: function() {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            obj.id = n;
+                            this.updateObject(obj);
+                            if(obj.type=='enemy'&&obj.health<=0) {
+                                this.enemyDeath(obj);
+                                this.objects.splice(n,1);
+                                n--;
+                            }
+                            n++;
+                        }
+                    },
+                    draw: function(lighting) {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var obj = this.objects[n];
+                            this.drawObject(obj,lighting);
+                            n++;
+                        }
+                    },
+                    calculateObjectsInLight: function(cors) {
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o = this.objects[n];
+                            var cPoint = {x:o.x+o.w/2,y:o.y+o.h/2};
+                            if(inside(cPoint,cors)) {
+                                o.inLight = true;
+                            } else {
+                                o.inLight = false;
+                            }
+                            n++;
+                        }
+                    },
+                    updateObject: function(o) {
+                        if(!o.init) {
+                            o.xmove = 0;
+                            o.ymove = 0;
+                            o.init = true;
+                            o.attackReload = 0;
+                            o.attackReloadReset = 30;
+                            o.animation = 0;
+                            o.maxHealth = o.health;
+                        }
+                        o.animation++;
+                        if(o.collide!==false&&!player.dead) {
+                            updateBlock(o,game.objects.objects);
+                        }
+                        if(o.inLight||distTo(o.x+o.w/2,o.y+o.h/2,player.x,player.y)<200) {
+                            o.aggravated = true;
+                        }
+                        if(o.type=='enemy'&&!player.dead&&o.aggravated!==false) {
+                            this.updateEnemy(o);
+                        }
+                    },
+                    updateEnemy: function(o) {
+                        var canAttack = false;
+                        var dir = dirTo(o.x+o.w/2,o.y+o.h/2,player.x+player.w/2,player.y+player.h/2);
+                        o.angle = dir;
+                        var move = distToMove(0.4,dir);
+                        if(Math.floor(o.animation/20)%2==1) {
+                            move = distToMove(0.2,dir);
+                        }
+                        o.xmove += move[0];
+                        o.ymove += move[1];
+                        o.xmove *= 0.8;
+                        o.ymove *= 0.8;
+                        var dist = distTo(o.x+o.w/2,o.y+o.h/2,player.x+player.w/2,player.y+player.h/2);
+                        if(dist<50) {
+                            canAttack = true;
+                        }
+                        o.attackReload--;
+                        o.attackReload = Math.max(o.attackReload,0);
+                        if(canAttack) {
+                            if(o.attackReload==0) {
+                                o.attackReload = o.attackReloadReset;
+
+                                o.xmove = 0;
+                                o.ymove = 0;
+                                player.health -= 10;
+                                var move = distToMove(2,dir);
+                                player.xmove = move[0];
+                                player.ymove = move[1];
+                                //attack
+                            }
+                        }
+
+                        var n = 0;
+                        while(n < this.objects.length) {
+                            var o2 = this.objects[n];
+                            if(o2.type=='enemy') {
+                                if(n!=o.id) {
+                                    var dist = distTo(o.x,o.y,o2.x,o2.y);
+                                    if(dist<50) {
+                                        var dir = dirTo(o2.x,o2.y,o.x,o.y);
+                                        var move = distToMove(0.05,dir);
+                                        o.xmove += move[0];
+                                        o.ymove += move[1];
+                                    }
+                                }
+                            }
+                            n++;
+                        }
+                        //move away from other enemies
+                    },
+                    enemyDeath: function(o) {
+                        player.health += 10;
+                    },
+                    drawObject: function(o,lighting) {
+                        if(o.animation===undefined) {
+                            o.animation = 0;
+                        }
+                        if(o.type=='enemy') {
+                            if(lighting=='light') {
+                                ctx.save();
+                                ctx.translate(o.x+o.w/2,o.y+o.h/2);
+                                ctx.rotate((o.angle+180)*Math.PI/180);
+                                ctx.drawImage(imgs[Math.floor(o.animation/20)%2],-o.w/2,-o.h/2,o.w,o.h);
+                                ctx.restore();
+                            } else {
+                                if(o.aggravated!==false) {
+                                    ctx.save();
+                                    ctx.translate(o.x+o.w/2,o.y+o.h/2);
+                                    ctx.rotate((o.angle+180)*Math.PI/180);
+                                    ctx.drawImage(imgs[2],-o.w/2,-o.h/2,o.w,o.h);
+                                    ctx.restore();
+                                }
+                            }
+                        }
+                        if(o.health!=o.maxHealth) {
+                            ctx.fillStyle = 'rgb(100,0,0)';
+                            ctx.fillRect(o.x,o.y+o.h+10,o.w,10);
+                            ctx.fillStyle = 'red';
+                            ctx.fillRect(o.x,o.y+o.h+10,o.w*o.health/o.maxHealth,10);
+                        }
+                        //health bar
+                    }
+                },
+                reset: function() {
+                    player.x = 6000;
+                    player.y = 6000;
+                    cam.x = 6000;
+                    cam.y = 6000;
+                    game.level.generate({});
+                    player.health = player.maxHealth;
+                    player.dead = false;
+                    this.playerDeathAnimation = 0;
+                },
+                playerDeathAnimation: 0
+            }
+
+            var village = {
+                tick: function() {
+                    this.update();
+                    this.draw();
+                },
+                update: function() {
+                    player.update();
+                    cam.update();
+                },
+                draw: function() {
+                    ctx.fillStyle = 'rgb(200,255,200)';
+                    ctx.fillRect(0,0,1000,1000);
+                    //background
+
+                    ctx.save();
+                    ctx.translate(500-cam.x,500-cam.y);
+
+                    ctx.fillStyle = 'black';
+                    ctx.textAlign = 'center';
+                    f(100);
+                    ctx.fillText('The Labyrinth',0,-350);
+                    //title
+
+                    f(50);
+                    ctx.fillText('By John Butler',0,-250);
+                    //credits
+
+                    player.draw();
+                    game.objects.draw('light',0);
+                    game.objects.draw('light',1);
+
+                    ctx.restore();
+                },
+                reset: function() {
+                    cam.x = 0;
+                    cam.y = 0;
+                    player.x = 0;
+                    player.y = 0;
+                    player.health = player.maxHealth;
+                    player.dead = false;
+                    game.objects.objects = [];
+                    game.dynamicObjects.objects = [];
+                }
+            }
+
+            var cam = {
+                x: 600,
+                y: 600,
+                update: function() {
+                    this.x = this.x*0.95+player.x*0.05;
+                    this.y = this.y*0.95+player.y*0.05;
+                }
+            }
+
+            var player = {
+                x: 0,
+                y: 0,
+                w: 30,
+                h: 30,
+                xmove: 0,
+                ymove: 0,
+                angle: 0,
+                health: 100,
+                maxHealth: 100,
+                dead: false,
+                attackReload: 0,
+                attackReloadReset: 100,
+                attack: false,
+                update: function() {
+                    this.health = Math.max(Math.min(this.health,this.maxHealth),0);
+                    //cap health
+
+                    this.xmove *= 0.98;
+                    this.ymove *= 0.98;
+                    //damping
+
+                    if(!this.dead) {
+                        if(Keys.keys[37]||Keys.keys[65]) {
+                            this.xmove -= 0.1;
+                        }
+                        if(Keys.keys[38]||Keys.keys[87]) {
+                            this.ymove -= 0.1;
+                        }
+                        if(Keys.keys[39]||Keys.keys[68]) {
+                            this.xmove += 0.1;
+                        }
+                        if(Keys.keys[40]||Keys.keys[83]) {
+                            this.ymove += 0.1;
+                        }
+                        //key movement
+
+                        this.angle = dirTo(this.x-cam.x+500,this.y-cam.y+500,Mouse.x,Mouse.y);
+                        //cam movement
+                    }
+
+                    updateBlock(this,game.objects.objects);
+                    //wall collisions
+
+                    if(this.health==0&&!this.dead) {
+                        this.dead = true;
+                        game.playerDeathAnimation = 300;
+                    }
+
+                    if(!this.dead) {
+                        this.attack = false;
+                        if(this.attackReload>0) {
+                            this.attackReload--;
+                        }
+                        if(Keys.keys[32]&&this.attackReload==0) {
+                            this.attack = true;
+                            this.attackReload = this.attackReloadReset;
+                        }
+                        if(this.attack) {
+                            var n = 0;
+                            while(n < game.dynamicObjects.objects.length) {
+                                var o = game.dynamicObjects.objects[n];
+                                if(o.type=='enemy') {
+                                    var dist = distTo(this.x+this.w/2,this.y+this.h/2,o.x+o.w/2,o.y+o.h/2);
+                                    if(dist<100) {
+                                        o.health -= 100;
+                                    }
+                                }
+                                n++;
+                            }
+                        }
+                    }
+                },
+                draw: function() {
+                    if(this.attackReload-this.attackReloadReset>-10) {
+                        ctx.fillStyle = 'blue';
+                        ctx.beginPath();
+                        ctx.arc(this.x+this.w/2,this.y+this.h/2,100,0,2*Math.PI);
+                        ctx.fill();
+                    }
+
+                    ctx.fillStyle = 'rgb(100,100,255)';
+                    ctx.save();
+                    ctx.translate(this.x+this.w/2,this.y+this.h/2);
+                    ctx.rotate(this.angle*Math.PI/180);
+                    ctx.fillRect(-this.w/2,-this.h/2,this.w,this.h);
+                    ctx.restore();
+                    if(this.health!=this.maxHealth) {
+                        ctx.fillStyle = 'rgb(0,100,0)';
+                        ctx.fillRect(this.x,this.y+this.h+10,this.w,10);
+                        ctx.fillStyle = 'lime';
+                        ctx.fillRect(this.x,this.y+this.h+10,this.w*this.health/this.maxHealth,10);
+                    }
+                    //health bar
+                },
+                inventory: {
+                    items: [],
+                    update: function() {
+                    },
+                    draw: function() {
+                    }
+                }
+            }
+
+            var t = 0;
+
+            var page = 'game';
+            game.reset();
+
+            /*
+            To Do:
+            Village:
+                Add Menu for Village
+                Add different floors
+                Add what floor you want to go to when you enter?
+                Add shops
+            Enemies:
+                Add enemy AI
+                Add enemy spawning in halls
+            Player:
+                Add player attack
+                Add different weapons
+                Add player inventory
+            Chambers:
+                Make doors for chambers open and close
+                Add bosses for chambers
+                Add door to next floor in center chamber?
+            Asthetics:
+                Add floor tiles
+                Add wall tiles
+                Alternate Light Sources?
+
+            Notes:
+            Each level will have be in the shape of a square, and have on main treasure chamber in the middle with the final boss inside. It will also have 4 other treasure chambers at the corners of the square, each having a good amount of treasure but hard to defeat enemies. The rest will be filled with hallways and passageways that have some treasure, randomly spawning mobs, secret passageways, and non euclideaness. The player can interact with almost every object, tearing down paintings, breaking vases, and doing a bunch of other stuff. These actions could have multiple consequences: tearing down a painting may reveal a secret passage to a small treasure room, but it might also reveal a sleeping enemy that targets the player when the painting is removed. The player can trade treasure and other items to upgrade their gear in the city in different shops, but the shops may need special items to make special weapons that you can only get by killing creatures. The player will also have an XP level that increases as they battle, making them more efficient. Hard to defeat enemies will drop rare items needed to craft powerful weapons.
+            */
+        </script>
+    </body>
+</html>

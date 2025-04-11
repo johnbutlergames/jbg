@@ -1,0 +1,382 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "Geometric Clock";
+            var dimensions = {width:1000,height:1000};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            var previousTime = new Date();
+            function main() {
+                var time = new Date();
+                if(previousTime.getSeconds()!=time.getSeconds()) {
+                    animation = 100;
+                    var h = time.getHours();
+                    var m = String(previousTime.getMinutes());
+                    var s = String(previousTime.getSeconds());
+                    if(h>12) {
+                        h -= 12;
+                    }
+                    h = String(h);
+                    if(h.length==1) h="0"+h;
+                    if(m.length==1) m="0"+m;
+                    if(s.length==1) s="0"+s;
+                    oldDigits = [h[0],h[1],m[0],m[1],s[0],s[1]];
+                    if(s%10==9) {
+                        switchColorScheme();
+                    } else {
+                        nextAnimation();
+                    }
+                }
+                
+                drawAnimation();
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.fillRect(0,365,1000,270);
+                ctx.fillStyle = 'black';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = "200px Arial";
+                var h = time.getHours();
+                var m = String(time.getMinutes());
+                var s = String(time.getSeconds());
+                if(h>12) {
+                    h -= 12;
+                }
+                h = String(h);
+                if(h.length==1) h="0"+h;
+                if(m.length==1) m="0"+m;
+                if(s.length==1) s="0"+s;
+                digits = [h[0],h[1],m[0],m[1],s[0],s[1]];
+                var positions = [190,300,445,555,700,810];
+                ctx.fillText(":",370,500);
+                ctx.fillText(":",625,500);
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0,365,1000,270);
+                ctx.clip();
+                for(var n in digits) {
+                    var d = digits[n];
+                    var o = oldDigits[n];
+                    var x = positions[n];
+                    if(d!=o) {
+                        var a = (1/(1+2.71828**((animation-50)/5)))-1;
+                        ctx.fillText(d,x,510+a*250);
+                        ctx.fillText(o,x,510+a*250+250);
+                    } else {
+                        ctx.fillText(d,x,510);
+                    }
+                }
+                ctx.restore();
+
+                if(animation>0) {
+                    animation--;
+                }
+
+                previousTime = time;
+            }
+
+            function nextAnimation() {
+                for(var o of objects) {
+                    o.xmove = 0;
+                    o.ymove = 0;
+                    o.turn = 0;
+                }
+                for(var n=0;n<objects.length;n++) {
+                    var o = objects[n];
+                    if(o.x<0||o.y<0||o.x>900||o.y>900) {
+                        objects.splice(n,1);
+                        n--;
+                        continue;
+                    }
+                }
+                if(Math.random()<0.5) {
+                    slideAnimation();
+                } else {
+                    rotateAnimation();
+                }
+            }
+
+            function switchColorScheme() {
+                var schemes = [];
+                for(var n=1;n<17;n++) {
+                    if(colorScheme==n) continue;
+                    schemes.push(n);
+                }
+                colorScheme = schemes[Math.floor(Math.random()*schemes.length)];
+                for(var o of objects) {
+                    o.xmove = 0;
+                    o.ymove = 0;
+                    o.turn = 0;
+                }
+                for(var n=0;n<objects.length;n++) {
+                    var o = objects[n];
+                    if(o.x<0||o.y<0||o.x>900||o.y>900) {
+                        objects.splice(n,1);
+                        n--;
+                        continue;
+                    }
+                }
+                var directions = [];
+                for(var n=0;n<10;n++) {
+                    directions.push(Math.floor(Math.random()*2)*2-1);
+                }
+                slideAnimation([0,100,200,300,400,500,600,700,800,900],[10,10,10,10,10,10,10,10,10,10],directions);
+            }
+
+            function slideAnimation(r,s,d) {
+                var rows = [];
+                for(var n=0;n<10;n++) {
+                    if(Math.random()<0.8) continue;
+                    rows.push(n*100);
+                }
+                if(rows.length==0) rows.push(Math.floor(Math.random()*10)*100);
+                var speeds = [];
+                for(var n in rows) {
+                    speeds.push(Math.floor(Math.random()*3)+1);
+                }
+                var directions = [];
+                for(var n in rows) {
+                    directions.push(Math.floor(Math.random()*2)*2-1);
+                }
+                if(r) rows = r;
+                if(s) speeds = s;
+                if(d) directions = d;
+                var dir = 'x';
+                var dir2 = 'y';
+                if(Math.random()<0.5) {
+                    dir = 'y';
+                    dir2 = 'x';
+                }
+                for(var n in rows) {
+                    var num = speeds[n];
+                    var move = directions[n];
+                    var cor = rows[n];
+                    for(var o of objects) {
+                        if(o[dir]==cor) {
+                            o[dir2+'move'] = move*num;
+                            o[dir2] -= move*num*100;
+                        }
+                    }
+                    for(var n=0;n<num;n++) {
+                        var newO = newObject(cor,450+move*450);
+                        if(dir=='y') {
+                            newO = newObject(450+move*450,cor);
+                        }
+                        newO[dir2] -= n*move*100;
+                        newO[dir2+'move'] = move*num;
+                        objects.push(newO);
+                    }
+                }
+            }
+
+            function rotateAnimation() {
+                for(var n=0;n<objects.length;n++) {
+                    var o = objects[n];
+                    if(Math.random()<0.8) continue;
+                    var s = Math.floor(Math.random()*2)*2-1;
+                    o.turn = -s*90;
+                    o.angle += 90*s;
+                }
+            }
+
+            function drawAnimation() {
+                for(var o of objects) {
+                    drawObject(o);
+                }
+            }
+
+            function drawObject(o) {
+                var a = (-(1/(1+2.71828**((animation-50)/5)))+1);
+                var color1 = o.bgColor;
+                var color2 = o.color;
+                ctx.lineWidth = 6;
+                ctx.save();
+                ctx.translate(o.x+50,o.y+50);
+                ctx.translate(o.xmove*100*a,o.ymove*100*a);
+                ctx.fillStyle = color1;
+                ctx.fillRect(-50,-50,100,100);
+                ctx.beginPath();
+                ctx.rect(-50,-50,100,100);
+                ctx.clip();
+                ctx.rotate((o.angle+(o.turn*a))*Math.PI/180);
+                ctx.beginPath();
+                ctx.strokeStyle = color2;
+                ctx.fillStyle = color2;
+                if(o.type==0) {
+                    ctx.arc(0,0,33,0,2*Math.PI);
+                } else if(o.type==1) {
+                    ctx.rect(-30,-30,60,60);
+                } else if(o.type==2) {
+                    ctx.moveTo(0,-37);
+                    ctx.lineTo(37,0);
+                    ctx.lineTo(0,37);
+                    ctx.lineTo(-37,0);
+                    ctx.closePath();
+                } else if(o.type==3) {
+                    ctx.moveTo(-37,-37);
+                    ctx.lineTo(37,-37);
+                    ctx.lineTo(-37,37);
+                    ctx.lineTo(37,37);
+                    ctx.closePath();
+                } else if(o.type==4) {
+                    ctx.moveTo(0,-35);
+                    ctx.lineTo(40,35);
+                    ctx.lineTo(-40,35);
+                    ctx.closePath();
+                } else if(o.type==5) {
+                    ctx.arc(0,0,33,0,Math.PI);
+                    ctx.closePath();
+                } else if(o.type==6) {
+                    ctx.rect(-30,-30,60,30);
+                } else if(o.type==7) {
+                    ctx.rect(-30,-30,30,30);
+                    ctx.rect(0,0,30,30);
+                } else if(o.type==8) {
+                    ctx.arc(0,0,33,0,Math.PI/2);
+                    ctx.lineTo(0,0);
+                    ctx.arc(0,0,33,Math.PI,Math.PI*3/2);
+                    ctx.lineTo(0,0);
+                    ctx.closePath();
+                } else if(o.type==9) {
+                    ctx.arc(0,0,33,0,Math.PI);
+                    ctx.lineTo(-33,-33);
+                    ctx.lineTo(33,-33);
+                    ctx.closePath();
+                } else if(o.type==10) {
+                    ctx.moveTo(-30,-30);
+                    ctx.lineTo(30,-30);
+                    ctx.lineTo(30,30);
+                    ctx.lineTo(0,30);
+                    ctx.lineTo(0,0);
+                    ctx.lineTo(-30,0);
+                    ctx.closePath();
+                } else if(o.type==11) {
+                    ctx.arc(0,0,33,0,1.5*Math.PI);
+                    ctx.lineTo(0,0);
+                    ctx.closePath();
+                } else if(o.type==12) {
+                    ctx.moveTo(-30,-30);
+                    ctx.lineTo(0,-20);
+                    ctx.lineTo(30,-30);
+                    ctx.lineTo(20,0);
+                    ctx.lineTo(30,30);
+                    ctx.lineTo(0,20);
+                    ctx.lineTo(-30,30);
+                    ctx.lineTo(-20,0);
+                    ctx.closePath();
+                } else if(o.type==13) {
+                    ctx.moveTo(-30,-30);
+                    ctx.lineTo(30,30);
+                    ctx.lineTo(-30,30);
+                    ctx.closePath();
+                } else if(o.type==14) {
+                    ctx.moveTo(-8,-23);
+                    ctx.arc(-23,-23,15,0,2*Math.PI);
+                    ctx.moveTo(38,-23);
+                    ctx.arc(23,-23,15,0,2*Math.PI);
+                    ctx.moveTo(-8,23);
+                    ctx.arc(-23,23,15,0,2*Math.PI);
+                    ctx.moveTo(38,23);
+                    ctx.arc(23,23,15,0,2*Math.PI);
+                } else if(o.type==15) {
+                    ctx.rect(-37,-37,30,30);
+                    ctx.rect(7,-37,30,30);
+                    ctx.rect(-37,7,30,30);
+                    ctx.rect(7,7,30,30);
+                }
+                if(o.fill) {
+                    ctx.fill();
+                } else {
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function initAnimation() {
+                objects = [];
+                for(var x=0;x<10;x++) {
+                    for(var y=0;y<10;y++) {
+                        var o = newObject(x*100,y*100);
+                        objects.push(o);
+                    }
+                }
+            }
+
+            function newObject(x,y) {
+                var o = {};
+                o.x = x;
+                o.y = y;
+                o.angle = Math.floor(Math.random()*4)*90;
+                o.type = Math.floor(Math.random()*14);
+                if(Math.random()<0.03) {
+                    o.type = Math.floor(Math.random()*2)+14;
+                }
+                o.fill = Math.floor(Math.random()*5);
+                var colors = getColorScheme();
+                o.color = colors.color;
+                o.bgColor = colors.bgColor;
+                o.xmove = 0;
+                o.ymove = 0;
+                o.turn = 0;
+                return o;
+            }
+
+            function getColorScheme() {
+                if(colorScheme==1) return {color:'white',bgColor:'black'};
+                if(colorScheme==2) return {color:'black',bgColor:'white'};
+                if(colorScheme==3) {
+                    var h = Math.random()*360;
+                    var color = `hsl(${h},50%,50%)`;
+                    var bgColor = `hsl(${h+180},70%,93%)`;
+                    return {color:color,bgColor:bgColor};
+                }
+                if(colorScheme==4) {
+                    var h = Math.random()*360;
+                    var color = `hsl(${h},100%,50%)`;
+                    return {color:color,bgColor:'white'};
+                }
+                if(colorScheme==5) {
+                    var h = Math.random()*360;
+                    var color = `hsl(${h},100%,50%)`;
+                    return {color:color,bgColor:'black'};
+                }
+                if(colorScheme==6) {
+                    var color = `hsl(${Math.random()*360},100%,50%)`;
+                    var bgColor = `hsl(0,0%,${Math.random()>0.5?Math.random()*30:Math.random()*30+70}%)`;
+                    return {color:color,bgColor:bgColor};
+                }
+                if(colorScheme>6&&colorScheme<16) {
+                    var h = (colorScheme-5)*36;
+                    var color = `hsl(${h},100%,30%)`;
+                    var bgColor = `hsl(${h+180},70%,90%)`;
+                    return {color:color,bgColor:bgColor};
+                }
+                if(colorScheme==16) {
+                    var h = Math.random()*360;
+                    var color = `black`;
+                    var bgColor = `hsl(${h+180},70%,93%)`;
+                    return {color:color,bgColor:bgColor};
+                }
+                if(colorScheme==17) {
+                    var h = Math.random()*360;
+                    var color = `white`;
+                    var bgColor = `hsl(${h+180},70%,50%)`;
+                    return {color:color,bgColor:bgColor};
+                }
+            }
+
+            var colorScheme = Math.floor(Math.random()*17)+1;
+            var animation = 0;
+            var objects = [];
+            var digits = [0,0,0,0,0,0];
+            var oldDigits = [0,0,0,0,0,0];
+            initAnimation();
+        </script>
+    </body>
+</html>

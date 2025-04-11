@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <link rel="stylesheet" href="styles.css">
+    <script src="game-data.json"></script>
+    <script src="scripts.js"></script>
+    <script src="updates.json"></script>
+</head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EXRQS6M7G7"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-EXRQS6M7G7');
+</script>
+
+<body>
+    <div id="game-title-container">
+        <font id="game-title"></font>
+        <font id="game-version"></font>
+    </div>
+    <div id="game-iframe-container">
+        <iframe id="game-iframe" title="Fullscreen"></iframe>
+        <br>
+        <button id="fullscreen-button"><img src="images/fullscreen-icon.png" /></button>
+    </div>
+    <div id="recommended">
+        <div id="recommended-title-container">
+            <font id="recommended-title">You might also like:</font>
+        </div>
+        <div id="recommended-games-scroll-container">
+            <div id="recommended-games-scroll-back">
+                <font>&lt;</font>
+            </div>
+            <div id="recommended-games-scroll-forward">
+                <font>&gt;</font>
+            </div>
+        </div>
+        <div id="recommended-games-container">
+        </div>
+    </div>
+    <div id="version-history">
+        <div id="version-history-title-container">
+            <font id="version-history-title">Version History:</font>
+            <font id="version-history-subtitle">Click one to view it</font>
+        </div>
+        <div id="version-history-content">
+        </div>
+    </div>
+</body>
+
+</html>

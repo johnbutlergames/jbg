@@ -1,0 +1,213 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <h1>Numbermind</h1>
+        <div id='selectPlayOptions'>
+            <button onclick='getNumberDigits(false)'>Play</button>
+            <br>
+            <!--<br>
+<button onclick='getNumberDigits(true)'>Computer Guesses Number</button>
+<br>-->
+            <br>
+            <button onclick='instructions()'>Instructions</button>
+        </div>
+        <div id='playMenu'>
+            <table id='guesses'></table>
+            <div id='guessDiv'>
+                <p id='numberOfGuesses'></p>
+                <input placeholder='Your Guess' id='yourGuess'>
+                <button onclick='guess()'>Guess</button>
+            </div>
+            <p id='errorCode'></p>
+        </div>
+        <div id='AIPlayMenu'>
+            <table id='AIguesses'></table>
+            <p id='currentAIGuess'></p>
+            <div id='feedbackDiv'>
+                <font>Digits Correct:</font><input type='number' id='digitsCorrect'>
+                <br>
+                <font>Places Correct:</font><input type='number' id='placesCorrect'>
+                <button onclick='submitFeedback()'>Submit</button>
+            </div>
+            <p id='errorCode2'></p>
+        </div>
+        <div id='youWinMenu'>
+            <h2>You Win!</h2>
+            <p id='winText'></p>
+            <button onclick='playAgain()'>Play Again?</button>
+        </div>
+        <div id='numberOfDigits'>
+            <h2>Length of Number:</h2>
+            <button onclick='setNumberDigits(2)'>2</button>
+            <button onclick='setNumberDigits(3)'>3</button>
+            <button onclick='setNumberDigits(4)'>4</button>
+        </div>
+        <div id='secretNumber'>
+            <h2>What is the target number?</h2>
+            <input id='targetNumber' placeholder='Ex: 1234'>
+            <button onclick='setTargetNumber()'>Submit</button>
+        </div>
+        <div id='instructions'>
+            <h3>Instructions:</h3>
+            <p>Each time you play a random number is chosen. This is the target number. It is either 2, 3, or 4 digits long depending on what you choose. The number does not start with a 0. It does not have any repeating digits.<br>Each turn you guess a number. Then the game will tell you how many digits of your guess are in the target number, and how many digits are in the correct place.<br>For instance, if the target number is 1234, and you guess 3456, then you have two digits correct but none are in the right place (digits 3 and 4 are in the target number, but not in the right place).<br>Using these clues you must find the target number in as few guesses as possible.</p>
+            <button onclick='playAgain()'>Back</button>
+        </div>
+        <style>
+            table, th, tr {
+                border: 2px solid black;
+            }
+            input[type='number'] {
+                margin-left: 20px;
+                width: 30px;
+            }
+            body {
+                background-color: white;
+            }
+        </style>
+        <script>
+            var howLongIsNumber = 4;
+            document.getElementById('secretNumber').style.display = 'none';
+            document.getElementById('youWinMenu').style.display = 'none';
+            document.getElementById('instructions').style.display = 'none';
+            document.getElementById('playMenu').style.display = 'none';
+            document.getElementById('AIPlayMenu').style.display = 'none';
+            document.getElementById('numberOfDigits').style.display = 'none';
+            document.getElementById('yourGuess').addEventListener('keypress',function() {setTimeout(function(){
+                var value = document.getElementById('yourGuess').value;
+                var valueSplit = value.split('');
+                var n = 0;
+                while(n < valueSplit.length) {
+                    if(isNaN(Number(valueSplit[n]))||n>howLongIsNumber-1) {
+                        valueSplit.splice(n,1);
+                        n--;
+                    }
+                    n++;
+                }
+                document.getElementById('yourGuess').value = valueSplit.join('');
+            },0)});
+            document.getElementById('yourGuess').addEventListener('keypress',function() {setTimeout(function(){
+                var value = document.getElementById('yourGuess').value;
+                var valueSplit = value.split('');
+                var n = 0;
+                while(n < valueSplit.length) {
+                    if(isNaN(Number(valueSplit[n]))||n>3) {
+                        valueSplit.splice(n,1);
+                        n--;
+                    }
+                    n++;
+                }
+                document.getElementById('yourGuess').value = valueSplit.join('');
+            },0)});
+            var numberOfGuesses = 0;
+            var ai = false;
+            var number = 0;
+            function playAgain() {
+                document.getElementById('youWinMenu').style.display = 'none';
+                document.getElementById('instructions').style.display = 'none';
+                document.getElementById('selectPlayOptions').style.display = 'block';
+            }
+            function getNumberDigits(AI) {
+                ai = AI;
+                if(ai) {
+                    document.getElementById('secretNumber').style.display = 'block';
+                } else {
+                    document.getElementById('numberOfDigits').style.display = 'block';
+                }
+                document.getElementById('selectPlayOptions').style.display = 'none';
+            }
+            function setNumberDigits(n) {
+                howLongIsNumber = Number(n);
+                document.getElementById('numberOfDigits').style.display = 'none';
+                play();
+            }
+            function setTargetNumber() {
+                var n = document.getElementById('targetNumber').value;
+                howLongIsNumber = n.length;
+                number = Number(n);
+                document.getElementById('targetNumber').value = '';
+                playAI();
+            }
+            function play() {
+                document.getElementById('playMenu').style.display = 'block';
+                document.getElementById('guesses').innerHTML = '<tr><th>#:</th><th>Guess:</th><th>Digits Correct:</th><th>Places Correct:</th></tr>';
+                document.getElementById('numberOfGuesses').innerHTML = 'Number of Guesses: 0';
+                numberOfGuesses = 0;
+                number = '';
+                var digits = [0,1,2,3,4,5,6,7,8,9];
+                var n = 0;
+                while(n < howLongIsNumber) {
+                    var randomDigit = 0;
+                    if(n==0) {
+                        randomDigit += Math.floor(Math.random()*digits.length-1+1);
+                    } else {
+                        randomDigit += Math.floor(Math.random()*digits.length);
+                    }
+                    number += digits[randomDigit];
+                    digits.splice(randomDigit,1);
+                    n++;
+                }
+            }
+            function playAI() {
+                document.getElementById('AIPlayMenu').style.display = 'block';
+            }
+            function guess() {
+                var yourGuess = document.getElementById('yourGuess').value;
+                var error = false;
+                if(yourGuess.length!=howLongIsNumber) {
+                    error = 'Guess must be '+howLongIsNumber+' digits long';
+                }
+                if(error!==false) {
+                    document.getElementById('errorCode').innerHTML = error;
+                } else {
+                    numberOfGuesses++;
+                    document.getElementById('numberOfGuesses').innerHTML = 'Number of Guesses: '+numberOfGuesses;
+                    document.getElementById('errorCode').innerHTML = '';
+                    document.getElementById('yourGuess').value = '';
+                    var numberArr = number.split('');
+                    var n = 0;
+                    while(n < numberArr.length) {
+                        numberArr[n] = [numberArr[n],1];
+                        n++;
+                    }
+                    var correctDigits = 0;
+                    var correctPlaces = 0;
+                    var splitGuess = yourGuess.split('');
+                    n = 0;
+                    while(n < splitGuess.length) {
+                        var n2 = 0;
+                        while(n2 < numberArr.length) {
+                            if(numberArr[n2][1]&&numberArr[n2][0]==splitGuess[n]) {
+                                correctDigits++;
+                                numberArr[n2][1] = 0;
+                                break;
+                            }
+                            n2++;
+                        }
+                        n++;
+                    }
+                    n = 0;
+                    while(n < splitGuess.length) {
+                        if(numberArr[n][0]==splitGuess[n]) {
+                            correctPlaces++;
+                        }
+                        n++;
+                    }
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<th>'+numberOfGuesses+'</th><th>'+yourGuess+'</th><th>'+correctDigits+'</th><th>'+correctPlaces+'</th>';
+                    document.getElementById('guesses').appendChild(tr);
+                }
+                if(yourGuess===number) {
+                    document.getElementById('youWinMenu').style.display = 'block';
+                    document.getElementById('playMenu').style.display = 'none';
+                    document.getElementById('winText').innerHTML = 'The number was '+number+'.<br>It took you '+numberOfGuesses+' guess'+(numberOfGuesses===1?'':'es')+'.';
+                }
+            }
+            function instructions() {
+                document.getElementById('instructions').style.display = 'block';
+                document.getElementById('selectPlayOptions').style.display = 'none';
+            }
+            function submitFeedback() {
+            }
+        </script>
+    </body>
+</html>

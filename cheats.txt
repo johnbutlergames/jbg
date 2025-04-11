@@ -1,0 +1,46 @@
+Gravity Drill:
+    MINING DIAMONDS: Changes all the blocks in the current level to gems.
+    
+Jump:
+    K8THEGR8: Changes skin to rotating rainbow cube and gives 100 coins.
+    THUNDER: Spawns 10 thunder clouds in game.
+    
+Snake:
+    JOHNBUTLERGAMES: Changes snake skin to rainbow in menu.
+    
+Logic Tanks:
+    JOHNBUTLERGAMES: Changes everything but the player into a box.
+    
+Blasty Ball:
+    JOHNBUTLERGAMES: Changes all players into balls.
+    
+3D Simulator:
+    JOHNBUTLERGAMES: Makes the circles form a big jump guy
+    
+Sandbox:
+    JOHNBUTLERGAMES: Creates a jump guy preset.
+    
+Mini Golf:
+    JOHNBUTLERGAMES: Colors the entire course blue.
+    RAGEQUIT: Shoots the ball really hard in a random direction.
+    
+Unscramble:
+    JOHNBUTLERGAMES: Turns all letters into round jump characters.
+    
+Coin Dash:
+    JOHNBUTLERGAMES: Changes character to jump character.
+    
+Snowman Builder:
+    JOHNBUTLERGAMES: Changes snowballs into blue squares.
+    RAGEQUIT: Shoots all snowballs away really fast.
+    
+Ghost Town:
+    JOHNBUTLERGAMES: Turns all houses and ghosts upside down.
+    
+Minesweeper:
+    RAGEQUIT: Creates a bomb in the top left corner and clicks it.
+    JOHNBUTLERGAMES: Turns the grass blue.
+    DAMAGEDRADAR: Randomizes all numbers.
+    
+Circles:
+    JOHNBUTLERGAMES: Changes all circles in loaded chunks to blue.

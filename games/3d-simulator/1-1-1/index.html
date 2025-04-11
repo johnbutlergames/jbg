@@ -1,0 +1,213 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id='canvas'></canvas>
+        <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+        <script>
+            var title = "3d Simulator";
+            var dimensions = {width:1000,height:500};
+            var images = {};
+            var audios = {};
+
+            initialize();
+            window.setInterval(update,10);
+
+            function main() {
+                updateGame();
+                drawGame();
+            }
+            function updateGame() {
+                if(word.endsWith('JOHNBUTLERGAMES')) {
+                    johnbutlergames();
+                }
+                if(Keys.keys[32]) {
+                    instructions = false;
+                }
+                if(!instructions) {
+                    player.update();
+                }
+            }
+            function drawGame() {
+                drawBackground();
+                drawDepth();
+                drawMap();
+                if(instructions) {
+                    drawInstructions();
+                }
+            }
+            function drawBackground() {
+                var grd = ctx.createLinearGradient(500,500,500,350);
+                grd.addColorStop(0,'black');
+                grd.addColorStop(1,'rgba(0,0,0,0)');
+                ctx.fillStyle = grd;
+                ctx.fillRect(0,350,1000,150);
+            }
+            function drawInstructions() {
+                ctx.strokeStyle = 'black';
+                ctx.fillStyle = 'white';
+                ctx.lineWidth = 3;
+                
+                ctx.fillRect(300,80,400,300);
+                ctx.strokeRect(300,80,400,300);
+                
+                ctx.fillStyle = 'black';
+                ctx.textAlign = 'center';
+                ctx.font = '30px Arial';
+                
+                ctx.fillText('INSTRUCTIONS:',500,120);
+                ctx.fillText('Use the arrow keys',500,160);
+                ctx.fillText('or WASD to move.',500,200);
+                ctx.fillText('Refer to the top-left map',500,240);
+                ctx.fillText('for guidance.',500,280);
+                ctx.fillText('SPACE to Close.',500,360);
+            }
+            function drawDepth() {
+                var n = 0;
+                while(n < 200) {
+                    var dir = player.direction-50+n/2;
+                    var distanceMoved = 0;
+                    var distance = 2;
+                    var x = player.x;
+                    var y = player.y;
+                    var color;
+                    while(distanceMoved<255&&distance>1) {
+                        distance = circles.findMinDistance(x,y);
+                        color = circles.circles[circles.findNearest(x,y)].color;
+                        distanceMoved+=distance;
+                        var move = rotate(0,0,0,distance,90-dir);
+                        x += move.x;
+                        y += move.y;
+                    }
+                    var d = distanceMoved;
+                    var h = 50000/d;
+                    var c = color+(d/255*50+50)+'%)';
+                    if(h>200) {
+                        ctx.fillStyle = c;
+                        ctx.fillRect(n*5,250-h/2,5,h);
+                    }
+                    depths[n] = [x,y,c];
+                    n++;
+                }
+            }
+            function drawMap() {
+                ctx.lineWidth = 3;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0,0,200,200);
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0,0,200,200);
+                ctx.clip();
+                var n = 0;
+                while(n < circles.circles.length) {
+                    var c = circles.circles[n];
+                    ctx.beginPath();
+                    ctx.strokeStyle = c.color+'50%,1)';
+                    ctx.arc(100+(c.x-player.x)/2,100+(c.y-player.y)/2,c.r/2,0,2*Math.PI);
+                    ctx.stroke();
+                    n++;
+                }
+                ctx.strokeStyle = 'black';
+                ctx.strokeRect(0,0,200,200);
+                ctx.restore();
+                ctx.save();
+                ctx.translate(100,100);
+                ctx.rotate(player.direction*Math.PI/180);
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.moveTo(5,0);
+                ctx.lineTo(-5,3);
+                ctx.lineTo(-5,-3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+            var circles = {
+                circles: [],
+                findMinDistance: function(x,y) {
+                    var d = false;
+                    var n = 0;
+                    while(n < this.circles.length) {
+                        var c = this.circles[n];
+                        var d2 = Math.abs(distTo(x,y,c.x,c.y)-c.r);
+                        if(d===false||d2<d) {
+                            d = d2;
+                        }
+                        n++;
+                    }
+                    return d;
+                },
+                findNearest: function(x,y) {
+                    var n = 0;
+                    var response = false;
+                    while(n < this.circles.length) {
+                        var d = Math.abs(distTo(x,y,this.circles[n].x,this.circles[n].y)-this.circles[n].r);
+                        if(response===false||d<response[0]) {
+                            response = [d,n];
+                        }
+                        n++;
+                    }
+                    return response[1];
+                }
+            }
+            var player = {
+                x: 0,
+                y: 0,
+                direction: 0,
+                update: function() {
+                    if(Keys.keys[37]||Keys.keys[65]) {
+                        this.direction -= 1;
+                    }
+                    if(Keys.keys[39]||Keys.keys[68]) {
+                        this.direction += 1;
+                    }
+                    if(Keys.keys[38]||Keys.keys[87]) {
+                        var move = rotate(0,0,0,1,90-this.direction);
+                        this.x += move.x;
+                        this.y += move.y;
+                        if(distTo(this.x,this.y,0,0)>497) {
+                            this.x -= move.x;
+                            this.y -= move.y;
+                        }
+                    }
+                    if(Keys.keys[40]||Keys.keys[83]) {
+                        var move = rotate(0,0,0,1,270-this.direction);
+                        this.x += move.x;
+                        this.y += move.y;
+                        if(distTo(this.x,this.y,0,0)>497) {
+                            this.x -= move.x;
+                            this.y -= move.y;
+                        }
+                    }
+                }
+            }
+            function randomize(n) {
+                var m = 0;
+                while(m < n) {
+                    circles.circles.push({x:Math.random()*1000-500,y:Math.random()*1000-500,r:Math.random()*30+20,color:'hsla('+(Math.random()*360)+',100%,'});
+                    m++;
+                }
+                circles.circles.push({x:0,y:0,r:500,color:'hsl(0,0%,'});
+            }
+            function johnbutlergames() {
+                word = "";
+                circles.circles = [];
+                var x = player.x;
+                var y = player.y;
+                for(var n=0;n<10;n++) {
+                    circles.circles.push({x:x+n*25-125,y:y-125,r:20,color:'hsla(240,100%,'});
+                    circles.circles.push({x:x-125,y:y+n*25-125,r:20,color:'hsla(240,100%,'});
+                    circles.circles.push({x:x+n*25-125,y:y+125,r:20,color:'hsla(240,100%,'});
+                    circles.circles.push({x:x+125,y:y+n*25-125,r:20,color:'hsla(240,100%,'});
+                }
+                circles.circles.push({x:x+125,y:y+125,r:20,color:'hsla(240,100%,'});
+                for(var n=0;n<10;n++) {
+                    circles.circles.push({x:x-50,y:y-50,r:20-n*2,color:'hsla(0,0%,'});
+                    circles.circles.push({x:x+50,y:y-50,r:20-n*2,color:'hsla(0,0%,'});
+                }
+            }
+            var depths = [];
+            var instructions = true;
+            randomize(50);
+        </script>
+    </body>
+</html>

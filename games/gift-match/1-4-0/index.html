@@ -1,0 +1,944 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Gift Match";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {
+            "title": "images/title.png"
+        };
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            menu.tick();
+            t++;
+        }
+
+        var t = 0;
+
+        function distanceToExitRectangle(angle, w, h) {
+            angle = (angle % 360 + 360) % 360;
+            var cornerAngle = dirTo(0, 0, w, -h);
+            if (angle > 180 - cornerAngle && angle < 360 - cornerAngle) angle -= 180;
+            if (angle < cornerAngle || angle > 360 - cornerAngle) {
+                return (h / 2) / Math.sin((90 - angle) * Math.PI / 180);
+            } else {
+                return (w / 2) / Math.cos((90 - angle) * Math.PI / 180);
+            }
+        }
+
+        var menu = {
+            page: "title screen",
+            switchPage: "title screen",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 30,
+            titleScreenAnimation: 0,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = this.switchPageAnimation / this.switchPageAnimationThreshold;
+                    var x;
+                    if (this.page == this.switchPage) {
+                        x = -1500 * (1 - easeInOut(a));
+                    } else {
+                        x = 1500 * (1 - easeInOut(a));
+                    }
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(x, 0, 1500, 1000);
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                } else if (page == "tutorial") {
+                    tutorial.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                } else if (page == "tutorial") {
+                    tutorial.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "tutorial") {
+                    tutorial.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+                ctx.fillStyle = "rgb(0,0,20)";
+                ctx.fillRect(0, 0, 1500, 1000);
+                ctx.drawImage(images.title, 400, -50, 700, 700);
+
+                ctx.fillStyle = "white";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 60px Arial";
+                ctx.fillText(`Highscore: ${highscore}`, 750, 850);
+                ctx.font = "bold 40px Arial";
+                ctx.fillText(`By John Butler`, 750, 950);
+
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 5;
+                ctx.lineJoin = "round";
+                ctx.strokeRect(750 - 300 / 2, 600, 300, 140);
+
+                ctx.font = "bold 70px Arial";
+                ctx.fillText("Play", 750, 600 + 70);
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+                if (Mouse.clickInBox(750 - 300 / 2, 600, 300, 140)) {
+                    this.switchPage = "new game";
+                }
+            },
+            resetTitleScreen: function () {
+            }
+        }
+
+        var game = {
+            update: function () {
+                this.objects.update();
+                this.level.update();
+                this.particles.update();
+            },
+            updateEffects: function () {
+            },
+            draw: function () {
+                ctx.save();
+                ctx.translate(750, 500);
+                var s = 1 - easeInOut(this.level.mapTransition / 70) * 0.7;
+                ctx.scale(s, s);
+                ctx.translate(-750, -500);
+                this.level.drawBackground();
+                this.objects.draw();
+                ctx.restore();
+
+                this.particles.draw();
+                this.level.draw();
+            },
+            reset: function () {
+                this.level.reset();
+            },
+            objects: {
+                objects: [],
+                presentImages: [],
+                update: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        this.objects[n].id = n;
+                    }
+                    this.updatePresentObjects();
+                    this.objects = this.objects.filter(e => !e.delete);
+                },
+                updatePresentObjects: function () {
+                    var presents = this.objects.filter(e => e.type == "present");
+                    for (var o of presents) {
+                        if (o.popAnimation) {
+                            o.popAnimation++;
+                            if (o.popAnimation > 65) {
+                                var score = 10;
+                                game.particles.createParticlesForPresent(o, 5);
+                                o.delete = true;
+                            }
+                        }
+                        if (!o.selected) o.selected = 0;
+                        var distToMouse = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                        var mouseHovering = distToMouse < o.radius;
+                        var selected = game.level.selection.selected.id == o.id || o.popAnimation;
+                        if (selected) {
+                            o.selected++;
+                        } else {
+                            o.selected--;
+                        }
+                        o.selected = Math.max(Math.min(o.selected, 10), 0);
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawShadow(o);
+                    }
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+                    if (o.angle) ctx.rotate(o.angle * Math.PI / 180);
+
+                    if (o.type == "present") {
+                        var s = 1 + easeInOut(o.selected / 10) * 0.05;
+                        ctx.scale(s, s);
+                        this.drawPresent(o);
+                    }
+
+                    ctx.restore();
+                },
+                drawShadow: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+
+                    if (o.type == "present") this.drawPresentShadow(o);
+
+                    ctx.restore();
+                },
+                drawPresentShadow: function (o) {
+                    var shadowAngle = -45;
+                    var shadowDistance = Mouse.x / 10;
+                    if (o.shape == "rectangle") {
+
+                    } else {
+                        ctx.rotate(shadowAngle);
+                        ctx.translate(0, -o.size * 0.2);
+                        var grd = ctx.createRadialGradient(0, 0, 0, 0, 0, o.size * 0.6);
+                        grd.addColorStop(0, "rgba(0,0,0,0.3)");
+                        grd.addColorStop(1, "rgba(0,0,0,0)");
+                        ctx.fillStyle = grd;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, o.size * 0.6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                drawPresent: function (o) {
+                    ctx.save();
+                    if (o.popAnimation) {
+                        var x = o.bulgeImageCoordinates.x;
+                        var y = o.bulgeImageCoordinates.y;
+                        var w = o.bulgeImageCoordinates.w;
+                        var h = o.bulgeImageCoordinates.h;
+                        var step = w;
+                        var image = game.objects.presentImages[o.bulgeImageNumber];
+                        var frame = Math.floor(bulgeAnimation((o.popAnimation - 10) / 35) * 14);
+                        ctx.translate(x, y);
+                        ctx.drawImage(image, frame * step, 0, step, h, - o.w / 2, -o.h / 2, w, h);
+                    } else {
+                        var x = o.imageCoordinates.x;
+                        var y = o.imageCoordinates.y;
+                        var w = o.imageCoordinates.w;
+                        var h = o.imageCoordinates.h;
+                        var image = game.objects.presentImages[o.imageNumber];
+                        ctx.translate(x, y);
+                        ctx.drawImage(image, - o.w / 2, -o.h / 2, w, h);
+                    }
+                    ctx.restore();
+                }
+            },
+            particles: {
+                objects: [],
+                update: function () {
+                    for (var o of this.objects) {
+                        if (o.xmove) o.x += o.xmove;
+                        if (o.ymove) o.y += o.ymove;
+                        if (o.type == "present explosion particle") {
+                            var target = game.level.scoreNumberPosition;
+
+                            o.ymove += 0.05;
+                            o.timeUntilCapture--;
+                            o.timeAlive++;
+                            var dir = dirTo(o.x, o.y, target.x, target.y);
+                            var dist = distTo(o.x, o.y, target.x, target.y);
+                            o.distToTarget = dist;
+                            if (o.timeUntilCapture <= 0) {
+                                var move = distToMove(15 + (o.timeAlive / 20) ** 2, dir);
+                                o.xmove = move.x;
+                                o.ymove = move.y;
+                                if (dist < o.speed) {
+                                    o.delete = true;
+                                    game.level.addScore(o.score);
+                                }
+                            } else if (o.timeUntilCapture <= 20) {
+                                var move = distToMove(5, dir);
+                                var percent = 0.8;
+                                o.xmove = o.xmove * percent + move.x * (1 - percent);
+                                o.ymove = o.ymove * percent + move.y * (1 - percent);
+                            }
+                            o.speed = distTo(0, 0, o.xmove, o.ymove);
+                        }
+                        if (o.type == "present aura particle") {
+                            o.alpha -= 0.03;
+                            o.r *= 1.05;
+                            o.ymove += 0.05;
+                            if (o.alpha <= 0) o.delete = true;
+                        }
+                        if (o.type == "present slice particle") {
+                            o.xmove *= 0.9;
+                            o.ymove *= 0.9;
+                            o.alpha -= 0.1;
+                            if (o.alpha <= 0) o.delete = true;
+                        }
+                    }
+                    this.objects = this.objects.filter(e => !e.delete);
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        if (o.type == "present explosion particle") {
+                            ctx.save();
+                            ctx.globalAlpha = o.distToTarget / 50;
+                            ctx.fillStyle = o.color;
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, 7, 0, 2 * Math.PI);
+                            ctx.fill();
+                            if (o.border) {
+                                ctx.strokeStyle = "black";
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                            }
+                            ctx.restore();
+                        } else if (o.type == "present aura particle") {
+                            ctx.save();
+                            ctx.globalAlpha = o.alpha * 0.7;
+                            ctx.fillStyle = o.color;
+                            ctx.beginPath();
+                            ctx.arc(o.x, o.y, o.r, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.restore();
+                        } else if (o.type == "present slice particle") {
+                            ctx.save();
+                            ctx.globalAlpha = o.alpha;
+                            ctx.translate(o.x, o.y);
+                            ctx.rotate(o.oldAngle * Math.PI / 180);
+                            ctx.translate(-o.oldWidth / 2, -o.oldHeight / 2);
+                            var cx = o.clipCoordinates.x;
+                            var cy = o.clipCoordinates.y;
+                            var x = o.bulgeImageCoordinates.x + cx;
+                            var y = o.bulgeImageCoordinates.y + cy;
+                            var w = o.bulgeImageCoordinates.w;
+                            var h = o.bulgeImageCoordinates.h;
+                            var frame = 14;
+                            ctx.translate(x, y);
+                            ctx.drawImage(o.image, frame * w + cx, cy, w / 2, h / 2, 0, 0, w / 2, h / 2);
+                            ctx.restore();
+                        }
+                    }
+                },
+                createParticlesForPresent: function (o, score) {
+                    var particles = [];
+                    var particleSize = 20 + o.radius / 7;
+                    for (var x = 0; x < o.w / particleSize; x++) {
+                        for (var y = 0; y < o.h / particleSize; y++) {
+                            var o2 = {};
+                            o2.x = o.x - o.w / 2 + x * particleSize;
+                            o2.y = o.y - o.h / 2 + y * particleSize;
+                            var rotated = rotate(o.x, o.y, o2.x, o2.y, -o.angle);
+                            o2.x = rotated.x;
+                            o2.y = rotated.y;
+                            if (x == Math.floor(o.w / particleSize / 2) || y == Math.floor(o.h / particleSize / 2)) o2.onRibbon = true;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            o2.angle = dir;
+                            o2.dist = dist;
+                            particles.push(o2);
+                        }
+                    }
+                    if (o.shape == "circle") {
+                        for (var o2 of particles) {
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            if (dist > o.radius) o2.delete = true;
+                        }
+                        particles = particles.filter(e => !e.delete);
+                    }
+                    for (var n = 0; n < particles.length; n++) {
+                        var o2 = particles[n];
+                        o2.color = o.colorScheme.bodyColor;
+                        o2.type = "present explosion particle";
+                        o2.timeUntilCapture = Math.random() * 50 + 20;
+                        o2.timeAlive = 0;
+                        o2.score = score / particles.length;
+                        if (o2.onRibbon) {
+                            o2.color = o.ribbonScheme.ribbonColor;
+                        }
+                        var move = distToMove(Math.max(Math.random() * 3 + dist / 100 - 1, 0.4), o2.angle + Math.random() * 40 - 20);
+                        o2.xmove = move.x;
+                        o2.ymove = move.y - Math.random() * 5 - 2;
+                    }
+                    this.objects.push(...particles);
+
+                    var o2 = {};
+                    o2.type = "present aura particle";
+                    o2.x = o.x;
+                    o2.y = o.y;
+                    o2.alpha = 1;
+                    o2.r = o.radius / 2;
+                    o2.ymove = -4;
+                    o2.color = o.colorScheme.ribbonColor;
+                    this.objects.push(o2);
+
+                    for (var n = 0; n < 4; n++) {
+                        var o2 = {};
+                        o2.x = o.x;
+                        o2.y = o.y;
+                        o2.oldWidth = o.w;
+                        o2.oldHeight = o.h;
+                        o2.oldAngle = o.angle;
+                        var dir = n * 90 - 45 + o.angle;
+                        var move = distToMove(5, dir);
+                        o2.xmove = move.x;
+                        o2.ymove = move.y;
+                        o2.alpha = 1;
+
+                        o2.bulgeImageCoordinates = o.bulgeImageCoordinates;
+                        o2.clipCoordinates = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }][n];
+                        o2.clipCoordinates.x *= o.bulgeImageCoordinates.w / 2;
+                        o2.clipCoordinates.y *= o.bulgeImageCoordinates.h / 2;
+                        o2.image = game.objects.presentImages[o.bulgeImageNumber];
+                        o2.type = "present slice particle";
+                        this.objects.push(o2);
+                    }
+                }
+            },
+            level: {
+                score: 0,
+                time: 0,
+                gameOver: false,
+                levelCompleteTimer: 0,
+                level: 1,
+                addedScoreTimer: 0,
+                mapTransition: 0,
+                loadingLevel: false,
+                scoreNumberPosition: {},
+                generateLoaded: false,
+                transferredGenerateData: false,
+                levelTransitionMap: {},
+                update: function () {
+                    this.updateLevelTransition();
+                    this.updateScoreNumber();
+                    this.updateTime();
+                    if (this.gameOver) this.updateGameOver();
+
+                    if (!this.generateLoaded) {
+                        game.generate.generateDuringFrame();
+                        this.generateLoaded = game.generate.loaded;
+                    } else if (!this.transferredGenerateData) {
+                        this.transferredGenerateData = true;
+                        game.generate.transferNewLevelGeneration();
+                    } else if (this.transferredGenerateData) {
+                        this.selection.update();
+                        var correctPresents = game.objects.objects.filter(e => e.type == "present" && e.correctPresentNumber !== undefined);
+                        if (!this.levelCompleteTimer && correctPresents.length === 0 && game.particles.objects.length == 0) {
+                            this.completeLevel();
+                        }
+                        if (this.levelCompleteTimer) this.levelCompleteTimer++;
+                        if (this.levelCompleteTimer == 10) {
+                            this.loadingLevel = true;
+                        }
+                    }
+                },
+                draw: function () {
+                    this.selection.draw();
+
+                    this.drawLevelTransition();
+
+                    this.drawText();
+                    if (this.gameOver) this.drawGameOver();
+                    if (this.level == 0) {
+                        this.drawTutorial();
+                    }
+                },
+                updateTime: function () {
+                    if (this.gameOver) return;
+                    if (this.mapTransition) return;
+                    this.time--;
+                    this.time = Math.max(this.time, 0);
+                    if (this.time == 0) {
+                        this.endGame();
+                    }
+                },
+                endGame: function () {
+                    this.score = Math.round(this.score);
+                    this.gameOver = true;
+                    this.selection.selected = false;
+                    if (this.score > highscore) {
+                        highscore = this.score;
+                        updateHighscore();
+                    }
+                },
+                updateLevelTransition: function () {
+                    if (this.gameOver) {
+                        this.mapTransition++;
+                    } else if (this.loadingLevel) {
+                        this.mapTransition++;
+                        if (this.mapTransition == 62) {
+                            this.newLevel();
+                        }
+                        if (this.mapTransition > 100) {
+                            this.loadingLevel = false;
+                        }
+                    } else {
+                        this.mapTransition--;
+                    }
+                    this.mapTransition = Math.max(this.mapTransition, 0);
+
+                    var targetHouse = this.levelTransitionMap.objects.find(e => e.houseNumber === this.level);
+                    var cam = this.levelTransitionMap.cam;
+                    if (targetHouse) {
+                        cam.x = cam.x * 0.95 + (targetHouse.x + targetHouse.chimney.x) * 0.05;
+                        cam.y = cam.y * 0.95 + (targetHouse.y + targetHouse.chimney.y) * 0.05;
+                    }
+                },
+                resetLevelTransitionMap: function () {
+                    this.levelTransitionMap = {
+                        cam: {
+                            x: 0,
+                            y: 0
+                        },
+                        objects: []
+                    };
+                    for (var n = 0; n < 20; n++) {
+                        var o = {};
+                        o.type = "house";
+                        o.houseNumber = n;
+                        o.x = n * 200;
+                        o.y = 0;
+                        o.w = 80;
+                        o.h = 80;
+                        o.chimney = {
+                            x: 40,
+                            y: 40,
+                            w: 5
+                        };
+                        this.levelTransitionMap.objects.push(o);
+                    }
+                },
+                drawLevelTransition: function () {
+                    if (!this.mapTransition) return;
+                    var a = easeInOut(this.mapTransition / 70) * 0.9 + easeInOut((this.mapTransition) / 100) * 0.1;
+                    var a2 = easeInOut(this.mapTransition / 70);
+                    var a3 = easeInOut((this.mapTransition - 30) / 20);
+                    if (this.loadingLevel) {
+                        a2 = easeInOut(this.mapTransition / 60);
+                        a3 = easeInOut((this.mapTransition - 40) / 20);
+                    }
+                    var cam = this.levelTransitionMap.cam;
+                    var targetHouse = this.levelTransitionMap.objects.find(e => e.houseNumber === this.level);
+                    if (!targetHouse) {
+                        targetHouse = { x: 0, y: 0, w: 0, h: 0, chimney: { x: 0, y: 0, w: 0 } };
+                    }
+                    var w = targetHouse.chimney.w + 50 * (1 - a2);
+                    var s = 15 - a * 14;
+                    var center = { x: 750, y: 500 };
+                    var rect = {
+                        x: targetHouse.x + targetHouse.chimney.x - w - cam.x,
+                        y: targetHouse.y + targetHouse.chimney.y - w - cam.y,
+                        w: w * 2,
+                        h: w * 2
+                    };
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.translate(center.x, center.y);
+                    ctx.scale(s, s);
+                    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+                    ctx.fillStyle = `rgba(0,0,0,${a3})`;
+                    ctx.fill();
+                    ctx.translate(-center.x, -center.y);
+                    ctx.rect(0, 0, 1500, 1000);
+                    ctx.clip("evenodd");
+                    ctx.translate(center.x, center.y);
+
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(-750, -500, 1500, 1000);
+
+                    ctx.translate(-cam.x, -cam.y);
+
+                    for (var n = 0; n < this.levelTransitionMap.objects.length; n++) {
+                        var o = this.levelTransitionMap.objects[n];
+                        if (o.type == "house") {
+                            ctx.save();
+                            ctx.translate(o.x, o.y);
+
+                            ctx.fillStyle = "red";
+                            ctx.fillRect(0, 0, o.w, o.h);
+
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(o.chimney.x - o.chimney.w, o.chimney.y - o.chimney.w, o.chimney.w * 2, o.chimney.w * 2);
+
+                            ctx.restore();
+                        }
+                    }
+
+                    ctx.restore();
+                },
+                reset: function () {
+                    this.levelCompleteTimer = 0;
+                    this.mapTransition = 99;
+                    this.loadingLevel = true;
+                    this.time = 6000;
+                    this.score = 0;
+                    this.gameOver = false;
+                    this.resetLevelTransitionMap();
+                    this.level = -1;
+                    this.newLevel();
+                },
+                completeLevel: function () {
+                    this.levelCompleteTimer = 1;
+                },
+                newLevel: function () {
+                    this.level++;
+                    game.objects.objects = [];
+                    game.objects.presentImages = [];
+                    this.transferredGenerateData = false;
+                    this.generateLoaded = false;
+                    this.levelCompleteTimer = 0;
+                    this.selection.reset();
+                    game.generate.initNewLevelGeneration();
+                },
+                updateScoreNumber: function () {
+                    ctx.font = "bold 50px Arial";
+                    var width = ctx.measureText(Math.round(this.score)).width;
+                    this.scoreNumberPosition = { x: 1450 - width / 2, y: 50, w: width };
+                    this.addedScoreTimer--;
+                    this.addedScoreTimer = Math.max(this.addedScoreTimer, 0);
+                },
+                addScore: function (amount) {
+                    this.score += amount;
+                    if (this.addedScoreTimer) {
+                        this.addedScoreTimer += 1 / this.addedScoreTimer;
+                    } else {
+                        this.addedScoreTimer = 3;
+                    }
+                    this.addedScoreTimer = Math.min(this.addedScoreTimer, 5);
+                },
+                drawText: function () {
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 50px Arial";
+                    ctx.fillText("Score: ", this.scoreNumberPosition.x - this.scoreNumberPosition.w / 2, 50);
+
+                    ctx.textAlign = "center";
+                    ctx.save();
+                    ctx.translate(this.scoreNumberPosition.x, this.scoreNumberPosition.y);
+                    var s = 1 + this.addedScoreTimer / 10;
+                    ctx.scale(s, s);
+                    ctx.fillText(Math.round(this.score), 0, 0);
+                    ctx.restore();
+
+                    ctx.textAlign = "left";
+                    ctx.fillText(`Time: ${Math.floor(this.time / 100)}`, 40, 50);
+                },
+                drawTutorial: function () {
+                    ctx.fillStyle = "rgba(255,240,240,0.7)";
+                    ctx.fillRect(0, 100, 1500, 100);
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 50px Arial";
+                    ctx.fillText("Click and drag between the matching gifts", 750, 150);
+                },
+                updateGameOver: function () {
+                    if (Mouse.clickInBox(750 - 300 / 2, 600, 300, 140)) {
+                        menu.switchPage = "new game";
+                    }
+                    if (Mouse.clickInBox(750 - 300 / 2, 800, 300, 140)) {
+                        menu.switchPage = "title screen";
+                    }
+                },
+                drawGameOver: function () {
+                    ctx.fillStyle = "rgba(255,240,240,0.7)";
+                    ctx.fillRect(750 / 2, 100, 750, 900);
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 100px Arial";
+                    ctx.fillText("Time's Up!", 750, 220);
+
+                    ctx.font = "bold 70px Arial";
+                    ctx.fillText(`Score: ${this.score}`, 750, 400);
+                    ctx.fillText(`Highscore: ${highscore}`, 750, 500);
+
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.lineJoin = "round";
+                    ctx.strokeRect(750 - 300 / 2, 600, 300, 140);
+                    ctx.strokeRect(750 - 300 / 2, 800, 300, 140);
+
+                    ctx.fillText(`Retry`, 750, 600 + 70);
+                    ctx.fillText(`Quit`, 750, 800 + 70);
+                },
+                drawBackground: function () {
+                    ctx.fillStyle = "rgb(30,30,30)";
+                    ctx.fillRect(-1500, -1000, 4500, 3000);
+
+                    ctx.fillStyle = "rgb(230,230,230)";
+                    ctx.fillRect(25, 75, 1450, 900);
+                },
+                selection: {
+                    selected: false,
+                    selection: {},
+                    correctSelections: [],
+                    update: function () {
+                        this.updateSelections();
+                        if (this.selected) {
+                            this.updateActiveSelecting();
+                        } else {
+                            this.updateStartSelecting();
+                        }
+                    },
+                    updateStartSelecting() {
+                        if (!Mouse.downStart) return;
+                        for (var o of game.objects.objects) {
+                            if (o.type != "present") continue;
+                            if (o.popAnimation) continue;
+                            var dist = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                            if (dist > o.radius) continue;
+                            this.selected = o;
+                            this.selection = {
+                                start: o,
+                                end: { x: Mouse.x, y: Mouse.y, r: 0 },
+                                lines: []
+                            };
+                            break;
+                        }
+                    },
+                    updateActiveSelecting() {
+                        if (!Mouse.down) {
+                            this.selected = false;
+                            this.selection = {};
+                            return;
+                        }
+                        this.selection.end.x = Mouse.x;
+                        this.selection.end.y = Mouse.y;
+                        this.selection.end.mouse = true;
+                        if (this.selected.correctPresentNumber === undefined) return;
+                        for (var o of game.objects.objects) {
+                            if (o.type != "present") continue;
+                            var dist = distTo(o.x, o.y, Mouse.x, Mouse.y);
+                            if (dist > o.radius) continue;
+                            if (o.correctPresentNumber !== this.selected.correctPresentNumber) continue;
+                            if (o.correctPresentId == this.selected.correctPresentId) continue;
+                            this.selected.popAnimation = 1;
+                            o.popAnimation = 1;
+                            this.selected = false;
+                            this.selection.animateToPresent = true;
+                            this.selection.end = { x: Mouse.x, y: Mouse.y, radius: 0, shape: "circle" };
+                            this.selection.realEnd = o;
+                            this.correctSelections.push(this.selection);
+                        }
+                    },
+                    updateSelections: function () {
+                        var selections = [this.selection, ...this.correctSelections];
+                        for (var selection of selections) {
+                            if (selection.lines) {
+                                var rate = 15;
+                                if (selection.animateToPresent) rate = 7;
+                                if (t % rate === 0) {
+                                    var width = Math.random() * 0.2 + 0.2;
+                                    if (Math.random() < 0.5 && selection.animateToPresent) {
+                                        selection.lines.push({ width: width, x1: 1, x2: 1 + width, y: Math.random(), direction: -1 });
+                                    } else {
+                                        selection.lines.push({ width: width, x1: -width, x2: 0, y: Math.random(), direction: 1 });
+                                    }
+                                }
+                                var dist = distTo(selection.start.x, selection.start.y, selection.end.x, selection.end.y);
+                                for (var o of selection.lines) {
+                                    o.x1 += 10 / (dist + 100) * o.direction;
+                                    o.x2 += 10 / (dist + 100) * o.direction;
+                                    if (o.x1 > 1) o.delete = true;
+                                    if (o.x2 < 0) o.delete = true;
+                                }
+                                selection.lines = selection.lines.filter(e => !e.delete);
+                            }
+                            if (!selection.alpha) selection.alpha = 1;
+                            if (selection.start?.delete) {
+                                selection.alpha -= 0.1;
+                            }
+                            if (selection.animateToPresent) {
+                                selection.end.x = selection.end.x * 0.9 + selection.realEnd.x * 0.1;
+                                selection.end.y = selection.end.y * 0.9 + selection.realEnd.y * 0.1;
+                                var realRadius;
+                                if (selection.realEnd.shape == "circle") realRadius = selection.realEnd.radius;
+                                if (selection.realEnd.shape == "rectangle") realRadius = Math.min(selection.realEnd.w, selection.realEnd.h) / 2;
+                                selection.end.radius = selection.end.radius * 0.9 + realRadius * 0.1;
+                            }
+                            if (selection.alpha <= 0) selection.delete = true;
+                        }
+                        this.correctSelections = this.correctSelections.filter(e => !e.delete);
+                    },
+                    draw: function () {
+                        var selections = [...this.correctSelections];
+                        if (this.selected) {
+                            selections.push(this.selection);
+                        }
+
+                        for (var n = 0; n < selections.length; n++) {
+                            var selection = selections[n];
+                            var o = selection.start;
+                            var o2 = selection.end;
+                            if (selection.animateToPresent) o2 = selection.realEnd;
+
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.translate(o.x, o.y);
+                            ctx.rotate(o.angle * Math.PI / 180);
+                            var s = 1 + easeInOut(o.selected / 10) * 0.05;
+                            ctx.scale(s, s);
+                            game.generate.drawPresentBodyShape(ctx, o, true);
+                            ctx.scale(1 / s, 1 / s);
+                            ctx.rotate(-o.angle * Math.PI / 180);
+                            ctx.translate(-o.x, -o.y);
+                            if (!o2.mouse) {
+                                ctx.translate(o2.x, o2.y);
+                                ctx.rotate(o2.angle * Math.PI / 180);
+                                var s = 1 + easeInOut(o2.selected / 10) * 0.05;
+                                ctx.scale(s, s);
+                                game.generate.drawPresentBodyShape(ctx, o, true);
+                                ctx.scale(1 / s, 1 / s);
+                                ctx.rotate(-o2.angle * Math.PI / 180);
+                                ctx.translate(-o2.x, -o2.y);
+                            }
+                            ctx.rect(0, 0, 1500, 1000);
+                            ctx.clip("evenodd");
+
+                            var o2 = selection.end;
+                            var points = [];
+                            var radius1, radius2;
+                            if (o.shape == "circle") {
+                                radius1 = o.radius;
+                            } else if (o.shape == "rectangle") {
+                                radius1 = Math.min(o.w, o.h) / 2;
+                            }
+                            if (o2.shape == "circle") {
+                                radius2 = o2.radius;
+                            } else if (o2.shape == "rectangle") {
+                                radius2 = Math.min(o2.w, o2.h) / 2;
+                            } else if (o2.mouse) {
+                                radius2 = 0;
+                            }
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(1, dir + 90);
+                            points.push({ x: o.x + move.x * radius1, y: o.y + move.y * radius1 });
+                            points.push({ x: o.x - move.x * radius1, y: o.y - move.y * radius1 });
+                            points.push({ x: o2.x - move.x * radius2, y: o2.y - move.y * radius2 });
+                            points.push({ x: o2.x + move.x * radius2, y: o2.y + move.y * radius2 });
+
+                            ctx.save();
+                            ctx.globalAlpha = (0.2 + (o.colorScheme.light ? 0.2 : 0)) * (selection.alpha || 1);
+                            ctx.fillStyle = o.colorScheme.bodyColor;
+                            ctx.beginPath();
+                            for (var p of points) {
+                                ctx.lineTo(p.x, p.y);
+                            }
+                            ctx.fill();
+                            ctx.restore();
+
+                            ctx.save();
+                            ctx.globalAlpha = 1 * selection.alpha;
+                            ctx.strokeStyle = o.ribbonScheme.ribbonColor;
+                            ctx.lineWidth = 4;
+                            ctx.lineCap = "round";
+                            for (var line of selection.lines) {
+                                var start = {
+                                    x: o.x - move.x * radius1 + move.x * radius1 * 2 * line.y,
+                                    y: o.y - move.y * radius1 + move.y * radius1 * 2 * line.y
+                                }
+                                var end = {
+                                    x: o2.x - move.x * radius2 + move.x * radius2 * 2 * line.y,
+                                    y: o2.y - move.y * radius2 + move.y * radius2 * 2 * line.y
+                                }
+                                var x1 = Math.max(Math.min(line.x1, 1), 0);
+                                var x2 = Math.max(Math.min(line.x2, 1), 0);
+                                ctx.beginPath();
+                                ctx.moveTo(start.x * (1 - x1) + end.x * x1, start.y * (1 - x1) + end.y * x1);
+                                ctx.lineTo(start.x * (1 - x2) + end.x * x2, start.y * (1 - x2) + end.y * x2);
+                                ctx.stroke();
+                            }
+                            ctx.restore();
+
+                            ctx.restore();
+                        }
+                    },
+                    reset: function () {
+                        this.selected = false;
+                        this.selection = {};
+                        this.correctSelections = [];
+                    }
+                }
+            }
+        }
+
+        function updateHighscore() {
+            window.localStorage.setItem("giftmatchhighscore", highscore);
+        }
+        var highscore = 0;
+        if (window.localStorage.getItem("giftmatchhighscore") != null) {
+            highscore = window.localStorage.getItem("giftmatchhighscore");
+        }
+        
+        /*
+        To Do:
+        Necessary:
+            House Images
+            Map Background Images
+            Cloud Images
+            Snowfall effects
+            Present Shadows
+            Floor Background
+            Better End Screen
+            Better Title Screen
+
+        Music & Sound Effects:
+            Royalty Free Christmas Game Music
+            Present Select & Pop Sound Effect
+            Menu Sound Effect
+            Time Up Sound Effects
+
+        Maybe In The Future:
+            Stickers for clicking on items in houses
+            Themed houses with some presents having custom wrapping paper
+            Clocks that you can click to get more time
+            Cookies that you can click to get more score
+        */
+    </script>
+    <script src="generate.js"></script>
+</body>
+
+</html>

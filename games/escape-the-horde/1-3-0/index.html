@@ -1,0 +1,1092 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script src="floorplans.js"></script>
+    <canvas id="canvas"></canvas>
+    <script>
+        var title = "Escape the Horde";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+        Loading.loaded = true;
+        Loading.intro = 0;
+
+        initialize();
+        window.setInterval(update, 10);
+
+        function resolveBlockCollision(dynamicBlock, staticBlock, axis) {
+            var c1 = { x: dynamicBlock.x + dynamicBlock.w / 2, y: dynamicBlock.y + dynamicBlock.h / 2 };
+            var c2 = { x: staticBlock.x + staticBlock.w / 2, y: staticBlock.y + staticBlock.h / 2 };
+            var dimension = axis == "x" ? "w" : "h";
+            if (c1[axis] < c2[axis]) {
+                dynamicBlock[axis] = staticBlock[axis] - dynamicBlock[dimension];
+            } else {
+                dynamicBlock[axis] = staticBlock[axis] + staticBlock[dimension];
+            }
+        }
+
+        function main() {
+            menu.tick();
+        }
+
+        var menu = {
+            page: "new game",
+            switchPage: "new game",
+            switchPageAnimation: 0,
+            switchPageAnimationThreshold: 70,
+            titleScreenAnimation: 0,
+            titleScreenZombies: [],
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (this.page != this.switchPage) {
+                    this.switchPageAnimation++;
+                    if (this.switchPageAnimation >= this.switchPageAnimationThreshold) {
+                        this.page = this.switchPage;
+                    }
+                } else {
+                    if (this.page == "game") this.switchPageAnimation = 0;
+                    if (this.switchPageAnimation > 0) {
+                        this.switchPageAnimation--;
+                    }
+                    if (this.switchPageAnimation < 0) {
+                        this.switchPageAnimation = 0;
+                    }
+                    this.userInteractions(this.page);
+                }
+                this.updatePage(this.page);
+            },
+            draw: function () {
+                this.drawPage(this.page);
+
+                if (this.switchPageAnimation) {
+                    var a = easeInOut(this.switchPageAnimation / this.switchPageAnimationThreshold);
+                    ctx.fillStyle = "black";
+                    if (this.switchPage == this.page) {
+                        ctx.fillRect(-100 + 1400 * (1 - a), 0, 1400, 1000);
+                    } else {
+                        ctx.fillRect(-100 - 1400 * (1 - a), 0, 1400, 1000);
+                    }
+                }
+            },
+            userInteractions: function (page) {
+                if (page == "title screen") {
+                    this.titleScreenButtons();
+                } else if (page == "game") {
+                    game.update();
+                }
+            },
+            drawPage: function (page) {
+                if (page == "title screen") {
+                    this.drawTitleScreen();
+                } else if (page == "game") {
+                    game.draw();
+                }
+            },
+            updatePage: function (page) {
+                if (page == "title screen") {
+                    this.updateTitleScreen();
+                } else if (page == "game") {
+                    game.updateEffects();
+                } else if (page == "new game") {
+                    this.page = "game";
+                    this.switchPage = "game";
+                    game.reset();
+                }
+            },
+            drawTitleScreen: function () {
+                var a = this.titleScreenAnimation;
+                var titleAnimations = [easeInOut((a - 0) / 30), easeInOut((a - 20) / 30), easeInOut((a - 40) / 30)];
+                var positions = [{ x: 360, y: 180 }, { x: 529, y: 280 }, { x: 640, y: 390 }];
+                var texts = "Escape the Horde".split(" ");
+                var sizes = [130, 50, 130];
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(-width / 2 - 50, -height / 2 - 50, width + 100, height + 100);
+                    ctx.restore();
+                }
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(-width / 2 - 40, -height / 2 - 40, width + 80, height + 80);
+                    ctx.restore();
+                }
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.scale(titleAnimations[n], titleAnimations[n]);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    ctx.fillText(texts[n], 0, 0);
+                    ctx.restore();
+                }
+
+                var a2 = easeInOut((a - 70) / 30)
+                ctx.save();
+                ctx.translate(500, 680);
+                ctx.scale(a2, a2);
+                ctx.fillStyle = "black";
+                ctx.fillRect(-150, -75, 300, 150);
+                ctx.fillStyle = "white";
+                if (Mouse.inBox(-140 + 500, -65 + 680, 280, 130)) ctx.fillStyle = "rgb(235,235,235)";
+                ctx.fillRect(-140, -65, 280, 130);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 80px Trebuchet MS";
+                ctx.fillText("Play", 0, 0);
+                ctx.restore();
+
+                var a3 = easeInOut((a - 80) / 30)
+                ctx.save();
+                ctx.translate(500, 870);
+                ctx.scale(a3, a3);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 40px Trebuchet MS";
+                ctx.fillText("Highscore: " + highscore, 0, 0);
+                ctx.restore();
+
+                var a4 = easeInOut((a - 90) / 30)
+                ctx.save();
+                ctx.translate(500, 940);
+                ctx.scale(a4, a4);
+                ctx.fillStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = "bold 40px Trebuchet MS";
+                ctx.fillText("By John Butler", 0, 0);
+                ctx.restore();
+
+                for (var o of this.titleScreenZombies) {
+                    ctx.fillStyle = "green";
+                    ctx.fillRect(o.x, o.y, o.w, o.h);
+                }
+            },
+            updateTitleScreen: function () {
+                this.titleScreenAnimation++;
+                var positions = [{ x: 360, y: 180 }, { x: 529, y: 280 }, { x: 640, y: 390 }];
+                var texts = "Escape the Horde".split(" ");
+                var sizes = [130, 50, 130];
+                var blocks = [{ x: -150 + 500, y: -75 + 680, w: 300, h: 150 }];
+                for (var n = 0; n < texts.length; n++) {
+                    var position = positions[n];
+                    ctx.font = `bold ${sizes[n]}px Trebuchet MS`;
+                    var width = ctx.measureText(texts[n]).width;
+                    var height = sizes[n];
+                    blocks.push({
+                        x: position.x - width / 2 - 50,
+                        y: position.y - height / 2 - 50,
+                        w: width + 100,
+                        h: height + 100
+                    });
+                }
+                for (var o of this.titleScreenZombies) {
+                    o.cx = o.x + o.w / 2;
+                    o.cy = o.y + o.h / 2;
+                    var dir = dirTo(o.x, o.y, o.target.x, o.target.y);
+                    var move = distToMove(o.speed, dir);
+                    o.move = move;
+                    o.timeToSwitchTarget--;
+                    if (o.timeToSwitchTarget <= 0) {
+                        o.timeToSwitchTarget = Math.random() * 500 + 100;
+                        var dist = 200 + Math.random() * 500;
+                        var move = distToMove(dist, Math.random() * 360);
+                        o.target.x += move.x;
+                        o.target.y += move.y;
+                        o.target.x = Math.max(Math.min(o.target.x, 985), 0);
+                        o.target.y = Math.max(Math.min(o.target.y, 985), 0);
+                    }
+                }
+                for (var n = 0; n < this.titleScreenZombies.length; n++) {
+                    var o = this.titleScreenZombies[n];
+                    for (var n2 = n + 1; n2 < this.titleScreenZombies.length; n2++) {
+                        var o2 = this.titleScreenZombies[n2];
+                        var dist = distTo(o.x, o.y, o2.x, o2.y);
+                        if (dist > o.r + o2.r) continue;
+                        var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                        var move = distToMove(o.r + o2.r - dist, dir);
+                        o.move.x -= move.x / 2;
+                        o.move.y -= move.y / 2;
+                        o2.move.x += move.x / 2;
+                        o2.move.y += move.y / 2;
+                    }
+                }
+                for (var o of this.titleScreenZombies) {
+                    if (o.timeToWait >= 0) {
+                        o.timeToWait--;
+                        continue;
+                    }
+                    o.x += o.move.x;
+                    for (var o2 of blocks) {
+                        if (!blocksColliding(o, o2)) continue;
+                        resolveBlockCollision(o, o2, "x");
+                    }
+                    o.y += o.move.y;
+                    for (var o2 of blocks) {
+                        if (!blocksColliding(o, o2)) continue;
+                        resolveBlockCollision(o, o2, "y");
+                    }
+                }
+            },
+            titleScreenButtons: function () {
+                var a = this.titleScreenAnimation;
+                if (a < 40) return;
+                if (Mouse.clickInBox(-140 + 500, -65 + 680, 280, 130)) {
+                    this.switchPage = "new game";
+                }
+            },
+            resetTitleScreen: function () {
+                this.titleScreenZombies = [];
+                for (var n = 0; n < 25; n++) {
+                    var o = {};
+                    if (Math.random() < 0.5) {
+                        o.x = Math.random() * 985;
+                        if (Math.random() < 0.5) {
+                            o.y = -15;
+                        } else {
+                            o.y = 1000;
+                        }
+                    } else {
+                        o.y = Math.random() * 985;
+                        if (Math.random() < 0.5) {
+                            o.x = -15;
+                        } else {
+                            o.x = 1000;
+                        }
+                    }
+                    o.timeToWait = Math.random() * 300;
+                    o.w = 15;
+                    o.h = 15;
+                    o.r = 8;
+                    o.speed = 0.6;
+                    o.timeToSwitchTarget = Math.random() * 500 + 500;
+                    o.target = {};
+                    o.target.x = Math.random() * 985;
+                    o.target.y = Math.random() * 985;
+                    this.titleScreenZombies.push(o);
+                }
+            }
+        }
+        menu.resetTitleScreen();
+
+        var game = {
+            score: 0,
+            newHighscore: false,
+            oldHighscoreValue: 0,
+            update: function () {
+                this.level.update();
+            },
+            updateEffects: function () {
+                var groups = this.objects.generateGroups();
+
+                this.objects.update(groups);
+                this.player.update();
+                this.player.updateObjectCollisions(groups);
+                this.cam.update();
+            },
+            draw: function () {
+                ctx.save();
+                this.level.clipGameArea();
+
+                this.drawBackground();
+
+                ctx.save();
+                this.cam.alignViewport();
+
+                this.objects.draw();
+                this.player.draw();
+
+                ctx.restore();
+
+                this.level.draw();
+
+                ctx.restore();
+
+                this.level.drawLevelIntroAnimation();
+            },
+            reset: function () {
+                this.level.reset();
+                this.player.reset();
+                this.cam.reset();
+                this.score = 0;
+            },
+            endGame: function () {
+                if (this.score > highscore) {
+                    this.oldHighscoreValue = highscore;
+                    highscore = this.score;
+                    updateHighscore();
+                    this.newHighscore = true;
+                }
+            },
+            drawBackground: function () {
+                ctx.save();
+                this.cam.alignViewport();
+                var tileSize = 200;
+                var xCount = (1000 / tileSize) / this.cam.zoom;
+                var yCount = (1000 / tileSize) / this.cam.zoom;
+                var xOffset = Math.floor(this.cam.x / (tileSize * 2)) * (tileSize * 2);
+                var yOffset = Math.floor(this.cam.y / (tileSize * 2)) * (tileSize * 2);
+                for (var x = Math.floor(-xCount / 2 - 2), xNum = 0; x < xCount + 2; x++, xNum++) {
+                    for (var y = Math.floor(-yCount / 2 - 2), yNum = 0; y < yCount + 2; y++, yNum++) {
+                        if ((xNum + yNum) % 2 == 0) {
+                            continue;
+                            ctx.fillStyle = "white";
+                        } else {
+                            ctx.fillStyle = "rgb(240,240,240)";
+                        }
+                        ctx.fillRect(x * tileSize + xOffset, y * tileSize + yOffset, tileSize, tileSize);
+                    }
+                }
+                ctx.restore();
+            },
+            level: {
+                level: 0,
+                levelComplete: false,
+                levelIntro: false,
+                levelIntroAnimation: 0,
+                levelIntroAnimationCap: 200,
+                levelTransition: 0,
+                levelTransitionCap: 100,
+                playerSpawnCoordinates: { x: 0, y: 0 },
+                playerCanMove: true,
+                playerZombifiedAnimation: 0,
+                majorFloorPlan: [],
+                majorFloorPlanDimensions: {},
+                majorFloorPlanBuffer: 0,
+                update: function () {
+                    this.updateIntro();
+                    this.updateOutro();
+                    this.updateGameOverMenu();
+
+                    this.playerCanMove = true;
+                    if (this.levelComplete) this.playerCanMove = false;
+                    if (this.levelTransition > this.levelTransitionCap * 0.6) this.playerCanMove = false;
+                    if (game.player.zombified && !this.playerZombifiedAnimation) {
+                        game.endGame();
+                    }
+                    if (game.player.zombified) this.playerZombifiedAnimation++;
+                },
+                draw: function () {
+                    this.drawNavigation();
+                    this.drawGameOverMenu();
+                },
+                reset: function () {
+                    this.level = 0;
+                    this.levelComplete = false;
+                    this.levelIntro = true;
+                    this.levelTransition = this.levelTransitionCap;
+                    this.levelIntroAnimation = 1;
+                    this.playerZombifiedAnimation = 0;
+                    this.generateNewLevel();
+                },
+                updateGameOverMenu: function () {
+                    if (this.playerZombifiedAnimation < 140) return;
+                    if (Mouse.clickInBox(200, 830, 270, 110)) {
+                        menu.switchPage = "new game";
+                    }
+                    if (Mouse.clickInBox(530, 830, 270, 110)) {
+                        menu.switchPage = "title screen";
+                    }
+                },
+                drawNavigation: function () {
+                    ctx.save();
+                    var a = 1 - easeInOut(this.playerZombifiedAnimation / 100);
+                    ctx.globalAlpha = a;
+
+                    this.drawScore();
+                    this.drawDashMeter();
+                    this.drawMap();
+
+                    ctx.restore();
+                },
+                drawDashMeter: function () {
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(30, 920, 300, 50);
+                    if (game.player.dashTime) {
+                        ctx.fillStyle = "rgb(100,0,0)";
+                        ctx.fillRect(35, 925, 290, 40);
+                        ctx.fillStyle = "red";
+                        var percent = game.player.dashTime / game.player.dashTimeReset;
+                        ctx.fillRect(35, 925, 290 * easeInOut(percent), 40);
+                    } else {
+                        ctx.fillStyle = "rgb(100,0,0)";
+                        ctx.fillRect(35, 925, 290, 40);
+                        ctx.fillStyle = "rgb(170,0,0)";
+                        if (game.player.dashCooldown == 0) ctx.fillStyle = "red";
+                        var percent = 1 - game.player.dashCooldown / game.player.dashCooldownReset;
+                        ctx.fillRect(35, 925, 290 * easeInOut(percent), 40);
+                    }
+                },
+                drawScore: function () {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, 1000, 50);
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 40px Trebuchet MS";
+                    ctx.fillText(`Score: ${game.score}`, 985, 30);
+                },
+                drawMap: function () {
+                    var x = 805;
+                    var y = 805;
+                    var w = 150;
+                    var h = 150;
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(x - 5, y - 5, w + 10, h + 10);
+                    var scale = Math.min(w / this.majorFloorPlanDimensions.w, h / this.majorFloorPlanDimensions.h);
+                    var xOffset = -(this.majorFloorPlanDimensions.w * scale - w) / 2 - this.majorFloorPlanDimensions.x * scale;
+                    var yOffset = -(this.majorFloorPlanDimensions.h * scale - h) / 2 - this.majorFloorPlanDimensions.y * scale;
+                    ctx.save();
+                    ctx.translate(x + xOffset, y + yOffset);
+                    ctx.scale(scale, scale);
+                    for (var o of this.majorFloorPlan) {
+                        if (o.type != "space") continue;
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(o.x, o.y, o.w, o.h);
+                    }
+                    for (var o of game.objects.objects) {
+                        if (o.type == "exit") {
+                            ctx.fillStyle = "lime";
+                            ctx.beginPath();
+                            ctx.arc(o.cx, o.cy, 80, 0, 2 * Math.PI);
+                            ctx.fill();
+                        } else if (o.type == "block") {
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(o.x, o.y, o.w, o.h);
+                        }
+                    }
+                    ctx.fillStyle = "red";
+                    ctx.fillRect(game.player.cx - 60, game.player.cy - 60, 120, 120);
+                    ctx.restore();
+                },
+                drawGameOverMenu: function () {
+                    if (!this.playerZombifiedAnimation) return;
+
+                    var a = easeInOut((this.playerZombifiedAnimation - 70) / 20);
+                    ctx.save();
+                    ctx.globalAlpha = a;
+
+                    ctx.fillStyle = "green";
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 2;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 80px Trebuchet MS";
+                    ctx.fillText("You got zombified!", 500, 200);
+                    ctx.strokeText("You got zombified!", 500, 200);
+
+                    var a2 = easeInOut((this.playerZombifiedAnimation - 120) / 20);
+                    ctx.globalAlpha = a2;
+
+                    ctx.fillStyle = "rgba(255,255,255,0.7)";
+                    ctx.fillRect(0, 590, 1000, 410);
+
+                    var score = game.score;
+                    ctx.font = "bold 50px Trebuchet MS";
+                    var width = ctx.measureText(`Score: ${score}`).width;
+                    var animatedScore = Math.ceil(score * easeInOut((this.playerZombifiedAnimation - 140) / 100));
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(`Score: ${animatedScore}`, 500 - width / 2, 680);
+
+                    ctx.save();
+                    ctx.translate(500, 750);
+                    var a3 = easeInBack((this.playerZombifiedAnimation - 260) / 20);
+                    if (game.newHighscore) ctx.scale(1 + 0.1 * a3, 1 + 0.1 * a3);
+                    ctx.textAlign = "left";
+                    var width = ctx.measureText(`Highscore: ${highscore}`).width;
+                    var highscoreText = game.oldHighscoreValue;
+                    if (this.playerZombifiedAnimation > 260 || !game.newHighscore) highscoreText = highscore;
+                    ctx.fillText(`Highscore: ${highscoreText}`, -width / 2, 0);
+                    ctx.restore();
+
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 5;
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(200, 830, 270, 110)) {
+                        ctx.fillStyle = "rgb(235,235,235)";
+                    }
+                    ctx.roundRect(200, 830, 270, 110, 25);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = "white";
+                    if (Mouse.inBox(530, 830, 270, 110)) {
+                        ctx.fillStyle = "rgb(235,235,235)";
+                    }
+                    ctx.roundRect(530, 830, 270, 110, 25);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "60px Trebuchet MS";
+                    ctx.fillText("Retry", 200 + 270 / 2, 830 + 110 / 2);
+                    ctx.fillText("Quit", 530 + 270 / 2, 830 + 110 / 2);
+
+                    ctx.restore();
+                },
+                updateIntro: function () {
+                    if (this.levelComplete) return;
+                    if (this.levelIntroAnimation) {
+                        this.levelIntroAnimation++;
+                        if (this.levelIntroAnimation == this.levelIntroAnimationCap) this.levelIntroAnimation = 0;
+                        return;
+                    }
+                    this.levelTransition--;
+                    this.levelTransition = Math.max(this.levelTransition, 0);
+                    if (!this.playerCanMove) return;
+                    var pressedKey = false;
+                    var movementKeys = [37, 38, 39, 40, 65, 68, 83, 87];
+                    for (var key of movementKeys) {
+                        if (Keys.down[key]) {
+                            pressedKey = true;
+                            break;
+                        }
+                    }
+                    if (this.levelIntro) this.levelIntro = !pressedKey;
+                },
+                updateOutro: function () {
+                    if (!this.levelComplete) return;
+                    this.levelTransition++;
+                    if (this.levelTransition >= this.levelTransitionCap) {
+                        this.newLevel();
+                    }
+                },
+                clipGameArea: function () {
+                    if (!this.levelTransition) return;
+                    var a = this.levelTransition / this.levelTransitionCap;
+
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0, 0, 1000, 1000);
+
+                    var radius = easeInOut(1 - a) * 1500;
+                    ctx.translate(500 - game.cam.x * game.cam.zoom, 500 - game.cam.y * game.cam.zoom);
+                    var x = game.player.x + game.player.w / 2;
+                    var y = game.player.y + game.player.h / 2;
+                    ctx.translate(x * game.cam.zoom, y * game.cam.zoom);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                    ctx.clip();
+                    ctx.translate(-x * game.cam.zoom, -y * game.cam.zoom);
+                    ctx.translate(game.cam.x * game.cam.zoom - 500, game.cam.y * game.cam.zoom - 500);
+
+                    ctx.clearRect(0, 0, 1000, 1000);
+                },
+                drawLevelIntroAnimation: function () {
+                    if (!this.levelIntroAnimation) return;
+
+                    var a = this.levelIntroAnimation / this.levelIntroAnimationCap;
+                    ctx.save();
+                    ctx.globalAlpha = easeInOut(a * 4) * easeInOut((1 - a) * 4);
+
+                    this.drawLevelText(a);
+                    this.drawMajorFloorPlan(a);
+                    this.drawScoreText(a);
+
+                    ctx.restore();
+                },
+                drawLevelText: function (a) {
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "bold 120px Trebuchet MS";
+                    ctx.fillText(`Level ${this.level + 1}`, 500, 300);
+                },
+                drawScoreText: function (a) {
+                    ctx.save();
+                    ctx.translate(500, 350 + this.majorFloorPlanBuffer);
+                    if (this.level != 0) {
+                        var a2 = easeInBack((a - 0.35) * 10);
+                        ctx.scale(1 + 0.1 * a2, 1 + 0.1 * a2);
+                    }
+                    ctx.textAlign = "left";
+                    ctx.font = "bold 60px Trebuchet MS";
+                    var width = ctx.measureText(`Score: ${game.score}`).width;
+                    var score = game.score - 1000;
+                    if (a > 0.35 || this.level == 0) score = game.score;
+                    ctx.fillText(`Score: ${score}`, -width / 2, 0);
+                    ctx.restore();
+                },
+                drawMajorFloorPlan: function (a) {
+                    var x = this.majorFloorPlanDimensions.x;
+                    var y = this.majorFloorPlanDimensions.y;
+                    var w = this.majorFloorPlanDimensions.w;
+                    var h = this.majorFloorPlanDimensions.h;
+                    var scale = 1 / 1000 * 100;
+                    this.majorFloorPlanBuffer = h * scale;
+                    ctx.save();
+                    ctx.translate(500 - (w / 2) * scale - x * scale, 300 - y * scale);
+                    for (var o of this.majorFloorPlan) {
+                        if (o.type != "space") continue;
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(o.x * scale, o.y * scale, o.w * scale, o.h * scale);
+                        if (o.startSpace) {
+                            ctx.fillStyle = "red";
+                            ctx.fillRect(o.x * scale + o.w * 5 / 12 * scale, o.y * scale + o.h * 5 / 12 * scale, o.w / 6 * scale, o.h / 6 * scale);
+                        }
+                        if (o.endSpace) {
+                            ctx.fillStyle = "lime";
+                            ctx.beginPath();
+                            ctx.arc(o.x * scale + o.w / 2 * scale, o.y * scale + o.h / 2 * scale, o.h / 6 * scale, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    }
+                    ctx.restore();
+                },
+                generateMajorFloorPlan: function (level) {
+                    var eligiblePlans = majorFloorPlans.filter(e => !e.minLevel || e.minLevel <= this.level);
+                    var plan = structuredClone(eligiblePlans[Math.floor(Math.random() * eligiblePlans.length)]);
+                    var angle = Math.floor(Math.random() * 4) * 90;
+                    for (var o of plan.objects) {
+                        if (angle % 90 != 0) {
+                            var w = o.w;
+                            var h = o.h;
+                            o.w = h;
+                            o.h = w;
+                        }
+                        var cors = rotate(0, 0, o.x, o.y, angle);
+                        o.x = cors.x;
+                        o.y = cors.y;
+                    }
+                    var x = Math.min(...plan.objects.map(e => e.x));
+                    var y = Math.min(...plan.objects.map(e => e.y));
+                    var width = Math.max(...plan.objects.map(e => e.x + e.w)) - x;
+                    var height = Math.max(...plan.objects.map(e => e.y + e.h)) - y;
+                    plan.dimensions = { x: x, y: y, w: width, h: height };
+                    return plan;
+                },
+                generateNewLevel: function () {
+                    game.objects.objects = [];
+                    var majorFloorPlan = this.generateMajorFloorPlan(this.level);
+                    this.majorFloorPlan = majorFloorPlan.objects;
+                    this.majorFloorPlanDimensions = majorFloorPlan.dimensions;
+                    for (var o of this.majorFloorPlan) {
+                        if (o.type != "block") continue;
+                        var o2 = {};
+                        o2.type = "block";
+                        o2.x = o.x - 1;
+                        o2.y = o.y - 1;
+                        o2.w = o.w + 2;
+                        o2.h = o.h + 2;
+                        game.objects.objects.push(o2);
+                    }
+                    for (var o of this.majorFloorPlan) {
+                        if (o.type != "space") continue;
+                        var o2 = {};
+                        o2.type = "block";
+                        o2.x = o.x + 600;
+                        o2.y = o.y + 300;
+                        o2.w = o.w - 600;
+                        o2.h = o.h - 600;
+                        game.objects.objects.push(o2);
+                    }
+                    var spaces = this.majorFloorPlan.filter(e => e.type == "space");
+                    var startingSpace = spaces.find(e => e.startSpace);
+                    var endingSpace = spaces.find(e => e.endSpace);
+                    this.playerSpawnCoordinates = {
+                        x: startingSpace.x + startingSpace.w / 2 - game.player.w / 2,
+                        y: startingSpace.y + startingSpace.h / 2 - game.player.h / 2
+                    }
+                    game.objects.objects.push({
+                        type: "exit",
+                        x: endingSpace.x + endingSpace.w / 2,
+                        y: endingSpace.y + endingSpace.h / 2,
+                        cx: endingSpace.x + endingSpace.w / 2,
+                        cy: endingSpace.y + endingSpace.h / 2
+                    });
+                    var zombieDensity = 1 + this.level * 2;
+                    for (var o of spaces) {
+                        for (var n = 0; n < zombieDensity; n++) {
+                            var x = o.x + Math.random() * (o.w - 15);
+                            var y = o.y + Math.random() * (o.h - 15);
+                            game.objects.objects.push(this.createZombie(x, y));
+                        }
+                    }
+
+                    game.player.x = this.playerSpawnCoordinates.x;
+                    game.player.y = this.playerSpawnCoordinates.y;
+                },
+                createZombie: function (x, y) {
+                    var o = {};
+                    o.type = "zombie";
+                    o.x = x;
+                    o.y = y;
+                    o.w = 15;
+                    o.h = 15;
+                    o.cx = o.x + o.w / 2;
+                    o.cy = o.y + o.h / 2;
+                    o.originalPosition = { x: o.x, y: o.y };
+                    o.target = { x: o.x, y: o.y };
+                    o.move = { x: 0, y: 0 };
+                    o.speed = 0.6;
+                    o.r = 8;
+                    o.touchedPlayerTime = 0;
+                    return o;
+                },
+                newLevel: function () {
+                    this.level++;
+                    this.levelComplete = false;
+                    this.levelIntro = true;
+                    this.levelIntroAnimation = 1;
+                    game.score += 1000;
+                    game.player.reset();
+                    this.generateNewLevel();
+                }
+            },
+            objects: {
+                objects: [],
+                update: function (groups) {
+                    this.updateZombies(groups);
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        this.drawObject(o);
+                    }
+                },
+                generateGroups: function () {
+                    var groups = { zombie: [], block: [], collectable: [], lava: [], exit: [] };
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        groups[o.type].push(o);
+                    }
+                    return groups;
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+
+                    if (o.type == "zombie") {
+                        ctx.fillStyle = "green";
+                        ctx.fillRect(0, 0, o.w, o.h);
+                    } else if (o.type == "block") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(0, 0, o.w, o.h);
+                    } else if (o.type == "collectable") {
+                        ctx.fillStyle = "yellow";
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 4, 0, 2 * Math.PI);
+                        ctx.fill();
+                    } else if (o.type == "lava") {
+                        ctx.fillStyle = "red";
+                        ctx.fillRect(0, 0, o.w, o.h);
+                    } else if (o.type == "exit") {
+                        ctx.fillStyle = "lime";
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 20, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                },
+                updateZombies: function (groups) {
+                    if (game.level.levelIntro) return;
+                    for (var o of groups.zombie) {
+                        o.cx = o.x + o.w / 2;
+                        o.cy = o.y + o.h / 2;
+                        var dist = distTo(o.cx, o.cy, game.player.cx, game.player.cy);
+                        if (dist < o.r + game.player.r) o.touchedPlayerTime++;
+                        o.distToPlayer = dist;
+                        o.target = { x: game.player.cx, y: game.player.cy };
+                        if (dist < 400) {
+                            var location = this.predictLocation(game.player.cx, game.player.cy, game.player.move.x, game.player.move.y, o.x, o.y);
+                            o.target = { x: location.x, y: location.y };
+                        }
+                        if (o.touchedPlayerTime > 200) {
+                            o.target = o.originalPosition;
+                        }
+                        var dir = dirTo(o.cx, o.cy, o.target.x, o.target.y);
+                        var move = distToMove(o.speed, dir);
+                        o.move.x += move.x;
+                        o.move.y += move.y;
+                    }
+                    for (var n = 0; n < groups.zombie.length; n++) {
+                        if (game.player.zombified) break;
+                        var o = groups.zombie[n];
+                        for (var n2 = n + 1; n2 < groups.zombie.length; n2++) {
+                            var o2 = groups.zombie[n2];
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            var maxSpaceRequired = 100;
+                            var spaceScaling = 0.2;
+                            var spaceRequired = Math.min(o.distToPlayer * spaceScaling + o2.distToPlayer * spaceScaling, maxSpaceRequired);
+                            if (dist > spaceRequired) continue;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(spaceRequired - dist, dir);
+                            o.direction = dir + 180;
+                            o2.direction = dir;
+                            var move1 = distToMove(o.speed, o.direction);
+                            var move2 = distToMove(o2.speed, o2.direction);
+                            var percent = 1 - dist / maxSpaceRequired;
+                            o.move.x = o.move.x * (1 - percent) + move1.x * percent;
+                            o.move.y = o.move.y * (1 - percent) + move1.y * percent;
+                            o2.move.x = o2.move.x * (1 - percent) + move2.x * percent;
+                            o2.move.y = o2.move.y * (1 - percent) + move2.y * percent;
+                        }
+                    }
+                    for (var n = 0; n < groups.zombie.length; n++) {
+                        var o = groups.zombie[n];
+                        for (var n2 = n + 1; n2 < groups.zombie.length; n2++) {
+                            var o2 = groups.zombie[n2];
+                            var dist = distTo(o.x, o.y, o2.x, o2.y);
+                            if (dist > o.r + o2.r) continue;
+                            var dir = dirTo(o.x, o.y, o2.x, o2.y);
+                            var move = distToMove(o.r + o2.r - dist, dir);
+                            o.move.x -= move.x / 2;
+                            o.move.y -= move.y / 2;
+                            o2.move.x += move.x / 2;
+                            o2.move.y += move.y / 2;
+                        }
+                    }
+                    for (var o of groups.zombie) {
+                        o.x += o.move.x;
+                        for (var o2 of groups.block) {
+                            if (!blocksColliding(o, o2)) continue;
+                            resolveBlockCollision(o, o2, "x");
+                        }
+                    }
+                    for (var o of groups.zombie) {
+                        o.y += o.move.y;
+                        for (var o2 of groups.block) {
+                            if (!blocksColliding(o, o2)) continue;
+                            resolveBlockCollision(o, o2, "y");
+                        }
+                    }
+                    for (var o of groups.zombie) {
+                        o.move = { x: 0, y: 0 };
+                        o.cx = o.x + o.w / 2;
+                        o.cy = o.y + o.h / 2;
+                    }
+                },
+                predictLocation: function (x, y, xmove, ymove, x2, y2) {
+                    if (xmove == 0 && ymove == 0) return { x: x, y: y };
+                    var lastDistance = distTo(x, y, x2, y2);
+                    for (var n = 0; n < 100; n++) {
+                        x += xmove;
+                        y += ymove;
+                        var dist = distTo(x, y, x2, y2);
+                        if (dist > lastDistance) return { x: x - xmove, y: y - ymove };
+                        lastDistance = dist;
+                    }
+                    return { x: x, y: y }
+                }
+            },
+            player: {
+                x: 0,
+                y: 0,
+                r: 10,
+                move: { x: 0, y: 0 },
+                w: 20,
+                h: 20,
+                cx: 0,
+                cy: 0,
+                regularSpeed: 3,
+                dashSpeed: 10,
+                currentSpeed: 0,
+                dashTime: 0,
+                dashTimeReset: 20,
+                dashCooldown: 0,
+                dashCooldownReset: 150,
+                zombified: false,
+                direction: 0,
+                minDistToExit: 0,
+                update: function () {
+                    this.updateSpeed();
+                    this.handleInput();
+                    this.cx = this.x + this.w / 2;
+                    this.cy = this.y + this.h / 2;
+                },
+                draw: function () {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+
+                    ctx.globalAlpha = this.minDistToExit / 25;
+                    ctx.fillStyle = "red";
+                    if (this.zombified) ctx.fillStyle = "rgb(0,100,0)";
+                    ctx.fillRect(0, 0, this.w, this.h);
+
+                    ctx.restore();
+                },
+                reset: function () {
+                    this.zombified = false;
+                    this.dashTime = 0;
+                    this.dashCooldown = 0;
+                },
+                handleInput: function () {
+                    this.move = { x: 0, y: 0 };
+                    if (!game.level.playerCanMove) return;
+                    if (this.zombified) return;
+                    this.handleMovementInput();
+                    this.handleDashInput();
+                },
+                handleMovementInput: function () {
+                    if (Keys.keys[37] || Keys.keys[65]) {
+                        this.move.x--;
+                    }
+                    if (Keys.keys[39] || Keys.keys[68]) {
+                        this.move.x++;
+                    }
+                    if (Keys.keys[38] || Keys.keys[87]) {
+                        this.move.y--;
+                    }
+                    if (Keys.keys[40] || Keys.keys[83]) {
+                        this.move.y++;
+                    }
+                    if (this.move.x == 0 && this.move.y == 0) return;
+                    var dir = dirTo(0, 0, this.move.x, this.move.y);
+                    if (!this.dashTime) this.direction = dir;
+                    this.move = distToMove(this.currentSpeed, this.direction);
+                },
+                handleDashInput: function () {
+                    if (!Keys.keys[32]) return;
+                    if (this.dashTime) return;
+                    if (this.dashCooldown) return;
+                    this.dashTime = this.dashTimeReset;
+                },
+                updateSpeed: function () {
+                    if (this.dashTime > 0) {
+                        this.dashTime--;
+                        this.currentSpeed = this.dashSpeed;
+                        if (this.dashTime == 0) {
+                            this.dashCooldown = this.dashCooldownReset;
+                        }
+                    } else {
+                        this.dashCooldown--;
+                        this.dashCooldown = Math.max(this.dashCooldown, 0);
+                        this.currentSpeed = this.regularSpeed;
+                    }
+                },
+                updateObjectCollisions: function (groups) {
+                    this.minDistToExit = Infinity;
+                    for (var o of groups.exit) {
+                        if (this.zombified) continue;
+                        var dist = distTo(o.x, o.y, this.cx, this.cy);
+                        this.minDistToExit = Math.min(this.minDistToExit, dist);
+                        if (dist > 50) continue;
+                        game.level.levelComplete = true;
+                        var dir = dirTo(this.cx, this.cy, o.x, o.y);
+                        var move = distToMove(dist / 10, dir);
+                        this.x += move.x;
+                        this.y += move.y;
+                    }
+                    if (game.level.levelComplete) return;
+                    for (var o of groups.zombie) {
+                        var dist = distTo(o.cx, o.cy, this.cx, this.cy);
+                        if (dist > this.r + o.r) continue;
+                        var dir = dirTo(this.cx, this.cy, o.cx, o.cy);
+                        var move = distToMove(this.r + o.r - dist, dir);
+                        this.move.x -= move.x / 2;
+                        this.move.y -= move.y / 2;
+                        o.move.x += move.x / 2;
+                        o.move.y += move.y / 2;
+                        this.zombified = true;
+                    }
+
+                    this.x += this.move.x;
+                    for (var o of groups.block) {
+                        if (!blocksColliding(this, o)) continue;
+                        resolveBlockCollision(this, o, "x");
+                    }
+                    this.y += this.move.y;
+                    for (var o of groups.block) {
+                        if (!blocksColliding(this, o)) continue;
+                        resolveBlockCollision(this, o, "y");
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                angle: 0,
+                update: function () {
+                    this.x = this.x * 0.97 + game.player.x * 0.03;
+                    this.y = this.y * 0.97 + game.player.y * 0.03;
+                    var a0 = easeInOut(game.level.playerZombifiedAnimation / 120 - 0.15);
+                    var a1 = easeInOut(game.level.playerZombifiedAnimation / 50 - 0.5);
+                    var a2 = easeInOut(game.level.playerZombifiedAnimation / 50);
+                    var a = a1 * 0.9 + a2 * 0.1;
+                    this.zoom = 1 + 1 * a;
+                    this.x = this.x * (1 - a * 0.5) + game.player.x * a * 0.5;
+                    this.y = this.y * (1 - a * 0.5) + (game.player.y + 50) * a * 0.5;
+                    this.angle = this.angle * (1 - a0) + 5 * a0;
+                },
+                alignViewport: function () {
+                    ctx.translate(500, 500);
+                    ctx.rotate(this.angle * Math.PI / 180);
+                    ctx.scale(this.zoom, this.zoom);
+                    ctx.translate(-this.x, -this.y);
+                },
+                reset: function () {
+                    this.x = 0;
+                    this.y = 0;
+                    this.zoom = 1;
+                    this.angle = 0;
+                }
+            }
+        }
+        function initializeFloorplans() {
+            for (var plan of majorFloorPlans) {
+                plan.objects = [];
+                var blockSize = 800;
+                for (var y = 0; y < plan.rows.length; y++) {
+                    for (var x = 0; x < plan.rows[y].length; x++) {
+                        var char = plan.rows[y][x];
+                        var o = {};
+                        o.x = x * blockSize;
+                        o.y = y * blockSize;
+                        o.w = blockSize;
+                        o.h = blockSize;
+                        if (char == "#") {
+                            o.type = "block";
+                        }
+                        if (char == " ") {
+                            o.type = "space";
+                        }
+                        if (char == "S") {
+                            o.type = "space";
+                            o.startSpace = true;
+                        }
+                        if (char == "E") {
+                            o.type = "space";
+                            o.endSpace = true;
+                        }
+                        plan.objects.push(o);
+                    }
+                }
+            }
+        }
+        initializeFloorplans();
+        var highscore = 0;
+        if (localStorage.getItem("escapethehordehighscore") !== null) {
+            highscore = localStorage.getItem("escapethehordehighscore");
+        }
+        function updateHighscore() {
+            localStorage.setItem("escapethehordehighscore", highscore);
+        }
+    </script>
+</body>
+
+</html>

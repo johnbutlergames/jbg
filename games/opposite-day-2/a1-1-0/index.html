@@ -1,0 +1,405 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Opposite Day 2";
+        var dimensions = { width: 1000, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.intro = false;
+        Loading.loaded = true;
+        window.setInterval(update, 10);
+        var t = 0;
+
+        function main() {
+            game.update();
+            game.draw();
+            t++;
+        }
+
+        var game = {
+            backgroundOffset: {
+                x: 0,
+                y: 0,
+            },
+            update: function () {
+                this.objects.update();
+                this.input.update();
+                this.cam.update();
+            },
+            draw: function () {
+                ctx.save();
+                ctx.translate(500, 500);
+                ctx.scale(this.cam.zoom, this.cam.zoom);
+                ctx.translate(-this.cam.x, -this.cam.y);
+
+                this.drawBackground();
+                this.objects.draw();
+
+                ctx.restore();
+            },
+            drawBackground: function () {
+                var distance = 0.2;
+                var tileSize = 250;
+                var viewportSize = 1000 / this.cam.zoom;
+                var tileCount = Math.ceil(viewportSize / tileSize) * 2;
+                var xOffset = Math.floor(game.cam.x * (1 - distance) / (tileSize * 2)) * tileSize * 2 + game.cam.x * distance + this.backgroundOffset.x;
+                var yOffset = Math.floor(game.cam.y * (1 - distance) / (tileSize * 2)) * tileSize * 2 + game.cam.y * distance + this.backgroundOffset.y;
+
+                ctx.save();
+                ctx.translate(xOffset, yOffset);
+                ctx.translate(-tileCount / 2 * tileSize, -tileCount / 2 * tileSize);
+
+                for (var x = 0; x < tileCount; x++) {
+                    for (var y = 0; y < tileCount; y++) {
+                        if ((x + y) % 2 == 0) continue;
+                        ctx.save();
+                        ctx.translate(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2);
+
+                        ctx.fillStyle = "rgb(245,245,245)";
+                        if (x % 2 == 0) {
+                            ctx.rotate(45 * Math.PI / 180);
+                            ctx.fillRect(-tileSize / 2.5, -tileSize / 2.5, tileSize / 1.25, tileSize / 1.25);
+                        } else {
+                            ctx.fillRect(-tileSize / 2, -tileSize / 2, tileSize, tileSize);
+                        }
+
+                        ctx.restore();
+                    }
+                }
+
+                ctx.restore();
+            },
+            input: {
+                left: false,
+                right: false,
+                up: false,
+                down: false,
+                leftStart: false,
+                rightStart: false,
+                upStart: false,
+                downStart: false,
+                leftHold: 0,
+                rightHold: 0,
+                upHold: 0,
+                downHold: 0,
+                update: function () {
+                    this.left = Keys.keys[37] || Keys.keys[65];
+                    this.right = Keys.keys[39] || Keys.keys[68];
+                    this.up = Keys.keys[38] || Keys.keys[87];
+                    this.down = Keys.keys[40] || Keys.keys[83];
+                    var directions = ["left", "right", "up", "down"];
+                    for (var n = 0; n < 4; n++) {
+                        var dir = directions[n];
+                        if (this[`${dir}Start`]) this[`${dir}Start`] = false;
+                        else if (this[dir]) this[`${dir}Start`] = true;
+                        if (this[dir]) this[`${dir}Hold`]++;
+                        else this[`${dir}Hold`] = 0;
+                    }
+                }
+            },
+            objects: {
+                objects: [
+                    {
+                        type: "player",
+                        x: 500,
+                        y: 500,
+                        w: 40,
+                        h: 40,
+                        xmove: 0,
+                        ymove: 0,
+                        targetEyeHeight: 0,
+                        eyeHeight: 0,
+                        eyeDirection: 0,
+                        wallSlideAnimation: 0,
+                        wallSlideAnimationDirection: "right",
+                        stretchAnimation: 0,
+                        splatAnimation: 0,
+                        lastWallJump: false,
+                        lastJumpType: false,
+                        runSkew: 0,
+                        againstLeft: { current: false, last: 0 },
+                        againstRight: { current: false, last: 0 },
+                        againstTop: { current: false, last: 0 },
+                        againstBottom: { current: false, last: 0 }
+                    },
+                    { type: "block", x: 600, y: 0, w: 100, h: 600 },
+                    { type: "block", x: 300, y: 800, w: 600, h: 200 },
+                    { type: "block", x: -300, y: 0, w: 600, h: 1000 },
+                    { type: "block", x: 900, y: 0, w: 600, h: 1000 },
+                ],
+                update: function () {
+                    for (var o of this.objects) {
+                        if (o.type == "player") {
+                            this.updatePlayer(o);
+                            continue;
+                        }
+                    }
+                },
+                draw: function () {
+                    for (var o of this.objects) {
+                        if (o.type == "block") {
+                            this.drawBlock(o);
+                        } else if (o.type == "player") {
+                            this.drawPlayer(o);
+                        }
+                    }
+                },
+                updatePlayer: function (o) {
+                    this.updatePlayerAnimations(o);
+                    this.updatePlayerMovement(o);
+                    this.updatePlayerCollisions(o);
+                    this.updatePlayerCoyoteTime(o);
+                },
+                updatePlayerAnimations: function (o) {
+                    if (o.spawnTime > 0) o.spawnTime--;
+                    if (game.input.up) {
+                        o.targetEyeHeight--;
+                        o.targetEyeHeight = Math.max(o.targetEyeHeight, -5);
+                    } else {
+                        o.targetEyeHeight++;
+                        o.targetEyeHeight = Math.min(o.targetEyeHeight, 5);
+                        if (o.ymove <= 0) {
+                            if (o.targetEyeHeight > 0) o.targetEyeHeight -= 2;
+                        }
+                    }
+                    o.eyeHeight = o.eyeHeight * 0.9 + o.targetEyeHeight * 0.1;
+                    if (o.againstLeft.current && game.input.left) {
+                        o.wallSlideAnimation++;
+                        o.wallSlideAnimationDirection = "left";
+                    } else if (o.againstRight.current && game.input.right) {
+                        o.wallSlideAnimation++;
+                        o.wallSlideAnimationDirection = "right";
+                    } else {
+                        o.wallSlideAnimation--;
+                    }
+                    o.wallSlideAnimation = Math.max(Math.min(o.wallSlideAnimation, 15), 0);
+                    var targetStretch = Math.max(o.ymove, 0) * 2;
+                    o.stretchAnimation = o.stretchAnimation * 0.8 + targetStretch * 0.2;
+                    if (o.againstBottom.current) {
+                        o.splatAnimation++;
+                    } else {
+                        o.splatAnimation = 0;
+                    }
+                    if (o.againstBottom.current) {
+                        o.runSkew = o.runSkew * 0.9 + (-o.xmove / 50) * 0.1;
+                    } else {
+                        o.runSkew *= 0.9;
+                    }
+                    var target = o.xmove * 0.9;
+                    if (o.wallSlideAnimation) {
+                        if (o.wallSlideAnimationDirection == "right") {
+                            target = 5;
+                        } else {
+                            target = -5;
+                        }
+                    }
+                    target = Math.min(Math.max(target, -5), 5);
+                    o.eyeDirection = o.eyeDirection * 0.9 + target * 0.1;
+                },
+                updatePlayerCoyoteTime: function (o) {
+                    if (o.againstLeft.current) o.againstLeft.last = 0;
+                    else o.againstLeft.last++;
+                    if (o.againstRight.current) o.againstRight.last = 0;
+                    else o.againstRight.last++;
+                    if (o.againstTop.current) o.againstTop.last = 0;
+                    else o.againstTop.last++;
+                    if (o.againstBottom.current) o.againstBottom.last = 0;
+                    else o.againstBottom.last++;
+                },
+                updatePlayerMovement: function (o) {
+                    if (game.input.left) {
+                        o.xmove -= 0.4;
+                        if (game.input.leftHold > 15) o.xmove -= 0.1;
+                    }
+                    if (game.input.right) {
+                        o.xmove += 0.4;
+                        if (game.input.rightHold > 15) o.xmove += 0.1;
+                    }
+                    if (o.againstBottom.current) o.lastWallJump = false;
+                    if (game.input.up && o.ymove >= 0) {
+                        if (o.againstBottom.last < 5) {
+                            o.ymove = -10;
+                            o.lastJumpType = "ground";
+                        } else if (o.againstRight.last < 10 && game.input.left && o.lastWallJump != "right") {
+                            o.ymove = -8;
+                            o.xmove = -10;
+                            o.lastWallJump = "right";
+                            o.lastJumpType = "wall";
+                        } else if (o.againstLeft.last < 10 && game.input.right && o.lastWallJump != "left") {
+                            o.ymove = -8;
+                            o.xmove = 10;
+                            o.lastWallJump = "left";
+                            o.lastJumpType = "wall";
+                        }
+                    }
+
+                    if (o.againstBottom.current) {
+                        if (game.input.right || game.input.left) {
+                            o.xmove *= 0.9;
+                        } else {
+                            o.xmove *= 0.8;
+                        }
+                    } else {
+                        o.xmove *= 0.93;
+                    }
+                    o.ymove *= 0.98;
+
+                    if (o.againstRight.current && game.input.right) {
+                        o.ymove *= 0.8;
+                    }
+                    if (o.againstLeft.current && game.input.left) {
+                        o.ymove *= 0.8;
+                    }
+
+                    if (o.ymove >= 0) {
+                        o.ymove += 0.3;
+                        if (game.input.up) {
+                            o.ymove -= 0.05;
+                        }
+                    } else {
+                        if (o.againstBottom.last < 20) {
+                            o.ymove += 0.5;
+                            if (game.input.up) o.ymove -= 0.3;
+                        } else {
+                            //return;
+                            o.ymove += 0.3;
+                            if (game.input.up) o.ymove -= 0.15;
+                        }
+                    }
+                },
+                updatePlayerCollisions: function (o) {
+                    var player = o;
+                    player.againstLeft.current = false;
+                    player.againstRight.current = false;
+                    player.againstTop.current = false;
+                    player.againstBottom.current = false;
+                    var axises = ["x", "y"];
+                    var dims = ["w", "h"];
+                    var directions = [["Left", "Right"], ["Top", "Bottom"]];
+                    for (var n = 0; n < 2; n++) {
+                        var axis = axises[n];
+                        var dim = dims[n];
+                        player[axis] += player[`${axis}move`];
+                        for (var o of game.objects.objects) {
+                            if (o.type == "player") continue;
+                            if (!blocksCollidingEdge(player, o)) continue;
+                            if (player[axis] + player[dim] == o[axis]) {
+                                player[`against${directions[n][1]}`].current = true;
+                            } else if (player[axis] == o[axis] + o[dim]) {
+                                player[`against${directions[n][0]}`].current = true;
+                            }
+                            if (!blocksColliding(player, o)) continue;
+                            if (player[axis] + player[dim] / 2 < o[axis] + o[dim] / 2) {
+                                player[axis] = o[axis] - player[dim];
+                                player[`against${directions[n][1]}`].current = true;
+                            } else {
+                                player[axis] = o[axis] + o[dim];
+                                player[`against${directions[n][0]}`].current = true;
+                            }
+                            player[`${axis}move`] = 0;
+                        }
+                    }
+                },
+                drawPlayer: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+                    if (o.spawnTime) {
+                        ctx.globalAlpha = t % 20 < 10 ? 1 : 0.5;
+                    }
+
+                    var skew = o.wallSlideAnimation / 500;
+                    if (o.wallSlideAnimationDirection == "right") skew = -skew;
+                    if (skew) ctx.transform(1, skew, 0, 1, 0, 0);
+                    ctx.transform(1, 0, o.runSkew, 1, 0, 0);
+                    var stretch = o.stretchAnimation / 100;
+                    if (stretch) {
+                        ctx.translate(o.w / 2, 0);
+                        ctx.scale(1, 1 + stretch);
+                        ctx.translate(-o.w / 2, 0);
+                    }
+                    var splat = easeInBack(o.splatAnimation / 15) / 20;
+                    if (splat) {
+                        ctx.translate(o.w / 2, o.h);
+                        ctx.scale(1 + splat, 1 - splat);
+                        ctx.translate(-o.w / 2, -o.h);
+                    }
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(0, 0, o.w, o.h);
+
+                    ctx.translate(o.w / 2, o.h / 2);
+
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(o.eyeDirection * 1.5 - 7, o.eyeHeight - 7, 3.7, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(o.eyeDirection * 1.5 + 7, o.eyeHeight - 7, 3.7, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    ctx.restore();
+                },
+                drawBlock: function (o) {
+                    if (!o.drawType) o.drawType = "block";
+                    if (o.drawType == "block") {
+                        ctx.fillStyle = "black";
+                        ctx.fillRect(o.x, o.y, o.w, o.h);
+                    } else if (o.drawType == "glass") {
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(o.x, o.y, o.w, o.h);
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(o.x, o.y, o.w, o.h);
+                        ctx.clip();
+                        ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
+                        ctx.scale(1.2, 1.2);
+                        ctx.translate(-o.x - o.w / 2, -o.y - o.h / 2);
+                        game.drawBackground();
+                        ctx.restore();
+                        ctx.fillStyle = "rgba(0,0,0,0.02)";
+                        ctx.fillRect(o.x, o.y, o.w, o.h);
+                    }
+                }
+            },
+            cam: {
+                x: 0,
+                y: 0,
+                zoom: 1,
+                update: function () {
+                    var o = game.objects.objects.find(e => e.type == "player");
+                    var distToPlayer = distTo(this.x, this.y, o.x, o.y);
+                    var follow = 0.01;
+                    if (distToPlayer > 100) {
+                        follow += (distToPlayer - 100) / 5000;
+                    }
+                    this.x = this.x * (1 - follow) + (o.x + o.w / 2) * follow;
+                    this.y = this.y * (1 - follow) + (o.y + o.h / 2) * follow;
+
+                    //this.zoom = 1;
+                }
+            }
+        }
+
+        /*
+        Level: A level where the camera moves with the character but the character runs out of frame and appears in a different place
+        several times making use of cool camera action and portals. Maybe also have lots of characters in a level and you have to
+        control all of them correctly jumping over spikes and stuff to win
+
+        a level where the player presses both left and right to rip themselves apart.
+
+        a level where the player jumps left repeatedly, changing gravity and ending up at the middle of a spiral
+
+        a level where the player falls into a big pit that says "no way out", and has to go into the walls, turning them
+        blue and becoming the eyes to get up to the other side again
+
+        a level with broken mirrors that make it hard to see where you're going?
+        */
+    </script>
+</body>
+
+</html>

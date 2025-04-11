@@ -1,0 +1,333 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.title = "Pathfinder";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var loads = 0;
+            var loadingScreen = true;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = [];
+            var audios = [];
+            if(audios.length+imgs.length==0) {
+                loadingScreen = false;
+            }
+            var keys = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin:0px;overflow:hidden;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                down: false
+            }
+            var _math = {
+                random: function(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1) ) + min;
+                },
+                distanceTo: function(x1,y1,x2,y2) {
+                    return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+                },
+                average: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    while(num < arr.length) {
+                        num2 = num2 + arr[num];
+                        num = num + 1;
+                    }
+                    return num2/arr.length;
+                },
+                averageWeighted: function(arr) {
+                    var num = 0;
+                    var num2 = 0;
+                    var num3 = 0;
+                    while(num < arr.length) {
+                        num3 += arr[num];
+                        num2 += arr[num]*arr[num+1];
+                        num += 2;
+                    }
+                    return num2/num3;
+                }
+            }
+            function doAll() {
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                if(!loadingScreen) {
+                    program();
+                } else {
+                    _canvas.font = "40px Arial";
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Loading "+Math.floor(loads/(audios.length+imgs.length)*100)+"%",500,200);
+                    _canvas.fillStyle = 'green';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(400,250,loads/(audios.length+imgs.length)*200,50);
+                    _canvas.strokeRect(400,250,200,50);
+                    if(!navigator.onLine) {
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("No Internet",500,450);
+                    }
+                    if(loads==audios.length+imgs.length) {
+                        _canvas.strokeRect(437,350,125,50);
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("PLAY",500,390);
+                        _canvas.fillStyle = 'rgb(0,0,0,0.5)';
+                        if(_mouse.InBox(437,350,125,50)) {
+                            _canvas.fillRect(437,350,125,50);
+                            if(_mouse.click) {
+                                loadingScreen = false;
+                            }
+                        }
+                    }
+                }
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+            }
+
+            //start the program
+            window.setInterval(doAll,20);
+
+            function program() {
+                var blockWidth = 1000/width;
+                var blockHeight = 500/height;
+                _canvas.lineWidth = 1;
+                _canvas.strokeStyle = 'black';
+                _canvas.fillStyle = 'black';
+                var x = 0;
+                while(x < width) {
+                    var y = 0;
+                    while(y < height) {
+                        if(blocks[x][y]) {
+                            _canvas.fillRect(x*blockWidth,y*blockHeight,blockWidth,blockWidth);
+                        }
+                        y++;
+                    }
+                    x++;
+                }
+                var placeBlock = false;
+                var deleteBlock = false;
+                _mouse.x = Math.min(Math.max(_mouse.x,1),999);
+                _mouse.y = Math.min(Math.max(_mouse.y,1),499);
+                if(_mouse.down) {
+                    var x = Math.floor(_mouse.x/blockWidth);
+                    var y = Math.floor(_mouse.y/blockHeight);
+                    blocks[x][y] = 1;
+                    placeBlock = true;
+                }
+                if(keys[68]) {
+                    var x = Math.floor(_mouse.x/blockHeight);
+                    var y = Math.floor(_mouse.y/blockWidth);
+                    blocks[x][y] = 0;
+                    deleteBlock = true;
+                }
+                if(keys[69]) {
+                    var x = Math.floor(_mouse.x/blockHeight);
+                    var y = Math.floor(_mouse.y/blockWidth);
+                    end[0] = x;
+                    end[1] = y;
+                }
+                if(keys[83]) {
+                    var x = Math.floor(_mouse.x/blockHeight);
+                    var y = Math.floor(_mouse.y/blockWidth);
+                    start[0] = x;
+                    start[1] = y;
+                }
+                blocks[start[0]][start[1]] = 0;
+                blocks[end[0]][end[1]] = 0;
+                var l = path.length-1;
+                if(deleteBlock) {
+                    path = false;
+                }
+                if(path!=false&&(path[l][0]!=start[0]||path[l][1]!=start[1]||path[0][0]!=end[0]||path[0][1]!=end[1])) {
+                    path = false;
+                }
+                if(path!=false&&placeBlock) {
+                    var n = 0;
+                    while(n < path.length) {
+                        if(blocks[path[n][0]][path[n][1]]) {
+                            path = false;
+                            break;
+                        }
+                        n++;
+                    }
+                }
+                var nodes = [{x:start[0],y:start[1]}];
+                var searchedNodes = [];
+                while(path===false&&nodes.length>0) {
+                    var node = nodes[0];
+                    var x = node.x;
+                    var y = node.y;
+                    if(x===end[0]&&y===end[1]) {
+                        path = [[node.x,node.y]];
+                        var nodeId = node.lastId;
+                        while(nodeId!==undefined) {
+                            var node = searchedNodes[nodeId];
+                            path.push([node.x,node.y]);
+                            nodeId = node.lastId;
+                        }
+                    } else {
+                        var possibleMoves = [];
+                        if(x>0) {
+                            possibleMoves.push([x-1,y]);
+                        }
+                        if(x<width-1) {
+                            possibleMoves.push([x+1,y]);
+                        }
+                        if(y>0) {
+                            possibleMoves.push([x,y-1]);
+                        }
+                        if(y<height-1) {
+                            possibleMoves.push([x,y+1]);
+                        }
+                        var n = 0;
+                        while(n < possibleMoves.length) {
+                            var valid = true;
+                            var p = possibleMoves[n];
+                            var n2 = 0;
+                            while(n2 < searchedNodes.length) {
+                                var s = searchedNodes[n2];
+                                if(s.x===p[0]&&s.y===p[1]) {
+                                    valid = false;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            n2 = 0;
+                            while(n2 < nodes.length) {
+                                var s = nodes[n2];
+                                if(s.x===p[0]&&s.y===p[1]) {
+                                    valid = false;
+                                    break;
+                                }
+                                n2++;
+                            }
+                            if(blocks[p[0]][p[1]]) {
+                                valid = false;
+                            }
+                            if(!valid) {
+                                possibleMoves.splice(n,1);
+                            } else {
+                                n++;
+                            }
+                        }
+                        searchedNodes.push(node);
+                        var n = 0;
+                        while(n < possibleMoves.length) {
+                            nodes.push({lastId:searchedNodes.length-1,x:possibleMoves[n][0],y:possibleMoves[n][1]});
+                            n++;
+                        }
+                        nodes.shift();
+                    }
+                }
+                if(path) {
+                    _canvas.fillStyle = 'rgb(255,255,0)';
+                    var n = 0;
+                    while(n < path.length) {
+                        _canvas.fillRect(path[n][0]*blockWidth,path[n][1]*blockHeight,blockWidth,blockHeight);
+                        n++;
+                    }
+                }
+                _canvas.fillStyle = 'lime';
+                _canvas.fillRect(start[0]*blockWidth,start[1]*blockHeight,blockWidth,blockHeight);
+                _canvas.fillStyle = 'red';
+                _canvas.fillRect(end[0]*blockWidth,end[1]*blockHeight,blockWidth,blockHeight);
+            }
+            var path = false;
+            var width = 50;
+            var height = 25;
+            var start = [0,0];
+            var end = [5,5];
+            var blocks = [];
+            var x = 0;
+            while(x < width) {
+                blocks.push([]);
+                var y = 0;
+                while(y < height) {
+                    blocks[x].push(0);
+                    y++;
+                }
+                x++;
+            }
+        </script>
+    </body>
+</html>

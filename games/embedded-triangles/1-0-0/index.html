@@ -1,0 +1,255 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <script>
+            document.title = "Inscribed Triangle Theory";
+            var dimensions = {width:1000,height:500,offset:{x:0,y:0},zoom:1};
+            var loads = 0;
+            var loadingScreen = true;
+            var fps = 0;
+            var lastTime = 0;
+            var imgs = [];
+            var audios = [];
+            if(audios.length+imgs.length==0) {
+                loadingScreen = false;
+            }
+            var keys = [];
+            var canvas = document.createElement('CANVAS');
+            document.body.appendChild(canvas);
+            document.body.style = 'margin:0px;overflow:hidden;';
+            canvas.style = 'position: absolute; margin: 0px; background-color: white;';
+            canvas.innerHTML = 'Your browser does not support canvas. To play this game, you need to play on a canvas supported browser.';
+            var n = 0;
+            while(n < imgs.length) {
+                var img = document.createElement('IMG');
+                img.src = imgs[n];
+                img.style = 'display: none;';
+                imgs[n] = img;
+                img.addEventListener('load',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            var n = 0;
+            while(n < audios.length) {
+                var aud = document.createElement('AUDIO');
+                aud.src = audios[n];
+                aud.style = 'display: none;';
+                audios[n] = aud;
+                aud.addEventListener('canplaythrough',function() {
+                    loads++;
+                });
+                n = n + 1;
+            }
+            window.addEventListener('keyup',function(event) {
+                keys[event.keyCode] = false;
+            });
+            window.addEventListener('keydown',function(event) {
+                keys[event.keyCode] = true;
+            });
+            canvas.addEventListener('mousedown',function() {
+                _mouse.down = true;
+            });
+            canvas.addEventListener('mouseup',function(event) {
+                _mouse.down = false;
+                _mouse.click = true;
+            });
+            canvas.addEventListener('mousemove',function(event) {
+                _mouse.x = Math.max(Math.min((event.pageX-dimensions.offset.x/2)/dimensions.zoom,dimensions.width),0);
+                _mouse.y = Math.max(Math.min((event.pageY-dimensions.offset.y/2)/dimensions.zoom,dimensions.height),0);
+            });
+            var _canvas = canvas.getContext('2d');
+            var _mouse = {
+                InBox: function(x,y,w,h) {
+                    return this.x>=x&&this.x<=x+w&&this.y>=y&&this.y<=y+h;
+                },
+                ClickInBox: function(x,y,w,h) {
+                    return this.InBox(x,y,w,h)&&this.click;
+                },
+                x: 250,
+                y: 250,
+                click: false,
+                down: false
+            }
+            var _math = {
+                random: function(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1) ) + min;
+                },
+                distanceTo: function(x1,y1,x2,y2) {
+                    return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+                },
+                directionTo: function(cx, cy, ex, ey) {
+                    var dy = ey - cy;
+                    var dx = ex - cx;
+                    var theta = Math.atan2(dy, dx);
+                    theta *= -180 / Math.PI;
+                    theta += 90;
+                    return theta;
+                },
+                rotate: function(cx, cy, x, y, angle) {
+                    var radians = (Math.PI / 180) * angle,
+                        cos = Math.cos(radians),
+                        sin = Math.sin(radians),
+                        nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                        ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                    return [nx, ny];
+                }
+            }
+            function doAll() {
+                var d = new Date();
+                var t = d.getTime();
+                fps = 1/((t-lastTime)/1000);
+                lastTime = t;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                var zoom = Math.min(canvas.width/dimensions.width,canvas.height/dimensions.height);
+                var offset = {x:canvas.width-dimensions.width*zoom,y:canvas.height-dimensions.height*zoom};
+                if(offset.x&&offset.y) {
+                    if(offset.x>offset.y) {
+                        offset.y = 0;
+                    } else if(offset.y>offset.x) {
+                        offset.x = 0;
+                    } else {
+                        offset.x = 0;
+                        offset.y = 0;
+                    }
+                }
+                _canvas.clearRect(0,0,canvas.width,canvas.height);
+                _canvas.translate(offset.x/2,offset.y/2);
+                _canvas.scale(zoom,zoom);
+                if(!loadingScreen) {
+                    program();
+                } else {
+                    _canvas.font = "40px Arial";
+                    _canvas.fillStyle = 'black';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText("Loading "+Math.floor(loads/(audios.length+imgs.length)*100)+"%",500,200);
+                    _canvas.fillStyle = 'green';
+                    _canvas.strokeStyle = 'black';
+                    _canvas.lineWidth = 3;
+                    _canvas.fillRect(400,250,loads/(audios.length+imgs.length)*200,50);
+                    _canvas.strokeRect(400,250,200,50);
+                    if(!navigator.onLine) {
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("No Internet",500,450);
+                    }
+                    if(loads==audios.length+imgs.length) {
+                        _canvas.strokeRect(437,350,125,50);
+                        _canvas.fillStyle = 'black';
+                        _canvas.fillText("PLAY",500,390);
+                        _canvas.fillStyle = 'rgb(0,0,0,0.5)';
+                        if(_mouse.InBox(437,350,125,50)) {
+                            _canvas.fillRect(437,350,125,50);
+                            if(_mouse.click) {
+                                loadingScreen = false;
+                            }
+                        }
+                    }
+                }
+                _canvas.scale(1,1);
+                _canvas.setTransform(1,0,0,1,0,0);
+                _canvas.fillStyle = 'rgb(20,20,20)';
+                var x = offset.x?offset.x:canvas.width*2;
+                var y = offset.y?offset.y:canvas.height*2;
+                if(offset.x||offset.y) {
+                    _canvas.fillRect(0,0,x/2,y/2);
+                    _canvas.fillRect(canvas.width-x/2,canvas.height-y/2,x/2,y/2);
+                }
+                dimensions.offset = offset;
+                dimensions.zoom = zoom;
+                _mouse.click = false;
+            }
+
+            //start the program
+            window.setInterval(doAll,20);
+
+            function program() {
+                _canvas.strokeStyle = 'black';
+                _canvas.lineWidth = 1;
+                _canvas.fillStyle = 'black';
+                var circle = findCircle(points[0][0],points[0][1],points[1][0],points[1][1],points[2][0],points[2][1]);
+                if(circle) {
+                    _canvas.beginPath();
+                    _canvas.arc(circle[0],circle[1],circle[2],0,2*Math.PI);
+                    _canvas.stroke();
+                    _canvas.beginPath();
+                    _canvas.arc(circle[0]+0.1,circle[1]+0.1,circle[2],0,2*Math.PI);
+                    _canvas.stroke();
+                } else {
+                    _canvas.font = '30px Times New Roman';
+                    _canvas.textAlign = 'center';
+                    _canvas.fillText('Points cannot be colinear.',500,300);
+                }
+                var n = 0;
+                while(n < points.length) {
+                    _canvas.beginPath();
+                    _canvas.arc(points[n][0],points[n][1],3,0,2*Math.PI);
+                    _canvas.fill();
+                    n++;
+                }
+                _canvas.beginPath();
+                _canvas.moveTo(points[0][0],points[0][1]);
+                _canvas.lineTo(points[1][0],points[1][1]);
+                _canvas.lineTo(points[2][0],points[2][1]);
+                _canvas.closePath();
+                _canvas.stroke();
+                if(_mouse.down) {
+                    if(focusPoint===false) {
+                        var n = 0;
+                        while(n < points.length) {
+                            if(_math.distanceTo(_mouse.x,_mouse.y,points[n][0],points[n][1])<10) {
+                                focusPoint = n;
+                                break;
+                            }
+                            n++;
+                        }
+                    } else {
+                        points[focusPoint][0] = _mouse.x;
+                        points[focusPoint][1] = _mouse.y;
+                    }
+                }
+                if(_mouse.click) {
+                    focusPoint = false;
+                }
+            }
+            function findCircle(x1,y1,x2,y2,x3,y3) {
+                var mid1 = [(x1+x2)/2,(y1+y2)/2];
+                var mid2 = [(x3+x2)/2,(y3+y2)/2];
+                var angle1 = _math.directionTo(x1,y1,x2,y2);
+                var r1 = _math.rotate(mid1[0],mid1[1],mid1[0],mid1[1]-100,angle1+90);
+                var per1 = [mid1[0],mid1[1],r1[0],r1[1]];
+                var angle2 = _math.directionTo(x3,y3,x2,y2);
+                var r2 = _math.rotate(mid2[0],mid2[1],mid2[0],mid2[1]-100,angle2+90);
+                var per2 = [mid2[0],mid2[1],r2[0],r2[1]];
+                var intersection = findIntersection(per1[0],per1[1],per1[2],per1[3],per2[0],per2[1],per2[2],per2[3]);
+                if(intersection!==true&&intersection!==false) {
+                    return [intersection[0],intersection[1],_math.distanceTo(intersection[0],intersection[1],x1,y1)];
+                } else {
+                    return false;
+                }
+            }
+            function findIntersection(x1,y1,x2,y2,x3,y3,x4,y4) {
+                var slope1 = (y2-y1)/(x2-x1);
+                var slope2 = (y3-y4)/(x3-x4);
+                var start1 = y1-x1*slope1;
+                var start2 = y3-x3*slope2;
+                if(slope1===slope2) {
+                    if(start1===start2) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                var xCor = (start2-start1)/(slope1-slope2);
+                var yCor = slope1*xCor+start1;
+                if(isNaN(xCor)||isNaN(yCor)) {
+                    return false;
+                } else {
+                    return [xCor,yCor];
+                }
+            }
+            var points = [[100,400],[400,200],[100,100]];
+            var focusPoint = false;
+        </script>
+    </body>
+</html>

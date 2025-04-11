@@ -1,0 +1,1131 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Sandbox";
+        var dimensions = { width: 2000, height: 1000 };
+        var images = {
+            "eraserIcon": "images/eraser.png",
+            "sandIcon": "images/sand.png",
+            "waterIcon": "images/water.png",
+            "stoneIcon": "images/stone.png",
+            "lavaIcon": "images/lava.png",
+            "smokeIcon": "images/smoke.png",
+            "landscapesIcon": "images/landscapes.png",
+            "particlesIcon": "images/particles.png",
+            "worldSettingsIcon": "images/world-settings.png",
+            "mobsIcon": "images/fish.png",
+            "fishSpritesheet": "images/fish-spritesheet.png",
+            "preset0": "images/preset0.png",
+            "preset1": "images/preset1.png",
+            "preset2": "images/preset2.png",
+            "preset3": "images/preset3.png",
+            "preset4": "images/preset4.png",
+            "preset5": "images/preset5.png"
+        };
+        var audios = {};
+
+        initialize();
+        window.setInterval(update, 10);
+
+        function main() {
+            if (word.endsWith("JOHNBUTLERGAMES")) {
+                word = "";
+                johnbutlergames();
+            }
+            t++;
+            game.tick();
+        }
+
+        function resolveBlockCollision(o, o2) {
+            if (!o2.w) o2.w = 1;
+            if (!o2.h) o2.h = 1;
+            var distToLeft = o.x + o.w - o2.x;
+            var distToRight = o2.x + o2.w - o.x;
+            var distToTop = o.y + o.h - o2.y;
+            var distToBottom = o2.y + o2.h - o2.y;
+            distToLeft -= o.xmove;
+            distToRight += o.xmove;
+            distToTop -= o.ymove;
+            distToBottom += o.ymove;
+            var min = Math.min(distToLeft, distToRight, distToTop, distToBottom);
+            if (distToLeft == min) {
+                o.x = o2.x - o.w;
+                o.xmove *= -0.1;
+            } else if (distToRight == min) {
+                o.x = o2.x + o2.w;
+                o.xmove *= -0.1;
+            } else if (distToTop == min) {
+                o.y = o2.y - o.h;
+                o.ymove *= -0.1;
+            } else if (distToBottom == min) {
+                o.y = o2.y + o2.h;
+                o.ymove *= -0.1;
+            }
+        }
+
+        var game = {
+            boardSize: { w: 75, h: 50 },
+            paused: false,
+            tick: function () {
+                this.update();
+                this.draw();
+            },
+            update: function () {
+                if (t % 3 == 0 && !this.paused) this.objects.tick();
+                if (!this.paused) this.objects.updateMobs();
+                this.ui.update();
+            },
+            draw: function () {
+                ctx.fillStyle = "rgb(220,245,255)";
+                ctx.fillRect(0, 0, 2000, 1000);
+
+                this.objects.draw(500, 0, 1500, 1000);
+                this.particles.draw(500, 0, 1500, 1000);
+                this.ui.draw();
+            },
+            objects: {
+                objects: [],
+                mobs: [],
+                matrix: [],
+                typeGroups: [],
+                tick: function () {
+                    this.matrix = this.initializeMatrix();
+                    this.typeGroups = this.initializeTypeGroups();
+                    this.updateDormancy();
+                    this.updateObjects();
+                },
+                updateMobs: function () {
+                    for (var o of this.mobs) {
+                        this.updateMob(o);
+                    }
+                    this.mobs = this.mobs.filter(e => !e.delete);
+                },
+                draw: function (x, y, w, h) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    w = w / game.boardSize.w;
+                    h = h / game.boardSize.h;
+                    for (var o of this.objects) {
+                        if (o.dormant) {
+                            //ctx.globalAlpha = 0.2;
+                        } else {
+                            ctx.globalAlpha = 1;
+                        }
+                        ctx.fillStyle = this.getColor(o);
+                        ctx.fillRect(o.x * w, o.y * h, w, h);
+                    }
+                    ctx.globalAlpha = 1;
+                    for (var o of this.mobs) {
+                        this.drawMob(o, w, h);
+                    }
+                    ctx.restore();
+                },
+                initializeMatrix: function () {
+                    var matrix = [];
+                    for (var y = 0; y < game.boardSize.h; y++) {
+                        matrix.push([]);
+                        for (var x = 0; x < game.boardSize.w; x++) {
+                            matrix[y].push(false);
+                        }
+                    }
+                    for (var o of this.objects) {
+                        if (!matrix[o.y]) continue;
+                        matrix[o.y][o.x] = o;
+                    }
+                    return matrix;
+                },
+                initializeTypeGroups: function () {
+                    var typeGroups = {
+                        stone: [],
+                        sand: [],
+                        water: [],
+                        lava: [],
+                        smoke: []
+                    };
+                    for (var o of this.objects) {
+                        typeGroups[o.type].push(o);
+                    }
+                    return typeGroups;
+                },
+                updateDormancy: function () {
+                    for (var o of this.objects) {
+                        if (o.force?.x || o.force?.y) {
+                            o.dormant = false;
+                            continue;
+                        }
+                        o.dormant = this.trappedCheck(o, this.matrix, this.typeGroups);
+                    }
+                },
+                updateObjects: function () {
+                    for (var o of this.objects) {
+                        o.ymove = 0;
+                        o.xmove = 0;
+                        if (o.force) {
+                            o.xmove = o.force.x;
+                            o.ymove = o.force.y;
+                            o.force = { x: 0, y: 0 };
+                        }
+                    }
+                    for (var o of this.typeGroups.sand) {
+                        if (o.dormant) continue;
+                        this.updateObjectMovement(o, 2, false, 1, this.matrix, this.typeGroups);
+                    }
+                    for (var o of this.typeGroups.water) {
+                        if (o.dormant) continue;
+                        var steps = Math.max(o.x, game.boardSize.w - o.x) + 1;
+                        this.updateObjectMovement(o, steps, true, 1, this.matrix, this.typeGroups);
+                    }
+                    for (var o of this.typeGroups.lava) {
+                        if (o.dormant) continue;
+                        this.updateObjectMovement(o, 3, false, 1, this.matrix, this.typeGroups);
+                        this.updateLavaAndWaterCollisions(o, this.matrix, this.typeGroups);
+                    }
+                    for (var o of this.typeGroups.smoke) {
+                        if (o.dormant) continue;
+                        var ymove = -1;
+                        if (Math.random() < 0.05) ymove = 1;
+                        this.updateObjectMovement(o, 5, false, ymove, this.matrix, this.typeGroups);
+                    }
+                    for (var o of this.objects) {
+                        if (!o.xmove) continue;
+                        var o2 = this.convertTargetToObject(o.x + o.xmove, o.y, this.matrix);
+                        if (o2) {
+                            if (this.canMoveThrough(o.type, o2.type)) {
+                                o.x += o.xmove;
+                                o2.x -= o.xmove;
+                                o.x = Math.max(Math.min(o.x, game.boardSize.w), 0);
+                                o2.x = Math.max(Math.min(o2.x, game.boardSize.w), 0);
+                                this.matrix[o.y][o.x] = o;
+                                this.matrix[o2.y][o2.x] = o2;
+                            }
+                        } else {
+                            o.x += o.xmove;
+                            o.x = Math.max(Math.min(o.x, game.boardSize.w), 0);
+                            this.matrix[o.y][o.x] = o;
+                            this.matrix[o.y][o.x - o.xmove] = false;
+                        }
+                    }
+                    for (var o of this.objects) {
+                        if (!o.ymove) continue;
+                        var o2 = this.convertTargetToObject(o.x, o.y + o.ymove, this.matrix);
+                        if (o2) {
+                            if (this.canFallThrough(o.type, o2.type)) {
+                                o.y += o.ymove;
+                                o2.y -= o.ymove;
+                                o.y = Math.max(Math.min(o.y, game.boardSize.h - 1), 0);
+                                o2.y = Math.max(Math.min(o2.y, game.boardSize.h - 1), 0);
+                                this.matrix[o.y][o.x] = o;
+                                this.matrix[o2.y][o2.x] = o2;
+                            }
+                        } else {
+                            o.y += o.ymove;
+                            o.y = Math.max(Math.min(o.y, game.boardSize.h - 1), 0);
+                            this.matrix[o.y][o.x] = o;
+                            this.matrix[o.y - o.ymove][o.x] = false;
+                        }
+                    }
+                },
+                updateLavaAndWaterCollisions: function (o) {
+                    for (var x = -1; x < 2; x++) {
+                        if (x == 0) continue;
+                        var o2 = this.convertTargetToObject(o.x + x, o.y, this.matrix);
+                        if (o2.type == "water") {
+                            o2.type = "smoke";
+                            o.type = "sand";
+                        }
+                        var o2 = this.convertTargetToObject(o.x, o.y + x, this.matrix);
+                        if (o2.type == "water") {
+                            o2.type = "smoke";
+                            o.type = "sand";
+                        }
+                    }
+                },
+                updateObjectMovement: function (o, steps, selfEncounter, ymove, matrix, typeGroups) {
+                    var middle = this.convertTargetToObject(o.x, o.y + ymove, matrix);
+                    if (this.canFallThrough(o.type, middle.type)) {
+                        o.ymove = ymove;
+                        if (o.type == "smoke") {
+                            o.xmove = Math.floor(Math.random() * 2) * 2 - 1;
+                            if (Math.random() < 0.3) o.xmove = 0;
+                        }
+                        return;
+                    }
+                    var leftBlocked = false;
+                    var rightBlocked = false;
+                    if (o.type == "smoke") {
+                        if (Math.random() < 0.5) {
+                            leftBlocked = true;
+                        } else {
+                            rightBlocked = true;
+                        }
+                    }
+                    var firstSelfEncounter = 0;
+                    for (var x = 1; x < steps; x++) {
+                        var left = this.convertTargetToObject(o.x - x, o.y + ymove, matrix);
+                        var right = this.convertTargetToObject(o.x + x, o.y + ymove, matrix);
+                        var leftUpper = this.convertTargetToObject(o.x - x, o.y, matrix);
+                        var rightUpper = this.convertTargetToObject(o.x + x, o.y, matrix);
+                        if (!firstSelfEncounter && x < 5 && selfEncounter) {
+                            var leftSame = leftUpper.type == o.type;
+                            var rightSame = rightUpper.type == o.type
+                            if (leftSame && rightSame) {
+                                if (Math.random() < 0.5) {
+                                    firstSelfEncounter = -steps;
+                                } else {
+                                    firstSelfEncounter = steps;
+                                }
+                            } else if (leftSame) {
+                                firstSelfEncounter = -steps;
+                            } else if (rightSame) {
+                                firstSelfEncounter = steps;
+                            }
+                        }
+                        var currentLeftBlock = !this.canFallThrough(o.type, leftUpper.type) && leftUpper.type != o.type;
+                        var currentRightBlock = !this.canFallThrough(o.type, rightUpper.type) && rightUpper.type != o.type;
+                        leftBlocked = leftBlocked || currentLeftBlock;
+                        rightBlocked = rightBlocked || currentRightBlock;
+                        if (leftBlocked && rightBlocked) break;
+                        var fallLeft = this.canFallThrough(o.type, left.type) && !leftBlocked;
+                        var fallRight = this.canFallThrough(o.type, right.type) && !rightBlocked;
+                        if (fallLeft) {
+                            o.xmove = -1;
+                            if (x == 1) o.ymove = ymove;
+                            if (middle.type != o.type || Math.random() > 0.5) break;
+                        } else if (fallRight) {
+                            o.xmove = 1;
+                            if (x == 1) o.ymove = ymove;
+                            if (middle.type != o.type || Math.random() > 0.5) break;
+                        }
+                    }
+                    if (fallLeft && fallRight) {
+                        if (Math.random() < 0.5) {
+                            fallLeft = false;
+                        } else {
+                            fallRight = false;
+                        }
+                    }
+                    if (!fallLeft && !fallRight && firstSelfEncounter) {
+                        if (firstSelfEncounter < 0) {
+                            o.xmove = -1;
+                        } else {
+                            o.xmove = 1;
+                        }
+                    }
+                    if (o.type == "smoke" && o.xmove == 0) {
+                        if (leftBlocked && rightBlocked) {
+                            o.xmove = Math.floor(Math.random() * 2) * 2 - 1;
+                        } else if (leftBlocked) {
+                            o.xmove = 1;
+                        } else {
+                            o.xmove = -1;
+                        }
+                    }
+                },
+                trappedCheck: function (o, matrix, typeGroups) {
+                    if (o.type == "stone") return true;
+                    var ymove = 1;
+                    if (o.type == "smoke") ymove = -1;
+                    var trapped = true;
+                    for (var x = -1; x < 2; x++) {
+                        for (var y = 0; y < 2; y++) {
+                            if (x == 0 && y == 0) continue;
+                            if (y == 1 && x != 0 && o.type == "sand") continue;
+                            var o2 = this.convertTargetToObject(x + o.x, y * ymove + o.y, matrix);
+                            if (this.canFallThrough(o.type, o2.type)) {
+                                trapped = false;
+                                break;
+                            }
+                        }
+                    }
+                    return trapped;
+                },
+                convertTargetToObject: function (x, y, matrix) {
+                    if (matrix[y] && matrix[y][x]) {
+                        return matrix[y][x];
+                    } else if (x < 0 || x > game.boardSize.w - 1 || y < 0 || y > game.boardSize.h - 1) {
+                        return { x: x, y: y, type: "stone", xmove: 0, ymove: 0 };
+                    } else {
+                        return { x: x, y: y, type: "air", xmove: 0, ymove: 0 };
+                    }
+                },
+                canFallThrough: function (type1, type2) {
+                    if (type2 == "stone") return false;
+                    if (type2 == "air") return true;
+                    if (type1 == "sand") {
+                        if (type2 == "smoke") return true;
+                        if (type2 == "water") return true;
+                        if (type2 == "lava") return false;
+                    }
+                    if (type1 == "lava") {
+                        if (type2 == "sand") return false;
+                        if (type2 == "water") return true;
+                        if (type2 == "smoke") return true;
+                    }
+                    if (type1 == "water") {
+                        if (type2 == "lava") return true;
+                        if (type2 == "sand") return false;
+                        if (type2 == "smoke") return true;
+                    }
+                    return false;
+                },
+                canMoveThrough: function (type1, type2) {
+                    if (type2 == "air") return true;
+                    if (type2 == "smoke") return true;
+                    return false;
+                },
+                getColor: function (o) {
+                    if (o.type == "stone") {
+                        var n = noise(o.x * 1.5, o.y * 1.5, 1) ** 2;
+                        var l = 0.8 - n * 0.4;
+                        return `rgb(${60 * l},${60 * l},${60 * l})`;
+                    }
+                    if (o.type == "sand") {
+                        var n = noise(o.x / 2, o.y / 2, 1);
+                        var l = 0.9 + n * 0.2;
+                        return `rgb(${200 * l},${150 * l},${25 * l})`;
+                    }
+                    if (o.type == "water") {
+                        var n = noise(o.x / 8, o.y / 2 + t / 200, t / 200);
+                        return `rgb(0,${n * 100},255)`;
+                    }
+                    if (o.type == "lava") {
+                        var n = noise(o.x / 8, o.y / 8, t / 1000);
+                        var l = (Math.sin(n * 10 + t / 200) + 1) / 2;
+                        return `rgb(${l * 100 + 155},${l * 50},0)`;
+                    };
+                    if (o.type == "smoke") {
+                        var n = noise(o.x / 2, o.y / 2, t / 100);
+                        var l = n;
+                        return `rgb(${l * 30 + 175},${l * 30 + 175},${l * 30 + 175})`;
+                    }
+                },
+                drawMob: function (o, w, h) {
+                    if (o.type == "fish") {
+                        var clip = { x: 0, y: 0, w: 100, h: 100 };
+                        if (o.color == "magenta") clip.x = 100;
+                        if (o.damageTime) clip.y = 100;
+                        var angle = o.animatedAngle;
+                        var horizontalFlip = o.horizontalFlip > 0;
+                        ctx.save();
+                        ctx.translate(o.x * w + o.w * w / 2, o.y * h + o.h * h / 2);
+                        ctx.rotate(angle * Math.PI / 180);
+                        ctx.scale(2, 2);
+                        if (horizontalFlip) ctx.scale(-1, 1);
+                        ctx.drawImage(images.fishSpritesheet, clip.x, clip.y, clip.w, clip.h, - o.w * w / 2, -o.h * h / 2, o.w * w, o.h * h);
+                        ctx.restore();
+                    }
+                },
+                updateMob: function (o) {
+                    if (o.damageTime) o.damageTime--;
+                    if (!o.init) {
+                        o.init = true;
+                        o.damageTime = 0;
+                        if (o.type == "fish") {
+                            o.w = 1;
+                            o.h = 1;
+                            o.xmove = 0;
+                            o.ymove = 0;
+                            o.dir = Math.random() * 360;
+                            o.angle = 0;
+                            o.animatedAngle = 0;
+                            o.horizontalFlip = 1;
+                            o.inWater = false;
+                            o.flailTime = 0;
+                            o.jumpTime = 0;
+                            o.touchingWallInWater = false;
+                            o.touchingGround = false;
+                            o.underground = false;
+                            o.inWaterTime = 0;
+                            o.lastTouchedWater = 0;
+                            o.health = 10;
+                            if (!o.color) o.color = "green";
+                        }
+                    }
+                    var surroundings = [];
+                    var distance = 2;
+                    var x = Math.floor(o.x + o.w / 2);
+                    var y = Math.floor(o.y + o.h / 2);
+                    for (var x2 = -distance; x2 <= distance; x2++) {
+                        for (var y2 = -distance; y2 <= distance; y2++) {
+                            var particle = game.objects.convertTargetToObject(x + x2, y + y2, game.objects.matrix);
+                            surroundings.push(particle);
+                        }
+                    }
+                    if (o.type == "fish") {
+                        o.angle += 360;
+                        o.angle %= 360;
+                        o.animatedAngle += turn(o.animatedAngle, o.angle) * 0.1;
+                        o.x += o.xmove;
+                        o.y += o.ymove;
+                        o.xmove *= 0.95;
+                        o.ymove *= 0.95;
+                        o.inWater = true;
+                        o.touchingGround = false;
+                        o.touchingWallInWater = false;
+                        var touching = [];
+                        var nonWaterDirections = [];
+                        for (var n = 0; n < surroundings.length; n++) {
+                            var o2 = surroundings[n];
+                            var largerBox = { x: o2.x - 0.1, y: o2.y - 0.1, w: 1.2, h: 1.2 };
+                            var box = { x: o2.x, y: o2.y, w: 1, h: 1 };
+                            if (o2.type != "water") {
+                                var dir = dirTo(o.x + o.w / 2, o.y + o.h / 2, o2.x + 0.5, o2.y + 0.5);
+                                dir = turn(o.dir, dir);
+                                nonWaterDirections.push(dir);
+                            }
+                            if (!blocksColliding(o, largerBox)) continue;
+                            if (o2.type != "water") o.inWater = false;
+                            if (!blocksColliding(o, box)) continue;
+                            touching.push(o2);
+                            if (o2.type == "air" || o2.type == "smoke") continue;
+                            if (o2.type == "water") {
+                                o.lastTouchedWater = 0;
+                                if (o2.xmove) o.xmove += o2.xmove * 0.01;
+                                if (o2.ymove) o.ymove += o2.ymove * 0.01;
+                                continue;
+                            }
+                            o.touchingGround = true;
+                        }
+                        if (!o.inWater) {
+                            o.inWater = true;
+                            for (var n = 0; n < surroundings.length; n++) {
+                                var o2 = surroundings[n];
+                                if (o2.y >= o.y) continue;
+                                if (Math.abs(o2.x - o.x) > 0.8) continue;
+                                if (o2.type == "air" || o2.type == "smoke") {
+                                    if (o2.y > o.y - 1) {
+                                        continue;
+                                    } else {
+                                        o.inWater = false;
+                                        break;
+                                    }
+                                }
+                                if (o2.type != "water") {
+                                    o.inWater = false;
+                                    break;
+                                }
+                            }
+                            if (o.inWater && o.touchingGround) {
+                                o.touchingGround = false;
+                                o.touchingWallInWater = true;
+                            }
+                        }
+                        if (o.inWater && !o.touchingWallInWater) {
+                            o.inWaterTime++;
+                        } else {
+                            o.inWaterTime = 0;
+                        }
+                        var types = touching.map(e => e.type);
+                        o.underground = true;
+                        for (var n = 0; n < types.length; n++) {
+                            if (types[n] == "air" || types[n] == "water" || types[n] == "smoke") {
+                                o.underground = false;
+                                break;
+                            }
+                        }
+                        if (nonWaterDirections.length > 0) {
+                            var avg = nonWaterDirections.reduce((a, b) => a + b) / nonWaterDirections.length;
+                            o.dir += avg + 180 + Math.random() * 90 - 45;
+                        }
+                        if (!o.underground) {
+                            for (var n = 0; n < touching.length; n++) {
+                                var o2 = touching[n];
+                                if (o2.type == "stone") {
+                                    resolveBlockCollision(o, o2);
+                                }
+                            }
+                        }
+                        if (o.underground) {
+                            o.xmove = 0;
+                            o.ymove = 0;
+                            o.flailTime++;
+                            o.dir = Math.random() * 360;
+                            if (o.flailTime > 80) {
+                                o.flailTime = 0;
+                                o.animatedAngle += 20;
+                                o.health--;
+                                o.damageTime = 10;
+                            }
+                        } else if (o.inWater) {
+                            if (o.touchingWallInWater) {
+                                for (var n = 0; n < touching.length; n++) {
+                                    var o2 = touching[n];
+                                    if (o2.type != "smoke" && o2.type != "air" && o2.type != "water") {
+                                        resolveBlockCollision(o, o2);
+                                    }
+                                }
+                            }
+                            if (o.angle > 160 && o.inWaterTime > 20) {
+                                o.angle = 0;
+                            }
+                            if (!nonWaterDirections.length) {
+                                var distTo90 = turn(o.dir, 90);
+                                var distTo270 = turn(o.dir, 270);
+                                if (Math.abs(distTo90) < Math.abs(distTo270)) {
+                                    if (Math.abs(distTo90) > 10) {
+                                        o.dir += distTo90 * 0.002;
+                                    }
+                                    o.angle = o.dir + distTo90 * 0.6 - 90;
+                                    o.horizontalFlip = o.horizontalFlip * 0.99 - 1 * 0.01;
+                                } else {
+                                    if (Math.abs(distTo270) > 10) {
+                                        o.dir += distTo270 * 0.002;
+                                    }
+                                    o.angle = o.dir + distTo270 * 0.6 + 90;
+                                    o.horizontalFlip = o.horizontalFlip * 0.99 + 1 * 0.01;
+                                }
+                                if (Math.random() < 0.005) {
+                                    o.dir += Math.random() * 70 - 35;
+                                }
+                            }
+                            var move = distToMove(0.001, o.dir);
+                            o.xmove += move.x;
+                            o.ymove += move.y;
+                        } else if (o.touchingGround) {
+                            o.ymove = 0;
+                            o.flailTime++;
+                            o.dir = Math.random() * 360;
+                            if (o.flailTime > 15) {
+                                o.lastTouchedWater++;
+                                if (o.lastTouchedWater > 5) {
+                                    o.health--;
+                                    o.damageTime = 10;
+                                }
+                                o.flailTime = 0;
+                                o.ymove = -0.6;
+                                o.xmove = (Math.floor(Math.random() * 2) * 2 - 1) * (0.1 + Math.random() * 0.1);
+                                if (o.xmove > 0) {
+                                    o.angle += 179;
+                                } else {
+                                    o.angle -= 179;
+                                }
+                            }
+                        } else {
+                            o.ymove += 0.015;
+                        }
+                    }
+                    if (o.health <= 0) o.delete = true;
+                    o.x = Math.min(Math.max(o.x, 0), game.boardSize.w - o.w);
+                    o.y = Math.min(Math.max(o.y, 0), game.boardSize.h - o.h);
+                },
+                loadPreset: function (preset) {
+                    var objects = [];
+                    var mobs = [];
+                    var groups = preset.split("|");
+                    for (var group of groups) {
+                        if (group.startsWith("{")) {
+                            mobs.push(JSON.parse(group));
+                            continue;
+                        }
+                        var type = group.split(":")[0];
+                        var sets = group.split(":")[1].split(",");
+                        for (var set of sets) {
+                            if (set[0] == "y") {
+                                var y = Number(set.slice(1, 3));
+                                for (var n = 3; n < set.length; n += 2) {
+                                    var x = Number(set.slice(n, n + 2));
+                                    var o = {};
+                                    o.x = x;
+                                    o.y = y;
+                                    o.type = type;
+                                    objects.push(o);
+                                }
+                            } else {
+                                for (var n = 0; n < set.length; n += 4) {
+                                    var x = Number(set.slice(n, n + 2));
+                                    var y = Number(set.slice(n + 2, n + 4));
+                                    var o = {};
+                                    o.x = x;
+                                    o.y = y;
+                                    o.type = type;
+                                    objects.push(o);
+                                }
+                            }
+                        }
+                    }
+                    return [objects, mobs];
+                },
+                createPreset: function (objects) {
+                    var types = ["stone", "sand", "water", "lava", "smoke"];
+                    var stone = game.objects.objects.filter(e => e.type == "stone");
+                    var sand = game.objects.objects.filter(e => e.type == "sand");
+                    var water = game.objects.objects.filter(e => e.type == "water");
+                    var lava = game.objects.objects.filter(e => e.type == "lava");
+                    var smoke = game.objects.objects.filter(e => e.type == "smoke");
+                    var groups = [];
+                    for (var n = 0; n < types.length; n++) {
+                        var objects = game.objects.objects.filter(e => e.type == types[n]);
+                        if (objects.length == 0) continue;
+                        var group = String(types[n] + ":");
+                        objects = objects.sort((a, b) => a.x - b.x);
+                        objects = objects.sort((a, b) => a.y - b.y);
+                        var yValues = new Set(objects.map(e => e.y));
+                        var sets = [];
+                        var standalones = [];
+                        for (var yValue of yValues) {
+                            var objectsAtY = objects.filter(e => e.y == yValue);
+                            if (objectsAtY.length == 1) {
+                                var o = objectsAtY[0];
+                            } else {
+                                var y = String(yValue);
+                                if (y < 10) {
+                                    y = "0" + y;
+                                }
+                                var str = `y${y}`;
+                                for (var n2 = 0; n2 < objectsAtY.length; n2++) {
+                                    var o = objectsAtY[n2];
+                                    var x = String(o.x);
+                                    if (x < 10) {
+                                        x = "0" + x;
+                                    }
+                                    str += x;
+                                }
+                                sets.push(str);
+                            }
+                        }
+                        var str = "";
+                        for (var n2 = 0; n2 < standalones.length; n2++) {
+                            var o = standalones[n2];
+                            var x = String(o.x);
+                            var y = String(o.y);
+                            if (x < 10) {
+                                x = "0" + x;
+                            }
+                            if (y < 10) {
+                                y = "0" + y;
+                            }
+                            str += x + y;
+                        }
+                        if (str.length) sets.push(str);
+                        group += sets.join(",");
+                        groups.push(group);
+                    }
+                    for (var o of game.objects.mobs) {
+                        groups.push(JSON.stringify(o));
+                    }
+                    return groups.join("|");
+                }
+            },
+            particles: {
+                objects: [],
+                update: function () {
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        this.updateObject(o);
+                    }
+                },
+                draw: function (x, y, w, h) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.scale(1 / (w / game.boardSize.w), 1 / (h / game.boardSize.h));
+                    for (var n = 0; n < this.objects.length; n++) {
+                        var o = this.objects[n];
+                        this.drawObject(o);
+                    }
+                    ctx.restore();
+                },
+                updateObject: function (o) {
+
+                },
+                drawObject: function (o) {
+                    ctx.save();
+                    ctx.translate(o.x, o.y);
+                    if (o.type == "splash particle") {
+                        ctx.fillStyle = "rgb(0,100,255)";
+                        ctx.fillRect(-2, -2, 4, 4);
+                    }
+                    ctx.restore();
+                },
+                create: function (o) {
+
+                },
+                createEffect: function (name, o) {
+
+                }
+            },
+            ui: {
+                tab: "particles",
+                tabs: ["particles", "mobs", "landscapes", "world"],
+                mouse: { x: 0, y: 0 },
+                lastMouse: { x: 0, y: 0 },
+                update: function () {
+                    this.updateMouse();
+                    this.handleInput();
+                    this.updateTabs();
+                },
+                draw: function () {
+                    ctx.fillStyle = "rgb(230,230,230)";
+                    ctx.fillRect(0, 0, 500, 1000);
+
+                    this.drawTabs();
+                    this.drawCurrentTab();
+                },
+                updateTabs: function () {
+                    for (var n = 0; n < this.tabs.length; n++) {
+                        if (Mouse.clickInBox(n * 118 + 30, 30, 80, 80)) {
+                            this.tab = this.tabs[n];
+                        }
+                    }
+                    if (this.tab == "mobs") this.mobPlacing.update();
+                    if (this.tab == "particles") this.particlePlacing.update();
+                },
+                drawTabs: function () {
+                    var icons = [images.particlesIcon, images.mobsIcon, images.landscapesIcon, images.worldSettingsIcon];
+                    for (var n = 0; n < this.tabs.length; n++) {
+                        var image = icons[n];
+                        if (this.tab == this.tabs[n]) {
+                            ctx.fillStyle = "rgb(180,180,180)";
+                            ctx.fillRect(n * 118 + 30, 30, 80, 80);
+                            ctx.fillStyle = "black";
+                            ctx.fillRect(n * 118 + 50, 115, 45, 7);
+                            ctx.drawImage(image, n * 118 + 30, 30, 80, 80);
+                        } else {
+                            ctx.fillStyle = "rgb(200,200,200)";
+                            ctx.fillRect(n * 118 + 30, 30, 80, 80);
+                            ctx.drawImage(image, n * 118 + 40, 40, 60, 60);
+                        }
+                    }
+
+                    var titles = {
+                        "particles": "Particles",
+                        "mobs": "Mobs",
+                        "landscapes": "Landscapes",
+                        "world": "World Settings"
+                    };
+
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = "small-caps 50px Trebuchet MS";
+                    ctx.fillText(titles[this.tab], 250, 170);
+
+                    ctx.fillStyle = "rgb(160,160,160)";
+                    ctx.fillRect(40, 210, 410, 5);
+
+                    this.drawCurrentTab();
+                },
+                drawCurrentTab: function () {
+                    if (this.tab == "particles") this.drawParticlesTab();
+                    if (this.tab == "mobs") this.drawMobsTab();
+                    if (this.tab == "landscapes") this.drawLandscapesTab();
+                    if (this.tab == "world") this.drawWorldTab();
+                },
+                drawParticlesTab: function () {
+                    ctx.font = "small-caps 40px Trebuchet MS";
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    var size = this.particlePlacing.placeSize;
+                    ctx.fillText(`Size: ${size}x${size}`, 40, 270);
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(370, 245 - size * 2 + 20, size * 4, size * 4)
+                    ctx.fillStyle = "rgb(200,200,200)";
+                    ctx.fillRect(250, 245, 40, 40);
+                    ctx.fillRect(310, 245, 40, 40);
+                    ctx.font = "60px Trebuchet MS";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = "black";
+                    if (size == 1) ctx.fillStyle = "rgb(120,120,120)";
+                    ctx.fillText("-", 270, 267);
+                    ctx.font = "60px Trebuchet MS";
+                    ctx.fillStyle = "black";
+                    if (size == 10) ctx.fillStyle = "rgb(120,120,120)";
+                    ctx.fillText("+", 330, 267);
+
+                    ctx.font = "small-caps 40px Trebuchet MS";
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    var type = this.particlePlacing.placeType;
+                    ctx.fillText(`Tool: ${type[0].toUpperCase() + type.slice(1)}`, 40, 330);
+
+                    var icons = [images.sandIcon, images.waterIcon, images.lavaIcon, images.smokeIcon, images.stoneIcon, images.eraserIcon];
+                    for (var n = 0; n < this.particlePlacing.placeTypeOptions.length; n++) {
+                        ctx.save();
+                        ctx.translate(n * 80 + 20, 380);
+                        ctx.fillStyle = "rgb(200,200,200)";
+                        ctx.fillRect(0, 0, 60, 60);
+                        if (this.particlePlacing.placeType == this.particlePlacing.placeTypeOptions[n]) {
+                            ctx.strokeStyle = "black";
+                            ctx.lineWidth = 5;
+                            ctx.strokeRect(0, 0, 60, 60);
+                        }
+                        ctx.drawImage(icons[n], 0, 0, 60, 60);
+                        ctx.restore();
+                    }
+
+                    this.particlePlacing.draw();
+                },
+                drawMobsTab: function () {
+                    ctx.font = "small-caps 40px Trebuchet MS";
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Click to place a fish", 250, 270);
+                },
+                drawLandscapesTab: function () {
+                    for (var n = 0; n < 6; n++) {
+                        var x = n % 2;
+                        var y = Math.floor(n / 2);
+                        var image = images["preset" + n];
+                        ctx.drawImage(image, 40 + x * 220, 240 + y * 150, 180, 120);
+                    }
+                },
+                drawWorldTab: function () {
+                    ctx.font = "small-caps 40px Trebuchet MS";
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("Clear World", 250, 270);
+                    if (Mouse.clickInBox(100, 200, 300, 100)) {
+                        game.objects.objects = [];
+                        game.objects.mobs = [];
+                    }
+                    ctx.fillText(game.paused ? "Unpause" : "Pause", 250, 370);
+                    if (Mouse.clickInBox(100, 300, 300, 100)) {
+                        game.paused = !game.paused;
+                        Mouse.click = false;
+                    }
+                },
+                updateMouse: function () {
+                    this.lastMouse = { x: this.mouse.x, y: this.mouse.y };
+                    var w = 1500 / game.boardSize.w;
+                    var h = 1000 / game.boardSize.h;
+                    this.mouse.x = Math.floor((Mouse.x - 500) / w);
+                    this.mouse.y = Math.floor(Mouse.y / h);
+                },
+                handleInput: function () {
+                    if (this.tab == "particles") {
+                        if (Mouse.down) {
+                            this.particlePlacing.place();
+                        }
+
+                        for (var n = 0; n < this.particlePlacing.placeTypeOptions.length; n++) {
+                            if (Mouse.clickInBox(n * 80 + 20, 380, 60, 60)) {
+                                this.particlePlacing.placeType = this.particlePlacing.placeTypeOptions[n];
+                            }
+                        }
+
+                        for (var n = 0; n < 10; n++) {
+                            if (Keys.down[48 + n]) {
+                                game.objects.objects = game.objects.loadPreset(presets[n]);
+                            }
+                        }
+
+                        if (Mouse.clickInBox(250, 245, 40, 40)) {
+                            var index = this.particlePlacing.placeSizes.indexOf(this.particlePlacing.placeSize);
+                            index--;
+                            index = Math.max(index, 0);
+                            this.particlePlacing.placeSize = this.particlePlacing.placeSizes[index];
+                        }
+                        if (Mouse.clickInBox(310, 245, 40, 40)) {
+                            var index = this.particlePlacing.placeSizes.indexOf(this.particlePlacing.placeSize);
+                            index++;
+                            index = Math.min(index, this.particlePlacing.placeSizes.length - 1);
+                            this.particlePlacing.placeSize = this.particlePlacing.placeSizes[index];
+                        }
+                    } else if (this.tab == "landscapes") {
+                        for (var n = 0; n < 6; n++) {
+                            var x = n % 2;
+                            var y = Math.floor(n / 2);
+                            if (Mouse.clickInBox(40 + x * 220, 240 + y * 150, 180, 120)) {
+                                [game.objects.objects, game.objects.mobs] = game.objects.loadPreset(presets[n]);
+                            }
+                        }
+                    } else if (this.tab == "world") {
+                        if (Mouse.clickInBox(100, 200, 300, 100)) {
+                            game.objects.objects = [];
+                            game.objects.mobs = [];
+                        }
+                        if (Mouse.clickInBox(100, 300, 300, 100)) {
+                            game.paused = !game.paused;
+                            Mouse.click = false;
+                        }
+                    }
+                },
+                mobPlacing: {
+                    update: function () {
+                        if (Mouse.click && Mouse.x >= 500) {
+                            var o = {};
+                            o.x = game.ui.mouse.x;
+                            o.y = game.ui.mouse.y;
+                            o.type = "fish";
+                            o.color = "green";
+                            if (Math.random() < 0.3) o.color = "magenta";
+                            game.objects.mobs.push(o);
+                            game.objects.updateMob(o);
+                        }
+                    }
+                },
+                particlePlacing: {
+                    placeSize: 3,
+                    placeType: "sand",
+                    placeTypeOptions: ["sand", "water", "lava", "smoke", "stone", "eraser"],
+                    placeTypeColors: ["rgb(200,150,25)", "blue", "red", "rgb(150,150,150)", "rgb(50,50,50)", "white"],
+                    placeSizes: [1, 2, 3, 5, 7, 10],
+                    cors: { x: 0, y: 0, w: 0, h: 0 },
+                    lastCors: { x: 0, y: 0, w: 0, h: 0 },
+                    corsPassedOver: [],
+                    update: function () {
+                        var offset = -Math.floor(this.placeSize / 2);
+                        this.cors.x = game.ui.mouse.x + offset;
+                        this.cors.y = game.ui.mouse.y + offset;
+                        this.cors.w = this.placeSize;
+                        this.cors.h = this.placeSize;
+                        this.lastCors.x = game.ui.lastMouse.x + offset;
+                        this.lastCors.y = game.ui.lastMouse.y + offset;
+                        this.lastCors.w = this.placeSize;
+                        this.lastCors.h = this.placeSize;
+                        this.corsPassedOver = [];
+                        var startY, startX, endY, endX;
+                        if (this.lastCors.x < this.cors.x) {
+                            startX = this.lastCors.x;
+                            startY = this.lastCors.y;
+                            endX = this.cors.x;
+                            endY = this.cors.y;
+                        } else {
+                            startX = this.cors.x;
+                            startY = this.cors.y;
+                            endX = this.lastCors.x;
+                            endY = this.lastCors.y;
+                        }
+                        for (var x = startX; x <= endX; x++) {
+                            var y = Math.round((x - startX) / Math.max(1, endX - startX) * (endY - startY)) + startY;
+                            this.corsPassedOver.push({ x: x, y: y, w: this.cors.w, h: this.cors.h });
+                        }
+                        if (this.lastCors.y < this.cors.y) {
+                            startX = this.lastCors.x;
+                            startY = this.lastCors.y;
+                            endX = this.cors.x;
+                            endY = this.cors.y;
+                        } else {
+                            startX = this.cors.x;
+                            startY = this.cors.y;
+                            endX = this.lastCors.x;
+                            endY = this.lastCors.y;
+                        }
+                        for (var y = startY; y <= endY; y++) {
+                            var x = Math.round((y - startY) / Math.max(1, endY - startY) * (endX - startX)) + startX;
+                            this.corsPassedOver.push({ x: x, y: y, w: this.cors.w, h: this.cors.h });
+                        }
+                        this.corsPassedOver = this.corsPassedOver.filter((e, i, a) => a.findIndex(e2 => e2.x == e.x && e2.y == e.y) == i);
+                    },
+                    draw: function () {
+                        if (this.cors.x < -this.cors.w / 2) return;
+                        var w = 1500 / game.boardSize.w;
+                        var h = 1000 / game.boardSize.h;
+                        ctx.save();
+                        ctx.translate(this.cors.x * w + 500, this.cors.y * h);
+                        ctx.globalAlpha = 0.2;
+                        ctx.fillStyle = this.placeTypeColors[this.placeTypeOptions.indexOf(this.placeType)];
+                        ctx.fillRect(0, 0, this.cors.w * w, this.cors.h * h);
+                        ctx.globalAlpha = 1;
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(0, 0, this.cors.w * w, this.cors.h * h);
+                        ctx.restore();
+                    },
+                    place: function () {
+                        if (this.cors.x < -this.cors.w / 2) return;
+                        for (var cor of this.corsPassedOver) {
+                            for (var x = 0; x < cor.w; x++) {
+                                for (var y = 0; y < cor.h; y++) {
+                                    var type = this.placeType;
+                                    if (type == "eraser") type = "air";
+                                    this.placeParticle(cor.x + x, cor.y + y, type);
+                                }
+                            }
+                        }
+                        game.objects.objects = game.objects.objects.filter(e => !e.delete);
+                    },
+                    placeParticle: function (x, y, type) {
+                        if (x < 0 || x > game.boardSize.w - 1 || y < 0 || y > game.boardSize.h - 1) return;
+                        var o = game.objects.convertTargetToObject(x, y, game.objects.matrix);
+                        if (o) {
+                            o.delete = true;
+                        }
+                        game.objects.matrix[y][x] = false;
+                        if (type == "air") return;
+                        var o2 = { x: x, y: y, type: type, dormant: true };
+                        game.objects.objects.push(o2);
+                        game.objects.matrix[y][x] = o2;
+                    }
+                }
+            }
+        }
+
+        function noise(x, y, z) {
+            function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+            function lerp(t, a, b) { return a + t * (b - a); }
+            function grad(hash, x, y, z) {
+                var h = hash & 15;
+                var u = h < 8 ? x : y,
+                    v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+                return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+            }
+            function scale(n) { return (1 + n) / 2; }
+
+            var p = new Array(512)
+            var permutation = [151, 160, 137, 91, 90, 15,
+                131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
+                190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+                88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
+                77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
+                102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
+                135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
+                5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
+                223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+                129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+                251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
+                49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
+                138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
+            ];
+            for (var i = 0; i < 256; i++)
+                p[256 + i] = p[i] = permutation[i];
+
+            var X = Math.floor(x) & 255,
+                Y = Math.floor(y) & 255,
+                Z = Math.floor(z) & 255;
+            x -= Math.floor(x);
+            y -= Math.floor(y);
+            z -= Math.floor(z);
+            var u = fade(x),
+                v = fade(y),
+                w = fade(z);
+            var A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z,
+                B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+
+            return scale(lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z),
+                grad(p[BA], x - 1, y, z)),
+                lerp(u, grad(p[AB], x, y - 1, z),
+                    grad(p[BB], x - 1, y - 1, z))),
+                lerp(v, lerp(u, grad(p[AA + 1], x, y, z - 1),
+                    grad(p[BA + 1], x - 1, y, z - 1)),
+                    lerp(u, grad(p[AB + 1], x, y - 1, z - 1),
+                        grad(p[BB + 1], x - 1, y - 1, z - 1)))));
+        }
+
+        var presets = [
+            "stone:y135758597172,y14575859607172,y150607080910111718323335364546474849505157585960616465667172,y16040506070809101116171823242532333536373845464748495051525657585960616465667172,y1704050607161718192324253233353637383945465051525657606162656667707172,y18030405161718192324252632333536383940414546515256576061626667707172,y190304161718192324252627313233353639404145465152535657616266677071,y20030416171819232425262731323536404145465253555657616263666768697071,y210304051617181923242526272831323536374041424546475253555661626367686970,y22030405161718192425272831323536374142464751525355566263676869,y2304050607161718192024252728293132363741424647515255566263676869,y24050607081516171819202425272829313236374142434647505152555662636869,y250607080915161920242526282930313236374142434647484950515255566263676869,y260708091015161920252629303132363742434647484950515556626367686970,y27080910111516192025262729303132363742434647495051525556626367686970,y2809101114151617181920252627293031323637424346475051525556626367686970,y2910111415161718192021262729303132363742434647515255566263666768697071,y3009101114151920212627303132363741424346475152555661626366677071,y31080910111314152021262730313236374041424647515255565761626366677071,y3206070809101314202126273132353637394041424546475152555657586162656667707172,y33020304050607080912131420212225262731323536373839404145464749505152565758596061626566677172,y340203040506121314202122252627353637383940454647484950515758596061626465667172,y352021223536373846474849585960616465667172|sand:y00000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y01000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y02000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y03000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y04000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y05000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y06000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y07000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374",
+            "stone:y042728293031323334353637383940414243444546474849,y052749,y062749,y072749,y082749,y092749,y102749,y112749,y122848,y132848,y142947,y152947,y163046,y173046,y183145,y193244,y203244,y213343,y223442,y233541,y243640,y253739,y263640,y273541,y283442,y293343,y303244,y313244,y323145,y333046,y343046,y352947,y362947,y372848,y382848,y392749,y402749,y412749,y422749,y432749,y442749,y452749,y462728293031323334353637383940414243444546474849|sand:y07282930313233343536373839404142434445464748,y08282930313233343536373839404142434445464748,y09282930313233343536373839404142434445464748,y10282930313233343536373839404142434445464748,y11282930313233343536373839404142434445464748,y1229303132333435363738394041424344454647,y1329303132333435363738394041424344454647,y143031323334353637383940414243444546,y153031323334353637383940414243444546,y16313233343536373839404142434445,y17313233343536373839404142434445,y1832333435363738394041424344,y193334353637383940414243,y203334353637383940414243,y21343536373839404142,y2235363738394041,y233637383940,y24373839",
+            "stone:y060001,y07010203040506,y0807080910111213,y091415161718,y10181920212223,y11232425262728,y1228293031323334,y1335363738394041424344454647484950515253545556575859,y145960616263,y177374,y18707172,y19686970,y2065666768,y2161626364,y225758596061,y23525354555657,y24474849505152,y25424344454647,y26363738394041,y2729303132333435,y28242526272829,y291920212223,y3016171819,y31131415,y3900010203040506070809101112,y4013141516171819,y412021222324,y42252627282930,y43313233343536373839,y4440414243444546,y454748495051525354555657,y46585960616263646566|water:y00000102030405060708091011121314151617181920212223242526,y01000102030405060708091011121314151617181920212223242526,y02000102030405060708091011121314151617181920212223242526,y03000102030405060708091011121314151617181920212223242526,y04000102030405060708091011121314151617181920212223242526,y05000102030405060708091011121314151617181920212223242526,y0602030405060708091011121314151617181920212223242526,y070708091011121314151617181920212223242526,y0814151617181920212223242526,y091920212223242526,y10242526",
+            "water:y33000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y34000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y35000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y36000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y37000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y38000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y39000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y40000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y41000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y42000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y43000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y44000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y45000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y46000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y47000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y48000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374,y49000102030405060708091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374|lava:y063031323334353637383940,y07293031323334353637383940414243,y082829303132333435363738394041424344,y09272829303132333435363738394041424344,y10272829303132333435363738394041424344,y11272829303132333435363738394041424344,y12272829303132333435363738394041424344,y13272829303132333435363738394041424344,y14272829303132333435363738394041424344,y15272829303132333435363738394041424344,y16272829303132333435363738394041424344,y17272829303132333435363738394041424344,y18272829303132333435363738394041424344,y19272829303132333435363738394041424344,y20272829303132333435363738394041424344,y21272829303132333435363738394041424344,y22282930313233343536373839404142",
+            "stone:y132351,y14235051,y152450,y162450,y17242550,y182550,y192549,y2026274849,y21274748,y222847,y23294546,y24303142434445,y25323334363739404142,y26323341424344,y273031324445,y28293046,y2927282947,y30274748,y312648,y32252648,y332548,y342548,y35244849,y36232449,y372349,y382349,y39222349,y40224950|water:y142425262728293031323334353637383940414243444546474849,y1525262728293031323334353637383940414243444546474849,y1625262728293031323334353637383940414243444546474849,y17262728293031323334353637383940414243444546474849,y18262728293031323334353637383940414243444546474849,y192627282930313233343536373839404142434445464748,y202829303132333435363738394041424344454647,y2128293031323334353637383940414243444546,y22293031323334353637383940414243444546,y23303132333435363738394041424344,y2432333435363738394041|smoke:y2634353637383940,y273334353637383940414243,y28313233343536373839404142434445,y293031323334353637383940414243444546,y3028293031323334353637383940414243444546,y31272829303132333435363738394041424344454647,y32272829303132333435363738394041424344454647,y3326272829303132333435363738394041424344454647,y3426272829303132333435363738394041424344454647,y352526272829303132333435363738394041424344454647,y36252627282930313233343536373839404142434445464748,y3724252627282930313233343536373839404142434445464748,y3824252627282930313233343536373839404142434445464748",
+            `stone:y13171819202122232425264950515253,y14171819202122232425264950515253545556,y15171819202122232425264950515253545556,y16192021222350515253545556,y17192021225152535455,y1819202152535455,y191819202152535455,y2018192021535455,y21181920535455,y2217181920535455,y2317181920535455,y24171819535455,y25171819535455,y26171819535455,y27171819535455,y281718192052535455,y291718192052535455,y3018192052535455,y3118192021525354,y32181920212251525354,y33192021222351525354,y3420212223245051525354,y3521222324252650515253,y3622232425262728294950515253,y3723242526272829303132474849505152,y38252627282930313233343536374445464748495051,y392829303132333435363738394041424344454647484950,y40313233343536373839404142434445464748,y4136373839404142434445|water:y18222324252627282930313233343536373839404142434445464748495051,y19222324252627282930313233343536373839404142434445464748495051,y2022232425262728293031323334353637383940414243444546474849505152,y212122232425262728293031323334353637383940414243444546474849505152,y222122232425262728293031323334353637383940414243444546474849505152,y232122232425262728293031323334353637383940414243444546474849505152,y24202122232425262728293031323334353637383940414243444546474849505152,y25202122232425262728293031323334353637383940414243444546474849505152,y26202122232425262728293031323334353637383940414243444546474849505152,y27202122232425262728293031323334353637383940414243444546474849505152,y2821222324252627282930313233343536373839404142434445464748495051,y2921222324252627282930313233343536373839404142434445464748495051,y3021222324252627282930313233343536373839404142434445464748495051,y31222324252627282930313233343536373839404142434445464748495051,y3223242526272829303132333435363738394041424344454647484950,y33242526272829303132333435363738394041424344454647484950,y3425262728293031323334353637383940414243444546474849,y352728293031323334353637383940414243444546474849,y3630313233343536373839404142434445464748,y373334353637383940414243444546,y38383940414243|{"x":25,"y":22,"type":"fish","color":"magenta"}|{"x":27,"y":20,"type":"fish","color":"green"}|{"x":40,"y":24,"type":"fish","color":"green"}`,
+        ];
+
+        var t = 0;
+
+        [game.objects.objects, game.objects.mobs] = game.objects.loadPreset(presets[0]);
+
+        function johnbutlergames() {
+        }
+    </script>
+</body>
+
+</html>

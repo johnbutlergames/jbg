@@ -1,0 +1,182 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Clicks Per Minute";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {};
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            game.update();
+            game.draw();
+        }
+
+        var game = {
+            playing: false,
+            gameOver: false,
+            score: 0,
+            timeLeft: 0,
+            update: function () {
+                if (this.playing) {
+                    this.updateTime();
+                    if (this.target.clicked()) {
+                        this.target.newPosition();
+                        this.score++;
+                    }
+                } else if (this.gameOver) {
+                    if(Keys.down[32]) {
+                        this.reset();
+                    }
+                } else {
+                    this.drawTitleText();
+                    if (this.target.clicked()) {
+                        this.newGame();
+                    }
+                }
+            },
+            draw: function () {
+                if (this.playing || this.gameOver) this.drawText();
+                if (this.gameOver) this.drawGameOverText();
+                this.target.draw();
+            },
+            newGame: function () {
+                this.score = 0;
+                this.playing = true;
+                this.timeLeft = 6000;
+                this.target.newPosition();
+            },
+            updateTime: function () {
+                this.timeLeft--;
+                if (this.timeLeft == 0) {
+                    this.endGame();
+                }
+            },
+            endGame: function () {
+                this.playing = false;
+                this.gameOver = true;
+                highscore = Math.max(highscore, this.score);
+                updateHighscore();
+            },
+            drawTitleText: function () {
+                ctx.fillStyle = "rgb(100,100,100)";
+                ctx.font = "bold 120px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Clicks per Minute", 750, 200);
+                ctx.fillStyle = "rgb(130,130,130)";
+                ctx.font = "bold 60px Arial";
+                ctx.fillText("Click the target to start", 750, 310);
+                ctx.fillStyle = "rgb(130,130,130)";
+                ctx.font = "bold 60px Arial";
+                ctx.fillText(`Highscore: ${highscore}`, 750, 700);
+
+                ctx.font = "rgb(200,200,200)";
+                ctx.font = "bold 10px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText("yw noah macpeek", 1495, 993);
+            },
+            drawText: function () {
+                this.drawTime();
+                this.drawScore();
+            },
+            drawTime: function () {
+                ctx.fillStyle = "rgb(200,200,200)";
+                ctx.font = "bold 400px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                var timeText = new String(Math.ceil(this.timeLeft / 100));
+                if (timeText.length == 1) timeText = `0${timeText}`;
+                ctx.fillText(timeText, 750, 500);
+            },
+            drawScore: function () {
+                ctx.fillStyle = "rgb(100,100,100)";
+                ctx.font = "bold 100px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(`Clicks: ${this.score}`, 750, 700);
+            },
+            drawGameOverText: function () {
+                ctx.fillStyle = "rgb(200,50,50)";
+                ctx.font = "bold 120px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Time's Up!", 750, 150);
+
+                ctx.fillStyle = "rgb(100,100,100)";
+                ctx.font = "bold 50px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Press Space to Restart", 750, 240);
+                ctx.font = "bold 70px Arial";
+                ctx.fillText(`Highscore: ${highscore}`, 750, 810);
+            },
+            reset: function () {
+                this.gameOver = false;
+                this.playing = false;
+                this.target.resetPosition();
+            },
+            target: {
+                x: 0,
+                y: 0,
+                r: 35,
+                draw: function () {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+
+                    ctx.fillStyle = "rgb(220,230,255)";
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.r, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-this.r, 0);
+                    ctx.lineTo(this.r, 0);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, -this.r);
+                    ctx.lineTo(0, this.r);
+                    ctx.stroke();
+
+                    ctx.restore();
+                },
+                clicked: function () {
+                    if (!Mouse.click) return false;
+                    var dist = distTo(this.x, this.y, Mouse.x, Mouse.y);
+                    if (dist > this.r) return false;
+                    return true;
+                },
+                newPosition: function () {
+                    this.x = Math.random() * (1500 - this.r * 2) + this.r;
+                    this.y = Math.random() * (1000 - this.r * 2) + this.r;
+                },
+                resetPosition: function () {
+                    this.x = 750;
+                    this.y = 500;
+                }
+            }
+        }
+        game.reset();
+
+        var highscore = 0;
+        if (localStorage.getItem("clicksperminutehighscore") != null) {
+            highscore = localStorage.getItem("clicksperminutehighscore");
+        }
+        function updateHighscore() {
+            localStorage.setItem("clicksperminutehighscore", highscore);
+        }
+    </script>
+</body>
+
+</html>
