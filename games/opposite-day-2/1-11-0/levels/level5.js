@@ -8,6 +8,8 @@ levels[4] = {
         { type: "block", x: -255, y: 100, w: 8000, h: 2000 },
         { type: "block", x: -350, y: 100, w: 400, h: 2000, id: "shortcut background", collide: false, alpha: 0.15 },
         { type: "block", x: -350, y: 100, w: 400, h: 2000, id: "shortcut barrier" },
+        { type: "clue", x: 250, y: -70, collide: false, proximity: 1, radius: 0, id: "ultra shortcut clue 1", angle: 90, ultra: true, air: true, alpha: 0 },
+        { type: "clue", x: -277.5, y: -70, collide: false, proximity: 1, radius: 0, id: "ultra shortcut clue 2", angle: 0, ultra: true, air: true, alpha: 0 },
         { type: "clue", x: 150, y: 140, collide: false, proximity: 1, radius: 0, id: "shortcut clue 1", down: true, color: { r: 0, g: 230, b: 0 }, alpha: 0 },
         { type: "clue", x: -277.5, y: 140, collide: false, proximity: 1, radius: 0, id: "shortcut clue 2", down: true, color: { r: 0, g: 230, b: 0 }, alpha: 0 },
         { type: "button", x: -50, y: 70, w: 100, h: 30, originalHeight: 30, pushBack: false, id: "button" },
@@ -79,9 +81,11 @@ levels[4] = {
                 return o.w == 3650;
             },
             trip: function () {
-                var o = game.objects.objects.find(e => e.id == "shortcut clue 1");
-                o.alpha = Math.min(o.alpha, 1);
-                o.decay = 0.1;
+                if (!game.level.triggers.tripped("shortcut")) {
+                    var o = game.objects.objects.find(e => e.id == "shortcut clue 1");
+                    o.alpha = Math.min(o.alpha, 1);
+                    o.decay = 0.1;
+                }
                 var o = game.objects.objects.find(e => e.id == "lava chase");
                 o.w -= 200;
                 var o = game.objects.objects.find(e => e.id == "fake cube lava");
@@ -207,7 +211,7 @@ levels[4] = {
             }
         },
         {
-            name: "first shortcut clue",
+            name: "shortcut",
             check: function () {
                 if (!game.level.triggers.tripped("button")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -217,21 +221,48 @@ levels[4] = {
                 if (dist < 100 && (game.input.downStart && game.input.downStart < 10)) return true;
                 return false;
             },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                return player.x > 300;
+            },
             trip: function () {
                 game.level.discoverShortcut();
+                game.background.effect.start("green");
                 var o = game.objects.objects.find(e => e.id == "shortcut clue 1");
-                o.decay = 0.05;
-                o.alpha = 2;
+                o.alpha = 1;
                 o.activated = true;
                 var o = game.objects.objects.find(e => e.id == "shortcut clue 2");
                 o.decay = -0.05;
-                game.soundEffects.preShortcut();
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 1");
+                if (!o.peeked) {
+                    o.alpha = 0.7;
+                    o.decay = 0.1;
+                    o.peeked = true;
+                }
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                if (!o.peeked) {
+                    o.alpha = 0.7;
+                    o.decay = 0.1;
+                    o.peeked = true;
+                }
+            },
+            untrip: function () {
+                game.background.effect.end("green");
+                var o = game.objects.objects.find(e => e.id == "shortcut clue 1");
+                o.alpha = 1;
+                o.decay = 0.05;
+                if (game.level.triggers.tripped("ultra shortcut")) return;
+                var o = game.objects.objects.find(e => e.id == "shortcut clue 2");
+                o.alpha = 1;
+                o.decay = 0.05;
             }
         },
         {
-            name: "shortcut",
+            name: "second shortcut clue",
             check: function () {
-                if (!game.level.triggers.tripped("first shortcut clue")) return false;
+                if (game.level.triggers.tripped("ultra shortcut")) return false;
+                if (!game.level.triggers.tripped("shortcut")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 var o = game.objects.objects.find(e => e.id == "shortcut clue 2");
@@ -245,7 +276,7 @@ levels[4] = {
                 return false;
             },
             trip: function () {
-                game.background.effect.start("green");
+                game.soundEffects.preShortcut();
                 var o = game.objects.objects.find(e => e.id == "shortcut clue 2");
                 o.activated = true;
                 var o = game.objects.objects.find(e => e.id == "shortcut barrier");
@@ -257,9 +288,94 @@ levels[4] = {
                 game.background.effect.end("green");
                 var o = game.objects.objects.find(e => e.id == "shortcut clue 2");
                 o.activated = false;
+                o.air = true;
                 var o = game.objects.objects.find(e => e.id == "shortcut barrier");
                 o.alpha = 0;
                 o.decay = -0.1;
+            }
+        },
+        {
+            name: "ultra shortcut",
+            check: function () {
+                if (!game.level.triggers.tripped("shortcut")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 1");
+                var dist = distTo(player.x, player.y, o.x - 20, o.y - 20);
+                if (dist < 40 && (game.input.leftStart && game.input.leftStart < 2)) return true;
+                return false;
+            },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                return false;
+            },
+            trip: function () {
+                game.background.effect.start("magenta");
+                game.level.discoverUltraShortcut();
+                game.soundEffects.ultra();
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                o.alpha = 1;
+                o.decay = 0;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 1");
+                o.activated = true;
+                o.alpha = 1;
+                o.decay = 0;
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.y = o.y - player.h / 2;
+                player.x = o.x - player.w / 2;
+                var o = game.objects.objects.find(e => e.id == "shortcut clue 2");
+                o.alpha = 0;
+                o.decay = 0;
+            },
+            untrip: function () {
+                game.background.effect.end("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 1");
+                o.decay = 0.1;
+                o.alpha = 1;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                o.decay = 0.1;
+                o.alpha = 1;
+            },
+            passive: function () {
+                if (game.level.triggers.tripped("ultra shortcut 2")) return;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return;
+                player.ymove = 0;
+                player.xmove = -40;
+            }
+        },
+        {
+            name: "ultra shortcut 2",
+            check: function () {
+                if (!game.level.triggers.tripped("ultra shortcut")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                var dist = distTo(player.x, player.y, o.x - 20, o.y - 20);
+                if (dist < 30 && (game.input.downStart && game.input.downStart < 3)) return true;
+                return false;
+            },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                return false;
+            },
+            trip: function () {
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                o.activated = true;
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.x = o.x - player.w / 2;
+                var o = game.objects.objects.find(e => e.id == "shortcut barrier");
+                o.collide = false;
+                o.alpha = 1;
+                o.decay = 0.1;
+            },
+            passive: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return;
+                player.xmove = 0;
+                player.ymove = 40;
             }
         },
         {
@@ -279,6 +395,7 @@ levels[4] = {
                 return false;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "fake cube lava");
                 o.alpha = 1;
@@ -351,6 +468,7 @@ levels[4] = {
         if (!player) return;
     },
     levelComplete: function () {
+        if(game.level.triggers.tripped("ultra shortcut 2")) return true;
         var player = game.objects.objects.find(e => e.type == "player");
         if (!player) return false;
         return player.x < -1550 || player.y > 500;

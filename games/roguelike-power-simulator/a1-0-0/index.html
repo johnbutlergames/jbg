@@ -1,0 +1,528 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script>
+        var title = "Roguelike Power Simulator";
+        var dimensions = { width: 1500, height: 1000 };
+        var images = {
+            "default": "images/default.png",
+            "checkmark": "images/checkmark.png",
+            "fireIcon": "images/fire-icon.png",
+            "airIcon": "images/air-icon.png",
+            "natureIcon": "images/nature-icon.png",
+            "steelIcon": "images/steel-icon.png",
+            "beastIcon": "images/beast-icon.png",
+            "earthIcon": "images/earth-icon.png",
+            "waterIcon": "images/water-icon.png",
+        };
+        var audios = {};
+
+        initialize();
+        Loading.loaded = true;
+        Loading.intro = 0;
+        window.setInterval(update, 10);
+
+        function main() {
+            game.update();
+            game.draw();
+        }
+
+        class Game {
+            constructor(p1Controls, p2Controls) {
+                this.p1Controls = p1Controls;
+                this.p2Controls = p2Controls;
+                this.state = "new round";
+            }
+            update() {
+                if (this.state == "new round") {
+                    this.state = "update round";
+                    this.round = new Round({
+                        team1: {
+                            controls: this.p1Controls,
+                            cards: [
+                                new Card("ROCK", images.default, [{ id: "earth", power: 4 }]),
+                                new Card("SCISSORS", images.default, [{ id: "steel", power: 4 }]),
+                                new Card("PAPER", images.default, [{ id: "air", power: 5 }]),
+                                new Card("WATER", images.default, [{ id: "water", power: 3 }])
+                            ]
+                        },
+                        team2: {
+                            controls: this.p2Controls,
+                            cards: [
+                                new Card("ROCK", images.default, [{ id: "earth", power: 4 }]),
+                                new Card("SCISSORS", images.default, [{ id: "steel", power: 4 }]),
+                                new Card("PAPER", images.default, [{ id: "air", power: 5 }]),
+                                new Card("WATER", images.default, [{ id: "water", power: 3 }])
+                            ]
+                        }
+                    });
+                } else if (this.state == "update round") {
+                    this.round.update();
+                }
+            }
+            draw() {
+                if (this.state == "update round") {
+                    this.round.draw();
+                }
+            }
+        }
+
+        class Round {
+            constructor({ team1, team2 }) {
+                this.state = "wait for selection";
+                this.teamCards = [team1.cards, team2.cards];
+                this.teamControls = [team1.controls, team2.controls];
+                this.faceoff = new CardFaceoff();
+                this.pickers = [];
+                for (var n = 0; n < 2; n++) {
+                    this.pickers[n] = new CardPicker(this.teamControls[n], this.teamCards[n]);
+                    this.pickers[n].x = 250 + 1000 * n;
+                    this.pickers[n].y = 725;
+                    this.pickers[n].scale = 0.8;
+                }
+            }
+            update() {
+                if (this.state == "wait for selection") {
+                    for (var n = 0; n < 2; n++) {
+                        var o = this.pickers[n];
+
+                        o.update();
+                        if (o.chosenCard) {
+                            var old = this.faceoff.teamCards[n];
+
+                            this.faceoff.teamCards[n] = o.chosenCard.clone();
+                            if (old) {
+                                this.faceoff.teamCards[n].scale = old.scale;
+                                this.faceoff.teamCards[n].flip = old.flip;
+                                this.faceoff.teamCards[n].targetFlip = old.targetFlip + 0.5;
+                                this.faceoff.teamCards[n].flipSpeed = old.flipSpeed;
+                                this.faceoff.teamCards[n].spawnAnimation = old.spawnAnimation;
+                            } else {
+                                this.faceoff.teamCards[n].scale = 0;
+                                this.faceoff.teamCards[n].flip = 0;
+                                this.faceoff.teamCards[n].targetFlip = 0.5;
+                                this.faceoff.teamCards[n].flipSpeed = 0;
+                                this.faceoff.teamCards[n].spawnAnimation = 0;
+                            }
+                            this.faceoff.teamCards[n].doubleBlank = true;
+
+                            o.chosenCard = false;
+                        }
+                    }
+
+                    this.faceoff.update();
+                    if (this.faceoff.state == "faceoff animation") this.state = "faceoff";
+                } else if (this.state == "faceoff") {
+                    this.faceoff.update();
+                    this.faceoff.updatePositioning();
+                }
+            }
+            draw() {
+                for (var n = 0; n < 2; n++) {
+                    this.pickers[n].draw();
+                }
+                this.faceoff.draw();
+            }
+        }
+
+        class CardFaceoff {
+            constructor(team1, team2) {
+                this.teamCards = [];
+                this.teamElements = [];
+                this.x = 750;
+                this.y = 500;
+                this.state = "wait for selection";
+            }
+            static elements = ["fire", "steel", "beast", "nature", "air", "water", "earth"]
+            static calculateMultiplier(offense, defense) {
+                var index1 = CardFaceoff.elements.indexOf(offense);
+                var index2 = CardFaceoff.elements.indexOf(defense);
+                index2 -= index1;
+                if (index2 < 0) index2 += 7;
+                if (index2 > 0 && index2 <= 3) return 2;
+                return 1;
+            }
+            update() {
+                if (this.state == "wait for selection") {
+                    if (this.teamCards[0] && this.teamCards[1]) {
+                        this.state = "faceoff countdown";
+                        this.faceoffCountdown = 300;
+                    }
+                } else if (this.state == "faceoff countdown") {
+                    this.faceoffCountdown--;
+                    if (this.faceoffCountdown <= 0) {
+                        this.state = "faceoff animation";
+                        this.faceoffAnimation = 0;
+
+                        for (var n = 0; n < 2; n++) {
+                            if (!this.teamCards[n]) continue;
+                            var o = this.teamCards[n];
+                            o.flip = o.flip % 0.5;
+                            o.targetFlip = 1;
+                            o.targetScale = 1;
+                            o.doubleBlank = false;
+                        }
+                    }
+                } else if (this.state == "faceoff animation") {
+                    this.faceoffAnimation++;
+                    if (this.faceoffAnimation > 100) {
+                        this.state = "power calculation";
+                        this.powerCalculationAnimation = 0;
+                    }
+                } else if (this.state == "power calculation") {
+                    this.powerCalculationAnimation++;
+                }
+
+                for (var n = 0; n < 2; n++) {
+                    if (!this.teamCards[n]) continue;
+                    var o = this.teamCards[n];
+
+                    o.spawnAnimation++;
+                    o.targetScale = Math.max(o.targetScale, easeInOut(o.spawnAnimation / 30) * 0.85);
+                    o.flip += o.flipSpeed;
+                    o.flipSpeed *= 0.5;
+                    o.flipSpeed += (o.targetFlip - o.flip) * 0.05;
+
+                    o.update();
+                }
+                this.updatePositioning();
+            }
+            calculateTeamElements() {
+                
+            }
+            updatePositioning() {
+                if (this.state == "power calculation") {
+                    var a = easeInOut(this.powerCalculationAnimation / 30);
+                    for (var n = 0; n < 2; n++) {
+                        if (this.teamCards[n]) {
+                            var width = 120 * (1 - a) + 200 * a;
+                            var x = this.x - width + width * 2 * n;
+                            var y = this.y - 200 * a;
+                            this.teamCards[n].x = x;
+                            this.teamCards[n].y = y;
+                            this.teamCards[n].targetX = x;
+                            this.teamCards[n].targetY = y;
+                        }
+                    }
+                } else {
+                    for (var n = 0; n < 2; n++) {
+                        if (this.teamCards[n]) {
+                            var x = this.x - 120 + 240 * n;
+                            var y = this.y
+                            this.teamCards[n].x = x;
+                            this.teamCards[n].y = y;
+                            this.teamCards[n].targetX = x;
+                            this.teamCards[n].targetY = y;
+                        }
+                    }
+                }
+
+            }
+            draw() {
+                for (var n = 0; n < 2; n++) {
+                    if (this.teamCards[n]) this.teamCards[n].draw();
+                }
+
+                this.drawBattleText();
+            }
+            drawBattleText() {
+                ctx.fillStyle = "black";
+                ctx.font = "100px Trebuchet MS";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                if (this.state == "faceoff countdown") {
+                    var number = Math.ceil(this.faceoffCountdown / 100);
+                    var a = this.faceoffCountdown % 100;
+                    var s = 0.5 + 0.5 * easeInOut(a / 10) * (1 - easeInOut((a - 90) / 10));
+                    ctx.save();
+                    ctx.translate(this.x, this.y - 400);
+                    ctx.scale(s, s);
+                    ctx.fillText(number, 0, 0);
+                    ctx.restore();
+                } else if (this.state == "faceoff animation") {
+                    var a = this.faceoffAnimation;
+                    var s = easeInOut(a / 10) * (1 - easeInOut((a - 80) / 20));
+                    ctx.save();
+                    ctx.globalAlpha = 1 - easeInOut((a - 90) / 10);
+                    ctx.translate(this.x, this.y - 400);
+                    ctx.scale(s, s);
+                    ctx.fillText("Shoot!", 0, 0);
+                    ctx.restore();
+                }
+            }
+        }
+
+        class Card {
+            constructor(name, image, elements) {
+                this.flip = 0;
+                this.targetX = 500;
+                this.targetY = 500;
+                this.targetScale = 0.8;
+                this.x = 500;
+                this.y = 500;
+                this.w = 150;
+                this.h = 200;
+                this.scale = 0.8;
+                this.name = name || "";
+                this.elements = elements || [];
+                this.image = image || false;
+                this.animatedElements = this.elements.map(e => {
+                    return new Element(e.id, e.power);
+                });
+            }
+            clone() {
+                var card = new Card(this.name, this.image, this.elements);
+                card.targetX = this.targetX;
+                card.targetY = this.targetY;
+                card.x = this.x;
+                card.y = this.y;
+                card.w = this.w;
+                card.h = this.h;
+                card.scale = this.scale;
+                card.targetScale = this.targetScale;
+                card.flip = this.flip;
+                return card;
+            }
+            update() {
+                this.animatedElements.forEach(e => e.update());
+                this.x = this.x * 0.9 + this.targetX * 0.1;
+                this.y = this.y * 0.9 + this.targetY * 0.1;
+                this.scale = this.scale * 0.9 + this.targetScale * 0.1;
+            }
+            draw() {
+                var flip = this.flip % 1;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                var flipScale = Math.sin((0.5 + flip * 2) * Math.PI);
+                ctx.scale(flipScale, 1);
+                ctx.scale(this.scale, this.scale);
+
+                if ((flip > 0.25 && flip < 0.75) || this.doubleBlank) {
+                    ctx.scale(-1, 1);
+                    this.drawBackSide();
+                } else {
+                    this.drawFrontSide();
+                }
+
+                ctx.restore();
+            }
+            drawBackSide() {
+                this.drawBackground();
+            }
+            drawFrontSide() {
+                this.drawBackground();
+                this.drawName();
+                this.drawImage();
+                this.drawElements();
+            }
+            drawBackground() {
+                ctx.fillStyle = "white";
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 5;
+                ctx.roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 5);
+                ctx.fill();
+                ctx.stroke();
+            }
+            drawName() {
+                ctx.fillStyle = "black";
+                ctx.font = "30px Trebuchet MS";
+                var width = ctx.measureText(this.name).width;
+                if (width > this.w * 0.9) {
+                    ctx.font = `${30 * (this.w * 0.9) / width}px Trebuchet MS`;
+                }
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(this.name, 0, -this.h / 2 + 30);
+            }
+            drawImage() {
+                if (!this.image) return;
+                ctx.drawImage(this.image, -50, -50, 100, 100);
+            }
+            drawElements() {
+                ctx.save();
+                ctx.translate(-45, 70);
+                for (var n = 0; n < this.animatedElements.length; n++) {
+                    var o = this.animatedElements[n];
+                    ctx.save();
+                    ctx.translate(n * 65, 0);
+                    o.draw();
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Element {
+            constructor(id, power) {
+                this.id = id || "";
+                this.basePower = power || 0;
+                this.animatedPower = this.basePower;
+                this.multiplier = 1;
+                this.multiplyAnimation = 0;
+                this.w = 0;
+                this.h = 0;
+
+                if (Element.iconImages[this.id]) {
+                    this.image = Element.iconImages[this.id]
+                } else {
+                    this.image = Element.defaultIcon;
+                }
+                this.calculateDimensions();
+            }
+            clone() {
+                var element = new Element(this.id, this.power);
+                o.animated
+            }
+            static font = "20px Trebuchet MS";
+            static iconImages = {
+                fire: images.fireIcon,
+                steel: images.steelIcon,
+                beast: images.beastIcon,
+                nature: images.natureIcon,
+                air: images.airIcon,
+                water: images.waterIcon,
+                earth: images.earthIcon
+            }
+            static defaultIcon = images.default
+            update() {
+                this.calculateDimensions();
+                if (this.multiplyAnimation) {
+                    this.multiplyAnimation++;
+                    if (this.multiplyAnimation == 50) {
+                        this.animatedPower = this.basePower * this.multiplier;
+                    }
+                    if (this.multiplyAnimation == 100) {
+                        this.multiplyAnimation = 0;
+                    }
+                }
+            }
+            calculateDimensions() {
+
+            }
+            draw() {
+                if (this.image) {
+                    ctx.strokeStyle = "black";
+                    ctx.lineWidth = 3;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 20, 0, 2 * Math.PI);
+                    ctx.clip();
+                    ctx.drawImage(this.image, -20, -20, 40, 40);
+                    ctx.restore();
+                }
+
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, 2 * Math.PI);
+                ctx.stroke();
+
+                ctx.fillStyle = "black";
+                ctx.font = Element.font;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(this.animatedPower, 35, 0);
+            }
+        }
+
+        class Control {
+            constructor(data) {
+                this.type = data.type;
+                if (this.type == "key") {
+                    this.keyCode = data.keyCode;
+                }
+                this.font = "30px Trebuchet MS";
+                this.color = "black";
+            }
+            get active() {
+                if (this.type == "key") {
+                    return Keys.down[this.keyCode];
+                }
+            }
+            draw() {
+                ctx.font = this.font;
+                ctx.fillStyle = this.color;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                if (this.type == "key") {
+                    var char = String.fromCharCode(this.keyCode);
+                    if (this.keyCode == "37") char = "←";
+                    if (this.keyCode == "38") char = "↑";
+                    if (this.keyCode == "39") char = "→";
+                    if (this.keyCode == "40") char = "↓";
+                    ctx.fillText(char, 0, 0);
+                }
+            }
+        }
+
+        class CardPicker {
+            constructor(controls, cards) {
+                this.x = 0;
+                this.y = 0;
+                this.scale = 1;
+                this.controls = controls;
+                this.cards = cards;
+                this.chosenCard = false;
+            }
+            update() {
+                for (var n = 0; n < this.controls.length; n++) {
+                    var control = this.controls[n];
+                    if (!control.active) continue;
+                    this.chosenCard = this.cards[n];
+                }
+                this.updatePositioning();
+            }
+            updatePositioning() {
+                for (var n = 0; n < this.cards.length; n++) {
+                    var o = this.cards[n];
+                    o.scale = this.scale;
+
+                    var move = distToMove(200 * this.scale, n * 90 - 90);
+                    o.x = this.x + move.x;
+                    o.y = this.y + move.y;
+                    o.targetX = this.x + move.x;
+                    o.targetY = this.y + move.y;
+
+                    o.update();
+                }
+            }
+            draw() {
+                for (var o of this.cards) {
+                    o.draw();
+                }
+                for (var n = 0; n < this.controls.length; n++) {
+                    var control = this.controls[n];
+                    var move = distToMove(50 * this.scale, n * 90 - 90);
+                    ctx.save();
+                    ctx.translate(this.x + move.x * 1.5, this.y + move.y);
+
+                    control.draw();
+
+                    ctx.restore();
+                }
+            }
+        }
+
+        var game = new Game(
+            [
+                new Control({ type: "key", keyCode: 65 }),
+                new Control({ type: "key", keyCode: 87 }),
+                new Control({ type: "key", keyCode: 68 }),
+                new Control({ type: "key", keyCode: 83 })
+            ],
+            [
+                new Control({ type: "key", keyCode: 37 }),
+                new Control({ type: "key", keyCode: 38 }),
+                new Control({ type: "key", keyCode: 39 }),
+                new Control({ type: "key", keyCode: 40 })
+            ]
+        );
+    </script>
+</body>
+
+</html>

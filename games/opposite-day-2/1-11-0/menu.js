@@ -49,7 +49,8 @@ var menu = {
         restartGameKeybind: false,
         keybinds: [],
         showKeybindPrompts: true,
-        autoHideUI: false
+        autoHideUI: false,
+        discoveryAlerts: true
     },
     getKeybindTextForAction: function (name) {
         var keybind = this.settings.keybinds.find(e => e.name == name);
@@ -82,6 +83,7 @@ var menu = {
             }
         }
         game.ui.update();
+        game.music.update();
 
         if (this.exitingGameAnimation) {
             if (this.titleScreen) {
@@ -127,7 +129,6 @@ var menu = {
                 ctx.fill();
                 ctx.restore();
             }
-            game.ui.draw();
         } else {
             game.draw();
             if (this.exitingGameAnimation) {
@@ -144,8 +145,8 @@ var menu = {
                 ctx.fill();
                 ctx.restore();
             }
-            game.ui.draw();
         }
+        game.ui.draw();
     },
     exitToMenu: function () {
         this.exitingGameAnimation = Math.max(this.exitingGameAnimation, 1);
@@ -329,7 +330,7 @@ var menu = {
             if (game.input.exitStart === 1) {
                 this.clickSettingsScreenExit();
             }
-            this.navigationObjectSelected = (this.navigationObjectSelected % 10 + 10) % 10;
+            this.navigationObjectSelected = (this.navigationObjectSelected % 11 + 11) % 11;
             var o = this.settingsAnimations[this.navigationObjectSelected];
             if (!o) return;
             if (o.type == "toggle") {
@@ -399,7 +400,7 @@ var menu = {
                     if (o.reference == "musicVolume") {
                         menu.settings.musicVolume = o.value;
                         menu.settings.musicMuted = o.muted;
-                        game.soundEffects.updateMusicVolume(value);
+                        game.music.updateVolume(value);
                     } else {
                         menu.settings.soundEffectsVolume = o.value;
                         menu.settings.soundEffectsMuted = o.muted;
@@ -512,8 +513,10 @@ var menu = {
             }
         }
         if (this.creditsScreen) {
-            if (this.creditsScreenAnimation >= 50 && game.input.selectStart === 1 && !this.endCreditsScreenAnimation) {
-                this.clickEndCreditsScreen();
+            if (this.creditsScreenAnimation >= 50 && !this.endCreditsScreenAnimation) {
+                if (game.input.selectStart === 1 || game.input.exitStart === 1) {
+                    this.clickEndCreditsScreen();
+                }
             }
         }
     },
@@ -869,18 +872,19 @@ var menu = {
                 { text: "Unrestart Game Keyunbind", type: "toggle", reference: "restartGameKeybind", value: menu.settings.restartGameKeybind },
                 { text: "Keyunbind Prompts", type: "toggle", reference: "showKeybindPrompts", value: menu.settings.showKeybindPrompts },
                 { text: "Auto Unhide In-Game UI", type: "toggle", reference: "autoHideUI", value: menu.settings.autoHideUI },
+                { text: "Undiscovery Alerts", type: "toggle", reference: "discoveryAlerts", value: menu.settings.discoveryAlerts },
                 { text: "Unchange Keyunbinds", type: "link", hoverAnimation: 0 }
             ];
         }
 
-        var y = 170;
+        var y = 150;
         for (var n = 0; n < this.settingsAnimations.length; n++) {
             var o = this.settingsAnimations[n];
             if (o.type == "toggle") {
                 if (!o.switchAnimation) o.switchAnimation = 0;
                 o.switchAnimation--;
                 o.switchAnimation = Math.max(o.switchAnimation, 0);
-                var hitbox = { x: 200, y: y - 33, w: 400, h: 60 }
+                var hitbox = { x: 200, y: y - 35, w: 400, h: 55 }
                 if (Mouse.clickInBox(hitbox.x, hitbox.y, hitbox.w, hitbox.h)) {
                     game.soundEffects.menuClick();
                     o.value = !o.value;
@@ -937,7 +941,7 @@ var menu = {
                     if (o.reference == "musicVolume") {
                         menu.settings.musicVolume = o.value;
                         menu.settings.musicMuted = o.muted;
-                        game.soundEffects.updateMusicVolume(value);
+                        game.music.updateVolume(value);
                     } else {
                         menu.settings.soundEffectsVolume = o.value;
                         menu.settings.soundEffectsMuted = o.muted;
@@ -945,7 +949,7 @@ var menu = {
                     }
                     updateSettingsData();
                 }
-                y += 110;
+                y += 100;
             } else if (o.type == "link") {
                 var hitbox = { x: 200, y: y - 10, w: 550, h: 80 };
                 if (Mouse.inBox(hitbox.x, hitbox.y, hitbox.w, hitbox.h) && !this.navigatingWithKeys) {
@@ -966,7 +970,7 @@ var menu = {
         ctx.fillText("Unsettings", 500, -930);
 
         ctx.save();
-        ctx.translate(0, -830);
+        ctx.translate(0, -850);
         for (var n = 0; n < this.settingsAnimations.length; n++) {
             var o = this.settingsAnimations[n];
             ctx.save();
@@ -1086,7 +1090,7 @@ var menu = {
             ctx.restore();
             ctx.translate(0, 55);
             if (o.type == "range") {
-                ctx.translate(0, 50);
+                ctx.translate(0, 40);
             }
         }
         ctx.restore();
@@ -1987,7 +1991,7 @@ var menu = {
 
         ctx.textAlign = "left";
         ctx.font = "40px rubik";
-        ctx.fillText("You haven't taken", 380, 0);
+        ctx.fillText("You haven't completed", 380, 0);
         ctx.font = "50px rubikbold";
         ctx.font = "50px rubikbold";
         var shortcutsTaken = saveData.shortcutsTaken.filter(e => e).length;

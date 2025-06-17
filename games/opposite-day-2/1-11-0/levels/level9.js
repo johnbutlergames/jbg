@@ -346,7 +346,7 @@ levels[8] = {
                 var o = game.objects.objects.find(e => e.id == "text 3");
                 o.alpha = 0;
                 o.decay = 0;
-                game.level.playerControlDelay = 1000;
+                if (!game.level.playerInvincible) game.level.playerControlDelay = 1000;
             },
             passive: function () {
                 var o = game.objects.objects.find(e => e.type == "boss");
@@ -360,8 +360,8 @@ levels[8] = {
                     if (o.y == -300 && !o.hitGround) {
                         o.hitGround = true;
                         game.cam.screenshake = 40;
-                        player.delete = true;
-                        game.soundEffects.death();
+                        if (!game.level.playerInvincible) player.delete = true;
+                        if (!game.level.playerInvincible) game.soundEffects.death();
                         game.soundEffects.bossDeathSlam();
                     }
                 }
@@ -437,6 +437,7 @@ levels[8] = {
                 return player.x < -1530;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
                 o.activated = true;
@@ -638,7 +639,7 @@ levels[8] = {
             name: "reload pre red cube",
             check: function () {
                 if (game.level.triggers.tripped("red cube")) return false;
-                return true;
+                //return true;
                 if (game.level.triggers.tripped("text 1")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return true;
@@ -663,7 +664,7 @@ levels[8] = {
         {
             name: "pre red cube phase 2",
             check: function () {
-                return true;
+                //return true;
                 if (game.level.triggers.tripped("red cube")) return false;
                 if (game.level.triggers.tripped("text 1")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -676,7 +677,7 @@ levels[8] = {
                 return player.y == 60;
             },
             trip: function () {
-                return;
+                //return;
                 var o = game.objects.objects.find(e => e.id == "red cube block");
                 o.alpha = 0;
                 o.decay = -0.1;
@@ -685,7 +686,7 @@ levels[8] = {
         {
             name: "red cube",
             check: function () {
-                return true;
+                //return true;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 var o = game.objects.objects.find(e => e.id == "red cube clue");
@@ -833,7 +834,7 @@ levels[8] = {
             },
             passive: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
-                var a = game.level.levelAnimationTime;// + 700 + 1200;
+                var a = game.level.levelAnimationTime;// + 700 + 1200 + 300;
                 if (a >= 2300) return;
                 var alpha = easeInOut(a / 20) - easeInOut((a - 280) / 80);
                 var scale = easeInOut(a / 20) + easeInBack((Math.min(a, 300) - 100) % 100 / 20) * 0.03 + Math.max(a - 300, 0) / 180 + a / 2000;
@@ -1030,9 +1031,11 @@ levels[8] = {
         {
             name: "phase 1",
             check: function () {
-                return game.level.triggers.tripped("phase 0") && game.level.levelAnimationTime/* + 700 + 1200/**/ >= 2300;
+                return game.level.triggers.tripped("phase 0") && game.level.levelAnimationTime/* + 700 + 1200 + 300/**/ >= 2300;
             },
             trip: function () {
+                //audios.notTheRealBossfight.currentTime = 23;
+                //audios.notTheRealBossfight.play();
                 var innerPart = game.objects.objects.find(e => e.id == "boss part 1");
                 var o = {
                     type: "bart",

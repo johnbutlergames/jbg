@@ -111,6 +111,7 @@ levels[0] = {
                 return false;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube");
                 o.alpha = 1;
@@ -401,6 +402,8 @@ levels[0] = {
             name: "red cube",
             check: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
+                var o = game.objects.objects.find(e => e.type == "cube" && e.red);
+                if (o.collected) return false;
                 var o = game.objects.objects.find(e => e.id == "red cube clue");
                 if (!player) return false;
                 var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);

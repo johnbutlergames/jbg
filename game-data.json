@@ -1264,6 +1264,12 @@ versions = {
             "date": "12-13-2024",
             "title": "Debug Menu",
             "description": "<ul><li>Added a debug menu, press ~ to access it in game.</li><li>Thanks @ppougj.</li></ul>"
+        },
+        {
+            "version": "1.2.1",
+            "date": "5-2-2025",
+            "title": "Competetive Patch",
+            "description": "<ul><li>Added a competetive patch for runs less than 40 seconds long.</li><li>Fixed some issues with the debug menu.</li></ul>"
         }
     ],
     "ghost-town": [

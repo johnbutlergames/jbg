@@ -105,12 +105,18 @@
             "bossPartTrail": "images/boss-part-trail.png",
             "bartPhase0Spritesheet": "images/bart-phase0-spritesheet.png",
             "bartPhase1TransformationSpritesheet": "images/bart-phase1-transformation-spritesheet.png",
+            "bartPhase1Spritesheet": "images/bart-phase1-spritesheet.png",
+            "bartPhase1WeaponsSpritesheet": "images/bart-phase1-weapons-spritesheet.png",
             "magentaSparkle": "images/magenta-sparkle.png",
             "ultraShortcutTaken": "images/ultra-shortcut-taken.png",
             "ultraShortcutDiscovered": "images/ultra-shortcut-discovered.png",
             "ultraCheckmark": "images/ultra-checkmark.png",
             "ultraCubeDiscovered": "images/ultra-cube-discovered.png",
-            "ultraCubeTaken": "images/ultra-cube-taken.png"
+            "ultraCubeTaken": "images/ultra-cube-taken.png",
+            "shortcutDiscoveredAlertIcon": "images/shortcut-discovered-alert-icon.png",
+            "shortcutTakenAlertIcon": "images/shortcut-taken-alert-icon.png",
+            "ultraShortcutDiscoveredAlertIcon": "images/ultra-shortcut-discovered-alert-icon.png",
+            "ultraShortcutTakenAlertIcon": "images/ultra-shortcut-taken-alert-icon.png",
         };
         var audios = {
             "collectBlueCube": "sound-effects/collect-blue-cube.mp3",
@@ -153,7 +159,6 @@
             "whoosh": "sound-effects/whoosh.mp3",
             "reverseWhoosh": "sound-effects/reverse-whoosh.mp3",
             "bubblesStart": "sound-effects/bubbles-start.mp3",
-            "bubblesEnd": "sound-effects/bubbles-end.mp3",
             "bubbles": "sound-effects/bubbles.mp3",
             "killJumpEnemy": "sound-effects/kill-jump-enemy.mp3",
             "pingPongHit": "sound-effects/ping-pong-hit.mp3",
@@ -168,9 +173,16 @@
             "levelSelect": "sound-effects/level-select.mp3",
             "levelSelectInvalid": "sound-effects/level-select-invalid.mp3",
             "menuClick": "sound-effects/menu-click.mp3",
-            "notTheRealBossfight": "music/not-the-real-bossfight.mp3",
             "eatApple": "sound-effects/eat-apple.mp3",
-            "ultra": "sound-effects/ultra.mp3"
+            "ultra": "sound-effects/ultra.mp3",
+            "finish": "sound-effects/finish.mp3",
+            "ultraFinish": "sound-effects/ultra-finish.mp3",
+            "blobStart": "sound-effects/blob-start.mp3",
+            "blobEnd": "sound-effects/blob-end.mp3",
+            "shortcutCompleted": "sound-effects/shortcut-completed.mp3",
+            "oppositeDayTheme": "music/opposite-day-theme.mp3",
+            "incompletionTheme": "music/incompletion-theme.mp3",
+            "notTheRealBossfight": "music/not-the-real-bossfight.mp3",
         };
         window.addEventListener("keydown", function (e) {
             if (!menu.acceptingKeybindInput) return;
@@ -179,7 +191,9 @@
         });
 
         var musicAudios = [
-            "notTheRealBossfight"
+            "oppositeDayTheme",
+            "incompletionTheme",
+            "notTheRealBossfight",
         ];
 
         var defaultKeybinds = [
@@ -257,6 +271,15 @@
             }
             menu.tick();
             t++;
+        }
+
+        function easeOut(n) {
+            return Math.min(Math.max(n, 0), 1) ** 4;
+        }
+
+        function easeOutPartialIn(a) {
+            a = 1.02 / (1 + 2.76 ** (-10 * (a - 0.6))) - 0.0026;
+            return Math.min(Math.max(a, 0), 1);
         }
 
         function drawRotatingCube(data) {
@@ -442,6 +465,52 @@
             }
         }
 
+        function pointInPolygon(x, y, o) {
+            var response = false;
+            var crossCount = 0;
+            for (var n = 0; n < o.length; n++) {
+                var line = o[n];
+                var intersection = linesIntersection(x, y, x + 1, y, line.p1.x, line.p1.y, line.p2.x, line.p2.y);
+                if (!intersection) continue;
+                if (intersection === true) continue;
+                if (intersection.x < x) continue;
+                if (intersection.y < Math.min(line.p1.y, line.p2.y)) continue;
+                if (intersection.y > Math.max(line.p1.y, line.p2.y)) continue;
+                crossCount++;
+            }
+            return crossCount % 2 === 1;
+        }
+
+        function linesIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+            if (x1 === x3 && y1 === y3 && x2 === x4 && y2 === y4) return true;
+            var m1 = (y2 - y1) / (x2 - x1);
+            var b1 = y1 - x1 * m1;
+            var m2 = (y4 - y3) / (x4 - x3);
+            var b2 = y3 - x3 * m2;
+
+            if ((!isFinite(m1) && !isFinite(m2))) {
+                if (x1 === x3) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            if (m1 === m2) {
+                if (b1 === b2) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            if (!isFinite(m1)) {
+                return { x: x1, y: m2 * x1 + b2 };
+            }
+            if (!isFinite(m2)) {
+                return { x: x3, y: m1 * x3 + b1 };
+            }
+            return { x: (b1 - b2) / (m2 - m1), y: m1 * (b1 - b2) / (m2 - m1) + b1 };
+        }
+
         var saveData = false;
         var saveDataStored = false;
         if (localStorage.getItem("oppositeday2savedata") !== null) {
@@ -454,6 +523,7 @@
             saveData.shortcutsTaken = saveData.shortcutsTaken || [];
             saveData.ultraShortcutsDiscovered = saveData.ultraShortcutsDiscovered || [];
             saveData.ultraShortcutsTaken = saveData.ultraShortcutsTaken || [];
+            saveData.blueCubesDiscovered = saveData.blueCubesDiscovered || [];
             saveData.blueCubesCollected = saveData.blueCubesCollected || [];
             saveData.ultraBlueCubesDiscovered = saveData.ultraBlueCubesDiscovered || [];
             saveData.ultraBlueCubesTaken = saveData.ultraBlueCubesTaken || [];
@@ -478,7 +548,7 @@
             menu.settings.keybinds = structuredClone(defaultKeybinds);
             game.input.updateKeybinds();
         }
-        game.soundEffects.updateMusicVolume(menu.settings.musicVolume * (menu.settings.musicMuted ? 0 : 1));
+        game.music.updateVolume(menu.settings.musicVolume * (menu.settings.musicMuted ? 0 : 1));
         game.soundEffects.updateSoundEffectsVolume(menu.settings.soundEffectsVolume * (menu.settings.soundEffectsMuted ? 0 : 1));
 
         function updateSaveData() {
@@ -525,6 +595,7 @@
             "God NTSC Player",
             "Ty Cirino",
             "Braxton McFarland",
+            "Smooshymemes",
             "Pompelo",
             "Annoying Dog",
             "Larry the Hamster",
@@ -554,23 +625,37 @@
         game.newGame();
         game.level.load(9);
         //game.level.playerInvincible = true;
+        //game.level.playerFlightMode = true;
         //game.level.showWireframes = true;
+        //game.level.showViewBox = true;
+        //game.cam.zoom = 0.5;
+        //game.level.lockedPlayerCamera = true;
         Loading.intro = false;
         Loading.loaded = true;
+
         /*
         To Do:
-        for credits menu make things pop in as it scrolls down
         Red cube level 10
         Red cube level 9
-        Level 8 pointless collectable
+        Ultra shortcut level 9
+        Ultra blue cube level 5
+        Ultra blue cube level 6
+        Ultra blue cube level 7
+        Ultra blue cube level 8
+        Ultra blue cube level 9
+        Ultra blue cube level 10
+        Ultra red cube level 4
+        Ultra red cube level 5
+        Ultra red cube level 6
+        Ultra red cube level 7
+        Ultra red cube level 8
+        Ultra red cube level 9
+        Ultra red cube level 10
 
         Music:
-        Menu Theme
         Main Theme
-        Incompletion Theme
 
         Sound Effects:
-        Lvl 10 win
         Lvl 9 red cube entrance
 
         Mb Later:
@@ -580,14 +665,6 @@
         Shortcut Theme
         Red Cube Theme
         Blue Cube Theme
-
-        Content Update:
-        Level 3 tesseract
-        Level 6 tesseract
-        Level 8 tesseract
-        Level 9 tesseract
-        Welcome to Hell
-        Coin Dash
         */
 
         var movementRecord = "";

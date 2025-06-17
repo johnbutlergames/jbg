@@ -1,8 +1,9 @@
 levels[9] = {
     objects: [
-        { type: "text", content: "This isn't the last level", x: 0, y: -250, font: "40px rubik", spawnAnimation: 50, spawnAnimationDuration: 50 },
+        { type: "text", content: "This isn't the final level", x: 0, y: -250, font: "40px rubik", spawnAnimation: 50, spawnAnimationDuration: 50 },
         { type: "text", content: "and it's completely ordinary.", x: 0, y: -200, font: "40px rubik", spawnAnimation: 50, spawnAnimationDuration: 50 },
         { type: "clue", x: -1250, y: -200, id: "shortcut clue", proximity: 1, radius: 1, color: { r: 0, g: 230, b: 0 }, air: true, down: true, angle: 180, alpha: 0 },
+        { type: "clue", x: -1250, y: -1750, id: "ultra shortcut clue 1", proximity: 1, radius: 1, ultra: true, air: true, angle: 180, alpha: 0 },
         { type: "block", x: 500, y: -500, w: 2000, h: 1000, slippery: true },
         { type: "block", x: -4100, y: 100, w: 5000, h: 1000, illusion3Push: { y: 1 } },
         { type: "lava", x: -1100, y: -2800, w: 2100, h: 2000 },
@@ -45,30 +46,90 @@ levels[9] = {
         { type: "block", x: -4900, y: 7300, w: 400, h: 1000, collide: false, alpha: 0, id: "crossroad block 2" },
         { type: "block", x: -5800, y: 7500, w: 400, h: 800, collide: false, alpha: 0, id: "crossroad block 2" },
         { type: "block", x: -4600, y: 7300, w: 400, h: 800, collide: false, alpha: 0, id: "crossroad block 2" },
-        { type: "block", x: -800, y: 560, w: 3000, h: 3000, collide: false, alpha: 0, t: true },
         { type: "block", x: 113, y: -1000, w: 1000, h: 3000, collide: false, alpha: 0, t: true, slippery: true },
-        /**/
-        { type: "block", drawType: "phase in out", x: -1000, y: 560, w: 201, h: 200, t: true },
-        { type: "block", drawType: "phase in out", x: -1200, y: 560, w: 201, h: 200, t: true },
-        { type: "block", drawType: "phase in out", x: -1400, y: 560, w: 201, h: 200, t: true },
-        { type: "block", drawType: "phase in out", x: -1600, y: 560, w: 201, h: 200, t: true },
-        { type: "block", drawType: "phase in out", x: -1800, y: 560, w: 201, h: 200, t: true },
-        { type: "block", drawType: "phase in out", x: -2000, y: 560, w: 201, h: 200, t: true },
-        { type: "block", x: -2400, y: 560, w: 401, h: 1000, t: true, slippery: true },
-        { type: "block", drawType: "phase in out", x: -2600, y: 560, w: 201, h: 200, t: true, id: "false bridge" },
-        { type: "block", drawType: "phase in out", x: -2800, y: 560, w: 201, h: 200, t: true, id: "false bridge" },
-        { type: "block", drawType: "phase in out", x: -3000, y: 560, w: 201, h: 200, t: true, id: "false bridge" },
-        { type: "block", drawType: "phase in out", x: -3200, y: 560, w: 201, h: 200, t: true, id: "false bridge" },
-        /**/
-        /*
-        { type: "block", x: -1200, y: 560, w: 401, h: 200, t: true, collide: false, slippery: true },
-        { type: "block", x: -1600, y: 560, w: 401, h: 200, t: true, collide: false, id: "false bridge" },
-        { type: "block", x: -2200, y: 560, w: 601, h: 200, t: true, collide: false, id: "shrink bridge" },
-        { type: "portal", drawType: "portal", x: -1450, y: 1000, length: 100, angle: 0, pair: 1, portalNumber: 0, color: { r: 100, g: 130, b: 255 }, direction: "in", id: "portal1", t: true },
-        { type: "portal", drawType: "portal", x: -1800, y: 200, length: 100, angle: 180, pair: 0, portalNumber: 1, color: { r: 100, g: 130, b: 255 }, direction: "out", id: "portal2", t: true },
-        { type: "block", x: -1800, y: 360, w: 200, h: 400, t: true, collide: false, noAlpha: true, slippery: true },
-        /**/
-        //{ type: "block", drawType: "phase in out", x: -2000, y: 560, w: 201, h: 200, t: true },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -3760, y: -86, w: 502, h: 502, speed: 1, turn: 72, angle: 2933, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -3300, y: 100, w: 180, h: 180, speed: -1, turn: -145, angle: 11, period: { time: 268, changeRange: 20, offset: 100, offTime: 66 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -3400, y: 230, w: 200, h: 200, speed: 1.574, turn: 145, angle: 11, period: { time: 268, changeRange: 20, offset: 278, offTime: 66 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -3150, y: -50, w: 280, h: 280, speed: 1.074, turn: 96, angle: 166, period: { time: 370, changeRange: 20, offset: 373, offTime: 117 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, id: "red cube delayed lava", x: -3100, y: -320, w: 406, h: 406, speed: -0.769, turn: -69, angle: 34, period: { time: 310, changeRange: 20, offset: 213, offTime: 75 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2950, y: 220, w: 90, h: 90, speed: -1.906, turn: -171, angle: 342, period: { time: 383, changeRange: 20, offset: 32, offTime: 99 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, id: "red cube absent lava", x: -2680, y: 173, w: 157, h: 157, speed: 1.806, turn: 171, angle: 100, period: { time: 383, changeRange: 20, offset: 180, offTime: 99 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2580, y: 133, w: 180, h: 180, speed: -1, turn: -171, angle: 100, period: { time: 383, changeRange: 20, offset: 150, offTime: 99 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2400, y: 0, w: 110, h: 110, speed: -1.33, turn: -141, angle: 202, period: { time: 217, changeRange: 20, offset: 106, offTime: 53 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2460, y: 171, w: 100, h: 100, speed: 1.573, turn: 141, angle: 202, period: { time: 217, changeRange: 20, offset: 206, offTime: 53 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2100, y: 0, w: 300, h: 300, speed: -1, turn: -100, angle: 351, period: { time: 500, changeRange: 20, offset: 20, offTime: 87 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2240, y: 127, w: 160, h: 160, speed: 0.688, turn: 61, angle: 351, period: { time: 354, changeRange: 20, offset: 20, offTime: 87 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2000, y: 140, w: 50, h: 50, speed: 0.98, turn: 100, angle: 301, period: { time: 304, changeRange: 20, offset: 100, offTime: 80 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2050, y: 240, w: 60, h: 60, speed: 0.98, turn: 100, angle: 301, period: { time: 304, changeRange: 20, offset: 200, offTime: 80 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -1900, y: 136, w: 186, h: 186, speed: -1.22, turn: -110, angle: 29, period: { time: 378, changeRange: 20, offset: 188, offTime: 101 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -1700, y: -106, w: 186, h: 186, speed: 1, turn: 110, angle: 29, period: { time: 300, changeRange: 20, offset: 100, offTime: 90 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -2200, y: -230, w: 276, h: 276, speed: -0.9, turn: -130, angle: 0, period: { time: 350, changeRange: 20, offset: 150, offTime: 110 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -1680, y: 150, w: 100, h: 100, speed: -0.603, turn: -54, angle: 38, period: { time: 355, changeRange: 20, offset: 295, offTime: 100 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -1500, y: 206, w: 105, h: 105, speed: 0.801, turn: 72, angle: 115, period: { time: 275, changeRange: 20, offset: 328, offTime: 100 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -1360, y: 119, w: 78, h: 78, speed: 1.415, turn: 127, angle: 112, period: { time: 357, changeRange: 20, offset: 95, offTime: 118 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -1140, y: 250, w: 65, h: 65, speed: -1.6854, turn: -151, angle: 160, period: { time: 345, changeRange: 20, offset: 267, offTime: 70 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, x: -920, y: 125, w: 54, h: 54, speed: 0.543, turn: 180, angle: 156, period: { time: 246, changeRange: 20, offset: 304, offTime: 54 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3740, y: 650, w: 130, h: 130, speed: -0.8, turn: -80, angle: 202, period: { time: 202, changeRange: 20, offset: 195, offTime: 40 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3650, y: 900, w: 150, h: 150, speed: 1.193, turn: 107, angle: 202, period: { time: 202, changeRange: 20, offset: 50, offTime: 40 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3600, y: 629, w: 300, h: 300, speed: 1.09, turn: 98, angle: 142, period: { time: 350, changeRange: 20, offset: 56, offTime: 50 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3440, y: 832, w: 133, h: 133, speed: -1.193, turn: -107, angle: 202, period: { time: 302, changeRange: 20, offset: 195, offTime: 73 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout2: true, x: -3230, y: 908, w: 300, h: 300, speed: -1.42, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2700, y: 1108, w: 200, h: 200, speed: -1.42, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2800, y: 1008, w: 170, h: 170, speed: 1.32, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2570, y: 1208, w: 250, h: 250, speed: 1.32, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3600, y: 1108, w: 200, h: 200, speed: -1.42, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3500, y: 1008, w: 170, h: 170, speed: 1.32, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -3770, y: 1208, w: 250, h: 250, speed: 1.32, turn: -66, angle: 98, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout2: true, x: -3210, y: 458, w: 250, h: 250, speed: -1.42, turn: -66, angle: 98, startRange: -1000, endRange: 1000, id: "hole in floor" },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout2: true, x: -3230, y: 658, w: 300, h: 300, speed: 1.42, turn: 66, angle: 98, startRange: -1000, endRange: 1000, id: "hole in floor 2" },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2770, y: 654, w: 250, h: 250, speed: 0.66, turn: 59, angle: 185, period: { time: 399, changeRange: 20, offset: 16, offTime: 92 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2900, y: 864, w: 180, h: 180, speed: 0.66, turn: 59, angle: 185, period: { time: 399, changeRange: 20, offset: 200, offTime: 92 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2820, y: 600, w: 90, h: 90, speed: -1.936, turn: -174, angle: 31, period: { time: 180, changeRange: 20, offset: 50, offTime: 40 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2790, y: 800, w: 69, h: 69, speed: -1.936, turn: -174, angle: 31, period: { time: 214, changeRange: 20, offset: 228, offTime: 83 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2680, y: 882, w: 128, h: 128, speed: -1.7192, turn: -154, angle: 35, period: { time: 255, changeRange: 20, offset: 206, offTime: 68 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2570, y: 644, w: 120, h: 120, speed: -1.496, turn: -134, angle: 309, period: { time: 262, changeRange: 20, offset: 173, offTime: 53 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2460, y: 699, w: 73, h: 73, speed: 1.201, turn: 108, angle: 162, period: { time: 391, changeRange: 20, offset: 11, offTime: 137 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2380, y: 870, w: 120, h: 120, speed: -1, turn: -100, angle: 313, period: { time: 222, changeRange: 20, offset: 280, offTime: 51 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2300, y: 900, w: 200, h: 200, speed: 0.833, turn: 75, angle: 313, period: { time: 222, changeRange: 20, offset: 338, offTime: 51 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2240, y: 784, w: 62, h: 62, speed: 2.2, turn: 170, angle: 176, period: { time: 292, changeRange: 20, offset: 160, offTime: 64 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2130, y: 614, w: 120, h: 120, speed: -1.214, turn: -109, angle: 20, period: { time: 326, changeRange: 20, offset: 387, offTime: 93 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -2020, y: 787, w: 140, h: 140, speed: 1.992, turn: 179, angle: 357, period: { time: 258, changeRange: 20, offset: 130, offTime: 77 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -1910, y: 749, w: 150, h: 150, speed: 1.375, turn: 123, angle: 21, period: { time: 258, changeRange: 20, offset: 165, offTime: 77 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -1700, y: 802, w: 73, h: 73, speed: -0.932, turn: -83, angle: 331, period: { time: 343, changeRange: 20, offset: 99, offTime: 70 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutout: true, x: -1500, y: 675, w: 90, h: 90, speed: 1.5, turn: 100, angle: 137, period: { time: 328, changeRange: 20, offset: 92, offTime: 30 } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -2965, y: 1060, w: 180, h: 180, speed: 0.8, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -2825, y: 1120, w: 220, h: 220, speed: -0.9, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -2725, y: 1320, w: 150, h: 150, speed: 1.2, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -2645, y: 1350, w: 190, h: 190, speed: -0.9, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -2545, y: 1380, w: 190, h: 190, speed: 0.7, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -3365, y: 1100, w: 180, h: 180, speed: -0.8, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -3550, y: 1130, w: 250, h: 250, speed: 1, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -3700, y: 1280, w: 250, h: 250, speed: -0.8, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "phase in out ornament", alpha: 0, noCollide: true, t: true, collide: false, cutoutEligible: true, x: -3850, y: 1300, w: 250, h: 250, speed: 0.5, turn: 180, angle: 156, period: { alwaysOn: true } },
+        { type: "clue", x: -2780, y: 380, down: true, angle: 180, id: "red cube clue", color: { r: 255, g: 100, b: 100 }, t: true, air: true },
+        { type: "phase in out", x: -2840, y: 220, w: 120, h: 120, t: true, alpha: 0, collide: false, noCollide: true, playerDistCheck: false, id: "red cube stable platform" },
+        { type: "phase in out", x: -2630, y: 100, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 320, changeRange: 20, initialOffset: 120, offset: 0, offTime: 120 }, id: "red cube platform" },
+        { type: "phase in out", x: -2500, y: 0, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 320, changeRange: 20, initialOffset: 80, offset: 0, offTime: 120 }, id: "red cube platform" },
+        { type: "phase in out", x: -2300, y: -50, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 320, changeRange: 20, initialOffset: 40, offset: 0, offTime: 120 }, id: "red cube platform" },
+        { type: "phase in out", x: -2500, y: -250, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 320, changeRange: 20, initialOffset: 0, offset: 0, offTime: 120 }, id: "red cube platform" },
+        { type: "phase in out", x: -2700, y: -500, w: 120, h: 120, t: true, alpha: 0, collide: false, noCollide: true, playerDistCheck: false, id: "red cube stable platform" },
+        { type: "phase in out ornament", lava: true, alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, id: "red cube extra lava", x: -3300, y: -800, w: 500, h: 500, speed: 0.769, turn: 70, angle: 34, period: { alwaysOff: true } },
+        { type: "phase in out ornament", lava: true, alpha: 0, noCollide: true, t: true, collide: false, cutout3: true, id: "red cube extra lava", x: -1800, y: -300, w: 300, h: 300, speed: 0.769, turn: 70, angle: 34, period: { alwaysOff: true } },
+        { type: "phase in out", x: -2500, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 150, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -2400, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 100, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -2300, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 50, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -2200, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 0, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -2100, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 150, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -2000, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 100, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -1900, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 50, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -1800, y: -600, w: 50, h: 50, t: true, alpha: 0, collide: false, noCollide: true, deactivated: true, period: { time: 200, changeRange: 20, initialOffset: 0, offset: 0, offTime: 80 }, id: "red cube platform" },
+        { type: "phase in out", x: -1700, y: -600, w: 120, h: 120, t: true, alpha: 0, collide: false, noCollide: true, playerDistCheck: false, id: "red cube stable platform" },
+        { type: "block", x: -800, y: 560, w: 3000, h: 3000, collide: false, alpha: 0, t: true, cutoutEligible: true },
+        { type: "block", x: -4200, y: 560, w: 4000, h: 600, t: true, slippery: true, cutoutEligible: true, id: "false bridge" },
+        { type: "block", x: -2700, y: 1159, w: 2500, h: 202, t: true, collide: false, noCollide: true, cutoutEligible: true },
+        { type: "block", x: -5950, y: 1159, w: 2500, h: 202, t: true, collide: false, noCollide: true, cutoutEligible: true },
+        { type: "block", x: -2550, y: 1360, w: 2500, h: 150, t: true, collide: false, noCollide: true, cutoutEligible: true },
+        { type: "block", x: -6100, y: 1360, w: 2500, h: 150, t: true, collide: false, noCollide: true, cutoutEligible: true },
         { type: "block", x: -3400, y: 2000, w: 600, h: 600, t: true, id: "planet layer 1" },
         { type: "block", x: -3351, y: 2000, w: 201, h: 50, t: true, id: "layer 1 border" },
         { type: "block", x: -3050, y: 2000, w: 201, h: 50, t: true, id: "layer 1 border" },
@@ -100,6 +161,7 @@ levels[9] = {
         { type: "lava", x: -3150, y: 4200, w: 100, h: 100, t: true, id: "shortcut lava" },
         { type: "lava", x: -3050, y: 3700, w: 100, h: 100, t: true, id: "shortcut lava" },
         { type: "lava", x: -3250, y: 3700, w: 100, h: 100, t: true, id: "shortcut lava" },
+        { type: "clue", x: -3100, y: 3750, id: "ultra shortcut clue 2", proximity: 1, radius: 1, ultra: true, air: true, angle: 180, t: true, alpha: 0 },
         { type: "lava", x: -3150, y: 3200, w: 100, h: 100, t: true, id: "shortcut lava" },
         { type: "lava", x: -5350, y: 2900, w: 2100, h: 2000, t: true, id: "shortcut lava" },
         { type: "block", drawType: "glass", x: -3400, y: 1300, w: 600, h: 700, t: true, id: "gravity down", noCollide: true, noAlpha: true },
@@ -108,6 +170,9 @@ levels[9] = {
         { type: "block", drawType: "glass", x: -2800, y: 2000, w: 700, h: 600, t: true, id: "gravity left", noCollide: true, noAlpha: true },
         { type: "cube", x: -4800, y: 400, id: "blue cube", illusion3: true },
         { type: "clue", x: -3200, y: 400, id: "blue cube pre clue", down: true, angle: 90, proximity: 1, radius: 1, illusion3: true },
+        { type: "clue", x: -3600, y: 400, id: "blue cube lead clue", down: true, angle: 90, proximity: 1, radius: 1, illusion3: true },
+        { type: "clue", x: -4000, y: 400, id: "blue cube lead clue", down: true, angle: 90, proximity: 1, radius: 1, illusion3: true },
+        { type: "clue", x: -4400, y: 400, id: "blue cube lead clue", down: true, angle: 90, proximity: 1, radius: 1, illusion3: true },
         { type: "clue", x: -4800, y: 320, id: "blue cube clue", down: true, proximity: 1, radius: 1, illusion3: true }
     ],
     triggers: [
@@ -130,6 +195,7 @@ levels[9] = {
                 player.y = -600 - (player.y - 60);
                 player.ymove = -player.ymove;
                 player.xmove = -player.xmove;
+                player.x++;
                 player.updateAngle = 180;
                 player.swapControls = {
                     left: "left",
@@ -144,6 +210,7 @@ levels[9] = {
                 player.y = 60 - (player.y + 600);
                 player.ymove = -player.ymove;
                 player.xmove = -player.xmove;
+                player.x++;
                 player.updateAngle = 0;
                 player.swapControls = false;
                 player.eyeAngleTarget = 0;
@@ -221,8 +288,19 @@ levels[9] = {
                 player.updateAngle = 180;
                 player.eyeAngleTarget = 180;
                 player.eyeAngle = 180;
-                player.swapControls = { left: "left", right: "right", up: "up", down: "down" };
+                player.swapControls = { left: "left", right: "right", up: "up", bottom: "bottom" };
                 player.wallJumpDisabled = true;
+
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 1");
+                if (!o.peeked) {
+                    o.peeked = true;
+                    o.alpha = 1;
+                }
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                if (!o.peeked) {
+                    o.peeked = true;
+                    o.alpha = 1;
+                }
 
                 game.cam.viewportBoundary = false;
             }
@@ -236,6 +314,7 @@ levels[9] = {
                 return player.y < -1500;
             },
             trip: function () {
+                //frameRate = 10;
                 var player = game.objects.objects.find(e => e.type == "player");
                 player.emitParticles = false;
                 player.wallJumpDisabled = false;
@@ -250,6 +329,7 @@ levels[9] = {
                 game.level.playerControlDelay = 0;
                 for (var o of game.objects.objects) {
                     if (o.type == "player") continue;
+                    if (o.id == "ultra shortcut clue 2") continue;
                     if (o.t) {
                         o.alpha = 1;
                         if (o.noAlpha) o.alpha = 0;
@@ -269,6 +349,51 @@ levels[9] = {
                 }
 
                 game.cam.offset = { x: 0, y: 0 };
+            }
+        },
+        {
+            name: "ultra shortcut",
+            check: function () {
+                if (!game.level.triggers.tripped("shortcut teleport")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
+                if (dist > 80) return false;
+                if (!game.input.down || game.input.downStart > 20) return false;
+                return true;
+            },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                return false;
+            },
+            trip: function () {
+                game.level.discoverUltraShortcut();
+                game.background.effect.start("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                o.activated = true;
+            },
+            untrip: function () {
+                game.background.effect.end("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue 2");
+                o.alpha = 1;
+                o.decay = 0.1;
+            },
+            passive: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return;
+                var dist = distTo(player.x + player.w / 2, player.y + player.h / 2, -3100, 2300);
+                if (dist < 100) return;
+                var percent = easeInOut((dist - 200) / 400);
+                if (game.input.left && !game.input.right) {
+                    player.xmove = (0.5 + 10 * percent);
+                } else if (game.input.right && !game.input.left) {
+                    player.xmove = -(0.5 + 10 * percent);
+                } else {
+                    player.xmove = 0;
+                }
+                player.ymove = -30;
             }
         },
         {
@@ -352,7 +477,7 @@ levels[9] = {
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 if (player.x > -1640) return false;
-                if (player.y == -140 || player.ymove < 0 && game.input.up) return true;
+                if (player.y > -150 && game.input.up) return true;
                 return false;
             },
             trip: function () {
@@ -363,7 +488,7 @@ levels[9] = {
                     left: "right",
                     right: "left",
                     up: "up",
-                    down: "down"
+                    bottom: "bottom"
                 }
                 player.wallJumpDisabled = true;
                 if (player.y == -140) game.soundEffects.jump();
@@ -496,6 +621,8 @@ levels[9] = {
                 var player = game.objects.objects.find(e => e.type == "player");
                 player.emitParticles = false;
                 player.controlDelay = 100;
+                //player.y = -20;
+                //player.x = -2600;
                 for (var o of game.objects.objects) {
                     if (o.type == "player") continue;
                     if (o.illusion3) continue;
@@ -513,7 +640,7 @@ levels[9] = {
                         o.y = -100 + y * 400;
                         if (y == 4) o.h = 6000;
                         if (x == -1 && y == 1) {
-                            game.objects.objects.splice(game.objects.objects.length - 4, 0, {
+                            game.objects.objects.splice(game.objects.objects.length - 7, 0, {
                                 type: "block",
                                 illusion3: true,
                                 x: -2700 + x * 400 + y % 2 * 200,
@@ -579,9 +706,9 @@ levels[9] = {
                                     h: 200
                                 }
                             ];
-                            game.objects.objects.splice(game.objects.objects.length - 3, 0, ...objects);
+                            game.objects.objects.splice(game.objects.objects.length - 6, 0, ...objects);
                         } else {
-                            game.objects.objects.splice(game.objects.objects.length - 3, 0, o);
+                            game.objects.objects.splice(game.objects.objects.length - 6, 0, o);
                         }
                     }
                 }
@@ -632,6 +759,9 @@ levels[9] = {
                 o.y -= 800;
                 var o = game.objects.objects.find(e => e.id == "blue cube");
                 o.y -= 800;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.y -= 800;
+                }
             }
         },
         {
@@ -663,6 +793,9 @@ levels[9] = {
                 o.x += 400;
                 var o = game.objects.objects.find(e => e.id == "blue cube");
                 o.x += 400;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.x += 400;
+                }
             }
         },
         {
@@ -694,6 +827,9 @@ levels[9] = {
                 o.x -= 400;
                 var o = game.objects.objects.find(e => e.id == "blue cube");
                 o.x -= 400;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.x -= 400;
+                }
             }
         },
         {
@@ -712,6 +848,10 @@ levels[9] = {
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
                 o.alpha = 1;
                 o.decay = 0.1;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.alpha = 1;
+                    o.decay = 0.1;
+                }
             }
         },
         {
@@ -733,14 +873,21 @@ levels[9] = {
                 return player.x > o.x;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube pre clue");
                 o.activated = true;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.activated = true;
+                }
             },
             untrip: function () {
                 game.background.effect.end("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube pre clue");
                 o.activated = false;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.activated = false;
+                }
             }
         },
         {
@@ -752,7 +899,7 @@ levels[9] = {
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
-                return Math.abs(player.x + player.w / 2 - o.x) < 20 && player.y == 260 && game.input.downStart;
+                return Math.abs(player.x + player.w / 2 - o.x) < 20 && player.y == 260 && game.input.downStart === 1;
             },
             stop: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -802,6 +949,10 @@ levels[9] = {
                 var o = game.objects.objects.find(e => e.id == "blue cube pre clue");
                 o.alpha = 0;
                 o.decay = 0;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.alpha = 1;
+                    o.decay = 0.1;
+                }
             }
         },
         {
@@ -819,6 +970,10 @@ levels[9] = {
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
                 o.alpha = 0;
                 o.decay = 0;
+                for (var o of game.objects.objects.filter(e => e.id == "blue cube lead clue")) {
+                    o.alpha = Math.min(o.alpha, 1);
+                    o.decay = 0.1;
+                }
             }
         },
         {
@@ -1190,7 +1345,7 @@ levels[9] = {
                 //game.level.playerFlightMode = true;
                 //game.level.showWireframes = true;
                 player.x = 0;
-                player.x = -3300;
+                player.x = -3100;
                 player.y = 0;
                 game.cam.viewportBoundary = false;
                 game.cam.offset = { x: 0, y: 0 };
@@ -1198,61 +1353,214 @@ levels[9] = {
             }
         },
         {
+            name: "red cube",
+            check: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "red cube clue");
+                var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
+                if (dist > 40) return false;
+                if (!game.input.up || game.input.upStart > 10) return false;
+                return true;
+            },
+            stop: function () {
+                if (!game.level.triggers.tripped("red cube platform 1")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                return player.y > 400;
+            },
+            trip: function () {
+                game.level.discoverRedCube();
+                game.background.effect.start("red");
+                var o = game.objects.objects.find(e => e.id == "red cube clue");
+                o.activated = true;
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.ymove = -15;
+                player.xmove = 0;
+
+                for (var o of game.objects.objects.filter(e => e.type == "phase in out ornament" && e.cutout3 && e.id != "red cube extra lava")) {
+                    o.lava = true;
+                    o.previousPeriod = o.period;
+                    o.period = { alwaysOn: true };
+                }
+                for (var o of game.objects.objects.filter(e => e.id == "red cube extra lava")) {
+                    o.period = { alwaysOn: true };
+                }
+
+                var o = game.objects.objects.find(e => e.id == "red cube absent lava");
+                o.period = { offTime: Infinity };
+                var o = game.objects.objects.find(e => e.id == "red cube delayed lava");
+                o.period = { offTime: Infinity };
+
+                for (var o of game.objects.objects.filter(e => e.id == "red cube platform")) {
+                    o.period.offset = o.period.initialOffset - game.level.levelAnimationTime;
+                    o.deactivated = false;
+                }
+            },
+            untrip: function () {
+                game.background.effect.end("red");
+                var o = game.objects.objects.find(e => e.id == "red cube clue");
+                o.activated = false;
+
+                for (var o of game.objects.objects.filter(e => e.type == "phase in out ornament" && e.cutout3 && e.id != "red cube extra lava")) {
+                    o.lava = false;
+                    o.period = o.previousPeriod;
+                }
+                for (var o of game.objects.objects.filter(e => e.id == "red cube extra lava")) {
+                    o.period = { alwaysOff: true };
+                }
+                for (var o of game.objects.objects.filter(e => e.id == "red cube platform")) {
+                    o.deactivated = true;
+                    o.animation.current = false;
+                }
+            },
+            passive: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return;
+                var hitbox = [
+                    { x: player.x + player.w * 0.25, y: player.y + player.h * 0.25 },
+                    { x: player.x + player.w * 0.75, y: player.y + player.h * 0.25 },
+                    { x: player.x + player.w * 0.75, y: player.y + player.h * 0.75 },
+                    { x: player.x + player.w * 0.25, y: player.y + player.h * 0.75 }
+                ];
+                var hitboxLines = [
+                    { p1: hitbox[0], p2: hitbox[1] },
+                    { p1: hitbox[1], p2: hitbox[2] },
+                    { p1: hitbox[2], p2: hitbox[3] },
+                    { p1: hitbox[3], p2: hitbox[0] }
+                ]
+                for (var o of game.objects.objects.filter(e => e.type == "phase in out ornament" && e.lava)) {
+                    var s = easeInOut(o.animation.a / o.animation.max);
+                    if (s == 0) continue;
+                    var maxSize = s * distTo(0, 0, o.w / 2, o.h / 2);
+                    var cx = o.x + o.w / 2;
+                    var cy = o.y + o.h / 2;
+                    var squareHitbox = { x: cx - maxSize, y: cy - maxSize, w: maxSize * 2, h: maxSize * 2 };
+                    o.hitbox = false;
+                    if (!blocksColliding(player, squareHitbox)) continue;
+                    var turn = o.turn || 90;
+                    var turnAngle = turn * s;
+                    var speed = o.speed || 1;
+                    var angle = o.angle || 0;
+                    if (!o.animation.current) turnAngle = turn + turn * (1 - s);
+                    var angle = (angle + speed * game.level.levelAnimationTime + turnAngle);
+                    var hitbox2 = [
+                        { x: -o.w / 2, y: -o.h / 2 },
+                        { x: o.w / 2, y: -o.h / 2 },
+                        { x: o.w / 2, y: o.h / 2 },
+                        { x: -o.w / 2, y: o.h / 2 }
+                    ];
+                    hitbox2 = hitbox2.map(e => {
+                        var r = rotate(0, 0, e.x, e.y, -angle);
+                        return { x: r.x + cx, y: r.y + cy };
+                    });
+                    var hitbox2Lines = [
+                        { p1: hitbox2[0], p2: hitbox2[1] },
+                        { p1: hitbox2[1], p2: hitbox2[2] },
+                        { p1: hitbox2[2], p2: hitbox2[3] },
+                        { p1: hitbox2[3], p2: hitbox2[0] }
+                    ]
+                    var collided = false;
+                    for (var n = 0; n < hitbox.length; n++) {
+                        if (pointInPolygon(hitbox[n].x, hitbox[n].y, hitbox2Lines)) {
+                            collided = true;
+                            break;
+                        }
+                    }
+                    if (!collided) {
+                        for (var n = 0; n < hitbox2.length; n++) {
+                            if (pointInPolygon(hitbox2[n].x, hitbox2[n].y, hitboxLines)) {
+                                collided = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!collided) continue;
+                    game.soundEffects.death();
+                    player.delete = true;
+                    break;
+                }
+                for (var o of game.objects.objects.filter(e => e.id == "red cube platform")) {
+                    var p = o.animation.a / o.animation.max;
+                    if (p > 0.6) {
+                        if (!o.collide && !blocksColliding(player, o)) {
+                            o.collide = true;
+                        }
+                    } else {
+                        o.collide = false;
+                    }
+                }
+            }
+        },
+        {
+            name: "red cube platform 1",
+            check: function () {
+                if (!game.level.triggers.tripped("red cube")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                return player.y < 220 - player.h;
+            },
+            stop: function () {
+                return !game.level.triggers.tripped("red cube");
+            },
+            trip: function () {
+                for (var o of game.objects.objects.filter(e => e.id == "red cube stable platform")) {
+                    o.animation.current = true;
+                    o.collide = true;
+                }
+            },
+            untrip: function () {
+                for (var o of game.objects.objects.filter(e => e.id == "red cube stable platform")) {
+                    o.animation.current = false;
+                    o.collide = false;
+                }
+            }
+        },
+        {
+            name: "red cube delayed lava",
+            check: function () {
+                if (!game.level.triggers.tripped("red cube platform 1")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                return player.y === 180;
+            },
+            stop: function () {
+                return !game.level.triggers.tripped("red cube");
+            },
+            trip: function () {
+                var o = game.objects.objects.find(e => e.id == "red cube delayed lava");
+                o.period = { alwaysOn: true };
+            }
+        },
+        {
             name: "false bridge",
             check: function () {
-                return true;
+                //return true;
                 if (!game.level.triggers.tripped("teleport 6")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 return player.x < -3100;
             },
             trip: function () {
-                for (var o of game.objects.objects.filter(e => e.id == "false bridge")) {
-                    o.playerDistCheck = false;
-                    o.collide = false;
-                    o.animation.current = false;
-                }
+                var o = game.objects.objects.find(e => e.id == "hole in floor");
+                o.animation.current = true;
+                o.animation.a = 10;
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.fallAnimation = 0;
             },
             passive: function () {
                 if (game.level.triggers.tripped("fall on planet")) return;
                 var player = game.objects.objects.find(e => e.type == "player");
+                player.fallAnimation++;
                 player.x = player.x * 0.9 + -3100 * 0.1;
-            }
-        },
-        {
-            name: "false bridge",
-            check: function () {
-                return false;
-                if (!game.level.triggers.tripped("teleport 6")) return false;
-                var player = game.objects.objects.find(e => e.type == "player");
-                if (!player) return false;
-                return player.x < -1300;
-            },
-            trip: function () {
-                return;
-                var o = game.objects.objects.find(e => e.id == "false bridge");
-                o.animation = 0;
-                o.collide = false;
-                o.originalY = o.y;
-                var o = game.objects.objects.find(e => e.id == "shrink bridge");
-                o.originalW = o.w;
-                var player = game.objects.objects.find(e => e.type == "player");
-                player.ymove = -3;
-            },
-            passive: function () {
-                return;
-                var o = game.objects.objects.find(e => e.id == "false bridge");
-                o.animation++;
-                var a = easeInOut(o.animation / 100);
-                o.angle = a * 90;
-                o.y = o.originalY - a * 200;
-                var o = game.objects.objects.find(e => e.id == "shrink bridge");
-                o.w = o.originalW - a * 2;
-                var player = game.objects.objects.find(e => e.type == "player");
-                player.ymove *= 0.995;
-                /*if (game.level.triggers.tripped("fall on planet")) return;
-                var player = game.objects.objects.find(e => e.type == "player");
-                player.x = player.x * 0.9 + -3100 * 0.1;*/
+                if (player.fallAnimation > 20) {
+                    var o = game.objects.objects.find(e => e.id == "hole in floor 2");
+                    o.animation.current = true;
+                }
+                if (player.fallAnimation > 26) {
+                    var o = game.objects.objects.find(e => e.id == "false bridge");
+                    o.collide = false;
+                }
             }
         },
         {
@@ -1267,7 +1575,7 @@ levels[9] = {
                 for (var n = 1; n < 4; n++) {
                     var o = { type: "player copy" };
                     o.rotate = { x: -3100, y: 2300, angle: n * 90 };
-                    game.objects.objects.splice(game.objects.objects.length - 1, 0, o);
+                    game.objects.objects.splice(game.objects.objects.length - 4, 0, o);
                 }
             }
         },
@@ -1283,6 +1591,9 @@ levels[9] = {
             trip: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
                 player.wallJumpDisabled = true;
+                for (var o of game.objects.objects.filter(e => e.type == "phase in out ornament" || e.cutoutEligible)) {
+                    o.delete = true;
+                }
             },
             passive: function () {
                 if (game.level.triggers.tripped("layer 2")) return;
@@ -1299,7 +1610,7 @@ levels[9] = {
         {
             name: "open layer 2",
             check: function () {
-                return true;
+                //return true;
                 if (game.level.triggers.tripped("shortcut teleport")) return true;
                 if (!game.level.triggers.tripped("fall on planet")) return false;
                 return Math.abs(game.cam.angle) >= 315;
@@ -1371,7 +1682,7 @@ levels[9] = {
         {
             name: "open layer 3",
             check: function () {
-                return true;
+                //return true;
                 if (game.level.triggers.tripped("shortcut teleport")) return true;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
@@ -1501,6 +1812,26 @@ levels[9] = {
             }
         },
         {
+            name: "layer 4 sound effect",
+            check: function () {
+                if (!game.level.triggers.tripped("layer 4")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                return player.animation > 75;
+            },
+            trip: function () {
+                if (!game.level.triggers.tripped("shortcut")) {
+                    game.soundEffects.finish();
+                } else {
+                    if (game.level.triggers.tripped("ultra shortcut")) {
+                        game.soundEffects.ultraFinish();
+                    } else {
+                        game.soundEffects.finishShortcut();
+                    }
+                }
+            }
+        },
+        {
             name: "layer 4",
             check: function () {
                 if (game.level.triggers.tripped("shortcut teleport")) return true;
@@ -1586,17 +1917,24 @@ levels[9] = {
                 player.x = -3100 - player.w / 2;
                 player.y = 2300 - player.h / 2;
                 player.explodeAnimation++;
+                if (game.level.triggers.tripped("ultra shortcut")) player.explodeAnimation++;
                 if (player.explodeAnimation % 4 == 0) game.particles.createEffect("player explode");
                 game.cam.screenshake = Math.min(player.explodeAnimation / 50, 8) + 2;
                 if (player.explodeAnimation > 500) {
                     if (game.level.triggers.tripped("shortcut")) {
-                        saveData.shortcutsTaken[9] = true;
+                        game.soundEffects.shortcutCompleted();
+                        if (game.level.triggers.tripped("ultra shortcut")) {
+                            game.level.takeUltraShortcut();
+                        } else {
+                            game.level.takeShortcut();
+                        }
                     }
                     saveData.levelsBeaten = 10;
                     updateSaveData();
                     menu.resetCreditsScreen();
                     menu.creditsScreen = true;
                     menu.levelSelectAnimations = [];
+                    game.ui.alerts.shortenAlerts();
                 }
             }
         },
@@ -1745,7 +2083,7 @@ levels[9] = {
             var percent = ((player.y - 1000) / 900) ** 8;
             game.cam.x = game.cam.x * (1 - percent) - 3100 * percent;
             game.cam.y = game.cam.y * (1 - percent) + 2300 * percent;
-            game.cam.zoom = 1 - 0.3 * easeInOut((player.y - 1000) / 900);
+            game.cam.zoom = 1 - 0.3 * easeInOut((player.y - 1200) / 900);
             return;
         } else if (game.level.triggers.tripped("teleport 6") || game.level.triggers.tripped("shortcut teleport")) {
             game.cam.angle = 0;
@@ -1844,7 +2182,25 @@ levels[9] = {
         x: 300,
         y: 0
     },
+    beforeManualRespawn: function () {
+        if (game.level.triggers.tripped("red cube")) {
+            var a = Math.min(Math.max((120 - this.playerRespawnTime) / 120, 0), 1);
+            var p0 = easeInOut(a);
+            game.cam.x = game.cam.x * (1 - p0) + -2780 * p0;
+            game.cam.y = game.cam.y * (1 - p0) + 200 * p0;
+            if (this.playerRespawnTime < 60) this.playerRespawnTime = 0;
+        }
+    },
     manualRespawn: function () {
-        this.reload(9);
+        if (game.level.triggers.tripped("red cube")) {
+            this.playerDead = false;
+            var player = this.createPlayer(-2800, 180);
+            game.level.playerControlDelay = 20;
+            player.spawnTime = 150;
+            player.spawnAnimation = 20;
+            game.objects.objects.push(player);
+        } else {
+            this.reload(9);
+        }
     }
 }

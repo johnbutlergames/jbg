@@ -81,7 +81,6 @@ function initialize() {
     window.onwheel = function (event) {
         Mouse.scrollX = event.deltaX;
         Mouse.scrollY = event.deltaY;
-        event.preventDefault();
     }
     window.onkeydown = function (event) {
         Keys.keys[event.keyCode] = true;

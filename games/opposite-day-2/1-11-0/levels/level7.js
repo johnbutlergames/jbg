@@ -52,6 +52,7 @@ levels[6] = {
         { type: "lava", x: -2500, y: 300, w: 75, h: 75, alpha: 0, collide: false, id: "shortcut lava" },
         { type: "block", x: -7500, y: 100, w: 8500, h: 1000, id: "shortcut block" },
         { type: "clue", x: 420, y: -90, proximity: 1, radius: 0, id: "shortcut clue", air: true, down: true, color: { r: 0, g: 230, b: 0 } },
+        { type: "clue", x: 200, y: 340, proximity: 1, radius: 0, id: "ultra shortcut clue", air: true, ultra: true, alpha: 0 },
         { type: "clue", x: -2250, y: 150, proximity: 1, radius: 0, id: "blue cube clue" }
     ],
     triggers: [
@@ -194,6 +195,7 @@ levels[6] = {
                 return false;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
                 o.activated = true;
@@ -672,6 +674,7 @@ levels[6] = {
                 return player.y < 60 && player.ymove < 0;
             },
             trip: function () {
+                game.level.discoverShortcut();
                 game.background.effect.start("green");
                 var o = game.objects.objects.find(e => e.id == "shortcut clue");
                 o.activated = true;
@@ -688,6 +691,12 @@ levels[6] = {
                     o.collide = true;
                     o.alpha = 1;
                 }
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                if (!o.peeked) {
+                    o.alpha = 1.5;
+                    o.decay = 0.05;
+                    o.peeked = true;
+                }
             },
             untrip: function () {
                 game.background.effect.end("green");
@@ -700,6 +709,37 @@ levels[6] = {
                 game.cam.followX = 0.01;
                 game.cam.followY = 0.01;
                 game.cam.offset.x = 0;
+            }
+        },
+        {
+            name: "ultra shortcut",
+            check: function () {
+                if (!game.level.triggers.tripped("shortcut")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
+                if (dist < 80 && game.input.downStart && game.input.downStart < 20) return true;
+                return false;
+            },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                return false;
+            },
+            trip: function () {
+                game.level.discoverUltraShortcut();
+                game.background.effect.start("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                o.activated = true;
+                o.alpha = 1;
+                o.decay = 0;
+            },
+            untrip: function () {
+                game.background.effect.end("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                o.alpha = 1;
+                o.decay = 0.1;
             }
         },
         {
@@ -719,6 +759,7 @@ levels[6] = {
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return;
                 player.xmove = -20;
+                if (game.level.triggers.tripped("ultra shortcut")) player.xmove = -40;
                 if (!player.updateAngle) player.updateAngle = 0;
                 if (player.x > 300) return;
                 if (game.input.up && player.updateAngle === 0) {
@@ -726,12 +767,14 @@ levels[6] = {
                     player.updateAngle = 180;
                     player.eyeAngleTarget = 180;
                     player.ymove = -40;
+                    if(game.level.triggers.tripped("ultra shortcut")) player.ymove = -130;
                 }
                 if (game.input.down && player.updateAngle === 180) {
                     game.soundEffects.jump();
                     player.updateAngle = 0;
                     player.eyeAngleTarget = 0;
                     player.ymove = 40;
+                    if(game.level.triggers.tripped("ultra shortcut")) player.ymove = 130;
                 }
             }
         },

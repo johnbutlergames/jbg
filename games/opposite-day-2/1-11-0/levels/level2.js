@@ -16,6 +16,9 @@ levels[1] = {
         { type: "block", x: -1500, y: 100, w: 200, h: 25, id: "platform2", slippery: true },
         { type: "block", x: -1850, y: 425, w: 1010, h: 100 },
         { type: "clue", x: 260, y: -180, collide: false, proximity: 100, radius: 0, id: "blue cube clue", air: true },
+        { type: "clue", x: -450, y: -250, collide: false, proximity: 1, radius: 0, id: "blue cube ultra clue", air: true, ultra: true, alpha: 0 },
+        { type: "lava", x: -2000, y: -2900, w: 1400, h: 5000, alpha: 0, collide: false, id: "ultra blue cube lava", alpha: 0, collide: false },
+        { type: "lava", x: -600, y: -3200, w: 1400, h: 2000, alpha: 0, collide: false, id: "ultra blue cube lava", alpha: 0, collide: false },
         { type: "block", drawType: "glass", x: 150, y: -100, w: 200, h: 25, alpha: 0, collide: false, id: "blue cube" },
         { type: "block", drawType: "glass", x: -300, y: -150, w: 100, h: 25, alpha: 0, collide: false, id: "blue cube" },
         { type: "block", drawType: "glass", x: -500, y: -320, w: 100, h: 25, alpha: 0, collide: false, id: "blue cube" },
@@ -28,6 +31,7 @@ levels[1] = {
         { type: "cube", x: -87.5, y: -1100, collide: false, collected: false },
         { type: "clue", x: -750, y: -50, collide: false, proximity: 0, radius: 0, alpha: 0, id: "shortcut clue", air: true, color: { r: 0, g: 230, b: 0 } },
         { type: "text", content: "Wheeeeeeeeeeeeeeee!!!", x: -1200, y: -250, font: "40px rubik", alpha: 0, id: "shortcut text" },
+        { type: "clue", x: -1000, y: -100, collide: false, proximity: 0, radius: 0, id: "ultra shortcut clue", air: true, ultra: true, angle: 180, alpha: 0 },
         { type: "text", content: "Admit it, that one got you.", x: -2000, y: 200, font: "40px rubik", alpha: 0, id: "figured out text" },
         { type: "block", x: -600, y: 300, w: 200, h: 1000, id: "red cube cover" },
         { type: "block", x: -1850, y: 425, w: 1400, h: 1000, id: "red cube cover" },
@@ -57,7 +61,8 @@ levels[1] = {
         { type: "block", x: -1590, y: 680, w: 970, h: 100, alpha: 0, collide: false, redCube: true },
         { type: "text", content: "Have fun with this one.", x: -1350, y: 1950, font: "40px rubik" },
         { type: "lava", x: -1750, y: 400, w: 1150, h: 1000, id: "platform4" },
-        { type: "cube", x: -773, y: 600, collide: false, collected: false, red: true, alpha: 0, redCube: true }
+        { type: "cube", x: -773, y: 600, collide: false, collected: false, proximity: 1, radius: 0, red: true, alpha: 0, redCube: true },
+        { type: "clue", collide: false, x: -1580, y: 1280, air: true, ultra: true, angle: 225, id: "red cube ultra clue", alpha: 0 }
     ],
     triggers: [
         {
@@ -294,6 +299,7 @@ levels[1] = {
                 return false;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
                 o.activated = true;
@@ -304,6 +310,12 @@ levels[1] = {
                     o.collide = true;
                     o.alpha = 0;
                     o.decay = -0.1;
+                }
+                var o = game.objects.objects.find(e => e.id == "blue cube ultra clue");
+                if (!o.peeked) {
+                    o.alpha = 1.5;
+                    o.decay = 0.05;
+                    o.peeked = true;
                 }
             },
             untrip: function () {
@@ -318,6 +330,73 @@ levels[1] = {
                     o.collide = false;
                     o.alpha = 1.5;
                     o.decay = 0.01;
+                }
+            }
+        },
+        {
+            name: "blue cube ultra",
+            check: function () {
+                var o = game.objects.objects.find(e => e.type == "cube" && !e.red);
+                if (o.collected) return false;
+                if (!game.level.triggers.tripped("blue cube")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "blue cube ultra clue");
+                var dist = distTo(player.x + player.w / 2, player.y + player.h / 2, o.x, o.y);
+                if (dist > 30) return false;
+                if (game.input.downStart > 10 || !game.input.down) return false;
+                return true;
+            },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                if (!game.level.triggers.tripped("blue cube")) return true;
+                return false;
+            },
+            trip: function () {
+                game.level.discoverUltraBlueCube();
+                game.background.effect.start("magenta");
+                var o = game.objects.objects.find(e => e.id == "blue cube ultra clue");
+                o.activated = true;
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.ymove = 50;
+                player.swapControls = { left: "left", right: "right" };
+                for (var o of game.objects.objects.filter(e => e.id == "ultra blue cube lava")) {
+                    o.alpha = 1;
+                    o.decay = 0;
+                    o.collide = true;
+                }
+            },
+            untrip: function () {
+                game.background.effect.end("magenta");
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (player) {
+                    player.swapControls = false;
+                    player.ymove = 60;
+                    player.xmove = -100;
+                }
+                var o = game.objects.objects.find(e => e.id == "blue cube ultra clue");
+                o.activated = false;
+                o.alpha = 0;
+                for (var o of game.objects.objects.filter(e => e.id == "ultra blue cube lava")) {
+                    o.alpha = 1;
+                    o.decay = 0.1;
+                    o.collide = false;
+                }
+            },
+            passive: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return;
+                if (player.againstBottom.current) {
+                    player.ymove = -50;
+                    game.soundEffects.jump();
+                } else if (player.againstTop.current) {
+                    player.ymove = 50;
+                    game.soundEffects.jump();
+                } else if (player.ymove < 0) {
+                    player.ymove -= 0.3;
+                } else {
+                    player.ymove += 0.3;
                 }
             }
         },
@@ -362,11 +441,44 @@ levels[1] = {
                 if (!player) return;
                 player.xmove = -30;
                 player.ymove = -10;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                if (!o.peeked) {
+                    o.alpha = 1.5;
+                    o.decay = 0.05;
+                    o.peeked = true;
+                }
             },
             passive: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return;
                 player.xmove -= 2;
+            }
+        },
+        {
+            name: "ultra shortcut",
+            check: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
+                if (dist > 30) return false;
+                if (game.input.upStart > 5 || !game.input.up) return false;
+                return true;
+            },
+            trip: function () {
+                game.level.discoverUltraShortcut();
+                game.background.effect.start("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                o.activated = true;
+                o.alpha = 1;
+                o.decay = 0;
+                game.cam.viewportBoundary.y = -200;
+                game.cam.viewportBoundary.h = 200;
+            },
+            passive: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.ymove = -40;
+                player.xmove = 0;
             }
         },
         {
@@ -412,6 +524,12 @@ levels[1] = {
                 for (var o of game.objects.objects.filter(e => e.id == "red cube cover")) {
                     o.alpha = 1;
                     o.decay = 0.1;
+                }
+                var o = game.objects.objects.find(e => e.id == "red cube ultra clue");
+                if (!o.peeked) {
+                    o.peeked = true;
+                    o.alpha = 1;
+                    o.decay = 0;
                 }
             },
             untrip: function () {
@@ -484,6 +602,81 @@ levels[1] = {
                 var player = game.objects.objects.find(e => e.id == "player");
                 if (player) player.ymove *= 0.3;
             }
+        },
+        {
+            name: "hide ultra red cube clue",
+            check: function () {
+                if (!game.level.triggers.tripped("red cube")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                if (player.y > 650) return true;
+                return false;
+            },
+            trip: function () {
+                var o = game.objects.objects.find(e => e.id == "red cube ultra clue");
+                o.decay = 0.1;
+            }
+        },
+        {
+            name: "red cube ultra",
+            check: function () {
+                var o = game.objects.objects.find(e => e.type == "cube" && e.red);
+                if (o.collected) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                if (!game.level.triggers.tripped("red cube")) return false;
+                var o = game.objects.objects.find(e => e.id == "red cube ultra clue");
+                var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
+                if (dist > 30) return false;
+                if (game.input.rightStart > 20 || !game.input.right || game.input.upStart > 20 || !game.input.up) return false;
+                return true;
+            },
+            stop: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                var cube = game.objects.objects.find(e => e.type == "cube" && e.red);
+                if (cube.collected) return true;
+                if (!game.level.triggers.tripped("red cube")) return true;
+                return false;
+            },
+            trip: function () {
+                game.level.discoverUltraRedCube();
+                game.background.effect.start("magenta");
+                var o = game.objects.objects.find(e => e.id == "red cube ultra clue");
+                o.activated = true;
+                o.alpha = 1;
+                o.decay = 0;
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.ymove = -30;
+                player.xmove = 30;
+                game.level.playerControlDelay = 2;
+            },
+            untrip: function () {
+                game.background.effect.end("magenta");
+                var o = game.objects.objects.find(e => e.id == "red cube ultra clue");
+                o.activated = false;
+                o.alpha = 1;
+                o.decay = 0.1;
+            },
+            passive: function () {
+                game.level.playerControlDelay = 2;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                if (player.ymove < 0) {
+                    player.ymove = -30;
+                } else if (player.ymove > 0) {
+                    player.ymove = 30;
+                }
+                if (player.xmove < 0) {
+                    player.xmove = -30;
+                } else if (player.xmove > 0) {
+                    player.xmove = 30;
+                }
+                if (player.againstBottom.current) player.ymove = -30;
+                if (player.againstTop.current) player.ymove = 30;
+                if (player.againstLeft.current) player.xmove = 30;
+                if (player.againstRight.current) player.xmove = -30;
+            }
         }
     ],
     viewportBoundary: { x: -2000, y: -10000, w: 2000, h: 11700 },
@@ -528,6 +721,7 @@ levels[1] = {
         game.objects.objects.push(player);
     },
     levelComplete: function () {
+        if (game.level.triggers.tripped("ultra shortcut")) return true;
         var player = game.objects.objects.find(e => e.type == "player");
         if (!player) return false;
         return player.x < -2550;

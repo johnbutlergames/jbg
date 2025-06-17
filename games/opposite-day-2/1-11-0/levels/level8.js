@@ -1,5 +1,6 @@
 levels[7] = {
     objects: [
+        { type: "block", color: "white", x: 498, y: -4502, w: 1004, h: 1004, room5: true, noCollide: true, collide: false, id: "pacman white background" },
         { type: "text", content: "This level is", x: 2000, y: -230, font: "50px rubik", spawnAnimation: 90, spawnAnimationDuration: 50, room0: true },
         { type: "text", content: "short and simple.", x: 2000, y: -160, font: "50px rubik", spawnAnimation: 90, spawnAnimationDuration: 50, room0: true },
         { type: "block", x: 1500, y: 200, w: 1000, h: 1000, room0: true },
@@ -7,6 +8,7 @@ levels[7] = {
         { type: "unstable", x: 2500, y: -1000, w: 500, h: 2000, room0: true, decayValue: 0.017, id: "shortcut wall" },
         { type: "unstable", x: 1970, y: -100, w: 50, h: 50, room0: true, alpha: 0, noAlpha: true, id: "shortcut block" },
         { type: "clue", x: 1550, y: -150, proximity: 1, radius: 0, id: "shortcut clue", air: true, down: true, color: { r: 0, g: 230, b: 0 }, room0: true },
+        { type: "clue", x: 2300, y: -230, proximity: 1, radius: 0, id: "ultra shortcut clue", air: true, ultra: true, room0: true, alpha: 0, noAlpha: true },
         { type: "text", content: "Fast and", x: 1530, y: -245, font: "35px rubik", alpha: 0, noAlpha: true, room0: true, id: "shortcut text", textAlign: "left" },
         { type: "text", content: "furious.", x: 1530, y: -200, font: "35px rubik", alpha: 0, noAlpha: true, room0: true, id: "shortcut text", textAlign: "left" },
         { type: "block", x: 1000, y: -600, w: 500, h: 600, slippery: true, room0: true },
@@ -62,7 +64,7 @@ levels[7] = {
         { type: "block", x: 500, y: -2500, w: 40, h: 1000, room3: true, sokobanCollide: true },
         { type: "block", x: 1460, y: -2500, w: 40, h: 280, room3: true, sokobanCollide: true },
         { type: "block", x: 1460, y: -2220, w: 40, h: 40, room3: true, sokobanBoxCollide: true },
-        { type: "clue", x: 1475, y: -2200, down: true, angle: 270, room3: true },
+        { type: "clue", x: 1475, y: -2200, down: true, angle: 270, room3: true, proximity: 80, radius: 50 },
         { type: "block", x: 1460, y: -2180, w: 40, h: 680, room3: true, sokobanCollide: true },
         { type: "block", x: 1060, y: -1900, w: 200, h: 200, room3: true, sokobanCollide: true },
         { type: "block", x: 660, y: -1980, w: 200, h: 200, room3: true, sokobanCollide: true },
@@ -108,10 +110,10 @@ levels[7] = {
         { type: "sokoban box", x: 1660, y: -2340, w: 40, h: 40, cubeRoom: true, sokobanCollide: true },
         { type: "sokoban box", x: 2060, y: -2340, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
         { type: "sokoban box", x: 2380, y: -2420, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
-        { type: "sokoban box", x: 2100, y: -1900, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
-        { type: "sokoban box", x: 1580, y: -1620, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
-        { type: "sokoban box", x: 1620, y: -1620, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
-        { type: "sokoban box", x: 1580, y: -1660, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
+        { type: "sokoban box", x: 2140, y: -1860, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
+        { type: "sokoban box", x: 2020, y: -1940, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
+        { type: "sokoban box", x: 1900, y: -1660, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
+        { type: "sokoban box", x: 1620, y: -1980, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
         { type: "sokoban box", x: 1860, y: -2220, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
         { type: "sokoban box", x: 2300, y: -2140, w: 40, h: 40, blue: true, cubeRoom: true, sokobanCollide: true },
         { type: "cube", x: 2120, y: -1880, collected: false, cubeRoom: true },
@@ -209,6 +211,11 @@ levels[7] = {
         { type: "circle", x: -1100, y: -4070, r: 100, color: "hsl(50,100%,50%)", room7: true },
         { type: "circle", x: -1400, y: -4500, r: 200, color: "hsla(150,100%,50%,0.2)", room7: true, secretCirclesRoom: true },
         { type: "circle", x: -1070, y: -4700, r: 300, color: "hsl(30,100%,50%)", room7: true, secretCirclesRoom: true },
+        { type: "circle", x: -1370, y: -5100, r: 280, color: "hsl(100,100%,50%)", secretCirclesRoom: true },
+        { type: "circle", x: -350, y: -5550, r: 400, color: "hsla(0,100%,50%,0.2)", secretCirclesRoom: true },
+        { type: "circle", x: -1100, y: -5650, r: 400, color: "hsl(262,100%,50%)", secretCirclesRoom: true },
+        { type: "circle", x: -850, y: -5100, r: 70, color: "hsla(100,100%,50%,0.2)", secretCirclesRoom: true },
+        { type: "circles collectable", x: -780, y: -5230, secretCirclesRoom: true },
         { type: "circle", x: -1700, y: -4200, r: 300, color: "hsl(160,100%,50%)", room7: true },
         { type: "circle", x: -600, y: -4500, r: 130, color: "hsl(140,100%,50%)", room7: true, secretCirclesRoom: true },
         { type: "circle", x: -1500, y: -3900, r: 140, color: "hsl(200,100%,50%)", room7: true },
@@ -218,8 +225,8 @@ levels[7] = {
         { type: "circle", x: -330, y: -3780, r: 250, color: "hsl(320,100%,50%)", room7: true },
         { type: "circle", x: -800, y: -3500, r: 80, color: "hsl(10,100%,50%)", room7: true },
         { type: "circle", x: -550, y: -4700, r: 120, color: "hsl(210,100%,50%)", secretCirclesRoom: true },
-        { type: "circle", x: -700, y: -4900, r: 150, color: "hsl(250,100%,50%)", secretCirclesRoom: true },
-        { x: -1500 + 400, y: -3500 + 70, type: "text", content: "No tricks here ;)", font: "50px Arial", room8: true },
+        { type: "circle", x: -500, y: -5000, r: 200, color: "hsl(250,100%,50%)", secretCirclesRoom: true },
+        { x: -1500 + 400, y: -3500 + 120, type: "text", content: "No tricks here ;)", font: "50px Arial", room8: true },
         { x: -1500 + 790, y: -3500 + 0, w: 10, h: 800, type: "block", room8: true },
         { x: -1500 + 900, y: -3500 - 100, w: 200, h: 1000, type: "block", room8: true },
         { x: -1500 - 100, y: -3500 + 900, w: 1200, h: 200, type: "block", room8: true },
@@ -249,7 +256,7 @@ levels[7] = {
             },
             trip: function () {
                 for (var o of game.objects.objects) {
-                    if (o.room0) {
+                    if (o.room0 && o.id != "shortcut wall") {
                         if (!o.noAlpha) o.alpha = 1;
                         o.collide = true;
                     } else {
@@ -257,6 +264,8 @@ levels[7] = {
                         o.collide = false;
                     }
                 }
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.y = Math.min(player.y, 160);
             },
             stop: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -286,6 +295,8 @@ levels[7] = {
                         o.collide = false;
                     }
                 }
+                var player = game.objects.objects.find(e => e.type == "player");
+                player.y = Math.min(player.y, 160);
             },
             stop: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -353,6 +364,8 @@ levels[7] = {
                 if (player && player.x <= 1460) return true;
                 var player = game.objects.objects.find(e => e.type == "snake player");
                 if (player && player.y > -2500) return true;
+                if (player && player.y > -2540 && player.move.direction.x != 0) return true;
+                return false;
             },
             trip: function () {
                 for (var o of game.objects.objects) {
@@ -416,6 +429,7 @@ levels[7] = {
                 if (player.x > 1460) return true;
             },
             trip: function () {
+                game.level.discoverBlueCube();
                 for (var o of game.objects.objects) {
                     if (o.type == "sokoban player") continue;
                     if (o.cubeRoom && o.type != "cube") {
@@ -426,12 +440,23 @@ levels[7] = {
                         o.collide = false;
                     }
                 }
+                for (var o of game.objects.objects.filter(e => e.type == "sokoban box" && e.cubeRoom)) {
+                    o.originalX = o.x;
+                    o.originalY = o.y;
+                }
                 game.background.effect.start("blue");
             },
             stop: function () {
                 var player = game.objects.objects.find(e => e.type == "sokoban player");
                 if (!player) return;
                 if (player.x <= 1460) return true;
+            },
+            untrip: function () {
+                game.background.effect.end("blue");
+                for (var o of game.objects.objects.filter(e => e.type == "sokoban box" && e.cubeRoom)) {
+                    o.x = o.originalX;
+                    o.y = o.originalY;
+                }
             },
             passive: function () {
                 game.cam.x = 2000;
@@ -470,7 +495,7 @@ levels[7] = {
                 var player = game.objects.objects.find(e => e.type == "sokoban player");
                 if (player && player.y < -2500) return true;
                 var player = game.objects.objects.find(e => e.type == "pacman player");
-                if (player && player.y > -3500) return true;
+                if (player && player.y >= -3500) return true;
             },
             trip: function () {
                 for (var o of game.objects.objects) {
@@ -535,6 +560,7 @@ levels[7] = {
                 if (!player) return false;
                 if (player.y > -2500) return true;
                 if (player.y < -3500) return true;
+                if (player.y > -2540 && player.move.direction.x != 0) return true;
                 return false;
             },
             passive: function () {
@@ -621,7 +647,7 @@ levels[7] = {
                 var pacmanPlayer = {
                     type: "pacman player",
                     x: 980,
-                    y: -3500,
+                    y: -3520,
                     w: 40,
                     h: 40,
                     angle: 0,
@@ -663,7 +689,7 @@ levels[7] = {
                         }
                         var collide = game.objects.objects.some(e => e.pacmanCollide && blocksColliding(e, dot));
                         if (collide) continue;
-                        game.objects.objects.unshift(dot);
+                        game.objects.objects.splice(1, 0, dot);
                         dots.push(dot);
                     }
                 }
@@ -784,7 +810,7 @@ levels[7] = {
             stop: function () {
                 var player = game.objects.objects.find(e => e.type == "pacman player");
                 if (!player) return false;
-                if (player.y > -3500) return true;
+                if (player.y >= -3500) return true;
                 if (player.x < 500) return true;
                 return false;
             },
@@ -1042,6 +1068,7 @@ levels[7] = {
             passive: function () {
                 var level8SpeedMultiplier = game.level.triggers.tripped("shortcut") ? 4 : 1;
                 var level8OpponentSpeedMultiplier = game.level.triggers.tripped("shortcut") ? 4 : 1;
+                if(game.level.triggers.tripped("ultra shortcut")) level8OpponentSpeedMultiplier *= 4;
 
                 game.cam.x = 0;
                 game.cam.y = -4000;
@@ -1077,7 +1104,7 @@ levels[7] = {
                 //return true;
                 var player = game.objects.objects.find(e => e.type == "ping pong player");
                 if (player && player.x < -500) return true;
-                var player = game.objects.objects.find(e => e.type == "circles player");
+                player = game.objects.objects.find(e => e.type == "circles player");
                 if (player && player.y > -4500) return true;
                 return false;
             },
@@ -1182,6 +1209,7 @@ levels[7] = {
                     ymove: 4
                 }
                 game.objects.objects.push(oldPlayer);
+                game.backgroundOpacity = 0;
             },
             passive: function () {
                 game.cam.x = -1000;
@@ -1204,7 +1232,6 @@ levels[7] = {
                 return player.y == 160;
             },
             trip: function () {
-                game.level.discoverShortcut();
                 var o = game.objects.objects.find(e => e.id == "shortcut block");
                 o.alpha = 0;
                 o.decay = -0.1;
@@ -1243,10 +1270,11 @@ levels[7] = {
                 var o = game.objects.objects.find(e => e.id == "shortcut clue");
                 var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
                 if (dist > 40) return false;
-                if (!game.input.down) return false;
+                if (!game.input.down || game.input.downStart > 10) return false;
                 return true;
             },
             trip: function () {
+                game.level.discoverShortcut();
                 game.background.effect.start("green");
                 var o = game.objects.objects.find(e => e.id == "shortcut clue");
                 o.activated = true;
@@ -1258,6 +1286,61 @@ levels[7] = {
                 var o = game.objects.objects.find(e => e.id == "secret circles room shortcut block");
                 o.noAlpha = false;
                 o.circlesCollide = true;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                if (!o.peeked) {
+                    o.alpha = 1;
+                    o.decay = 0.05;
+                    o.peeked = true;
+                }
+            }
+        },
+        {
+            name: "ultra shortcut",
+            check: function () {
+                if (!game.level.triggers.tripped("room 0")) return false;
+                if (!game.level.triggers.tripped("shortcut")) return false;
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
+                if (dist > 40) return false;
+                if (!game.input.downStart) return false;
+                return true;
+            },
+            trip: function () {
+                game.level.discoverUltraShortcut();
+                game.background.effect.start("magenta");
+                var o = game.objects.objects.find(e => e.id == "ultra shortcut clue");
+                o.activated = true;
+                o.alpha = 1;
+                o.decay = 0;
+                o.noAlpha = false;
+            },
+            passive: function () {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (player) {
+                    game.objects.updatePlayer(player);
+                }
+                var player = game.objects.objects.find(e => e.type == "sokoban player");
+                if (player && !game.level.triggers.tripped("cube room")) {
+                    game.objects.updateSokobanPlayer(player);
+                }
+                var player = game.objects.objects.find(e => e.type == "pacman player");
+                if (player && !game.level.triggers.tripped("red cube")) {
+                    game.objects.updatePacmanPlayer(player);
+                }
+                var player = game.objects.objects.find(e => e.type == "ping pong player");
+                if (player && !player.delete) {
+                    game.objects.updatePingPongPlayer(player);
+                }
+                var player = game.objects.objects.find(e => e.type == "circles player");
+                if (player) {
+                    game.objects.updateCirclesPlayer(player);
+                }
+                var player = game.objects.objects.find(e => e.type == "old player");
+                if (player && !player.delete) {
+                    game.objects.updateOldPlayer(player);
+                }
             }
         }
     ],
@@ -1403,6 +1486,9 @@ levels[7] = {
                 if (!game.objects.objects.find(e => e.type == "snake body")) game.level.playerRespawnTime -= decayAmount * 4;
             } else {
                 game.level.playerRespawnTime--;
+                if (game.level.triggers.tripped("ultra shortcut")) {
+                    game.level.playerRespawnTime -= 9;
+                }
             }
         }
         if (game.level.triggers.tripped("room 5")) {
@@ -1410,6 +1496,9 @@ levels[7] = {
         }
         if (game.level.triggers.tripped("room 6")) {
             game.level.playerRespawnTime--;
+            if (game.level.triggers.tripped("ultra shortcut")) {
+                game.level.playerRespawnTime -= 4;
+            }
         }
         if (game.level.triggers.tripped("room 8")) {
             game.level.playerRespawnTime -= 2;
