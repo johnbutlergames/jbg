@@ -6,7 +6,8 @@ var game = {
     },
     backgroundPatternOffset: {
         x: 0,
-        y: 0
+        y: 0,
+        angle: 0,
     },
     backgroundOpacity: 1,
     update: function () {
@@ -709,49 +710,44 @@ var game = {
                 ctx.rect(-100000, -100000, 200000, 200000);
                 for (var o of this.objects.filter(e => e.cutout)) {
                     if (o.alpha === 0) continue;
-                    if (o.drawType == "phase in out ornament") {
-                        if (!o.animation) continue;
-                        var s = easeInOut(o.animation.a / o.animation.max);
-                        if (!s) continue;
-                        var turn = o.turn || 90;
-                        var turnAngle = turn * s;
-                        var speed = o.speed || 1;
-                        var angle = o.angle || 0;
-                        if (!o.animation.current) turnAngle = turn + turn * (1 - s);
-                        ctx.save();
-                        ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
-                        ctx.scale(s, s);
-                        ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
+                    if (!o.animation) continue;
+                    var s = easeInOut(o.animation.a / o.animation.max);
+                    if (!s) continue;
+                    var turn = o.turn || 90;
+                    var turnAngle = turn * s;
+                    var speed = o.speed || 1;
+                    var angle = o.angle || 0;
+                    if (!o.animation.current) turnAngle = turn + turn * (1 - s);
+                    ctx.save();
+                    ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
+                    ctx.scale(s, s);
+                    ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
 
-                        ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
+                    ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
 
-                        ctx.restore();
-
-                    }
+                    ctx.restore();
                 }
                 ctx.clip("evenodd");
                 for (var o of this.objects.filter(e => e.cutout2)) {
                     if (o.alpha === 0) continue;
+                    if (!o.animation) continue;
+                    var s = easeInOut(o.animation.a / o.animation.max);
+                    if (!s) continue;
                     ctx.beginPath();
                     ctx.rect(-100000, -100000, 200000, 200000);
-                    if (o.drawType == "phase in out ornament") {
-                        if (!o.animation) continue;
-                        var s = easeInOut(o.animation.a / o.animation.max);
-                        if (!s) continue;
-                        var turn = o.turn || 90;
-                        var turnAngle = turn * s;
-                        var speed = o.speed || 1;
-                        var angle = o.angle || 0;
-                        if (!o.animation.current) turnAngle = turn + turn * (1 - s);
-                        ctx.save();
-                        ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
-                        ctx.scale(s, s);
-                        ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
+                    var turn = o.turn || 90;
+                    var turnAngle = turn * s;
+                    var speed = o.speed || 1;
+                    var angle = o.angle || 0;
+                    if (!o.animation.current) turnAngle = turn + turn * (1 - s);
+                    ctx.save();
+                    ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
+                    ctx.scale(s, s);
+                    ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
 
-                        ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
+                    ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
 
-                        ctx.restore();
-                    }
+                    ctx.restore();
                     ctx.clip("evenodd");
                 }
                 for (var o of this.objects.filter(e => e.cutoutEligible)) {
@@ -760,28 +756,47 @@ var game = {
                 ctx.restore();
 
                 ctx.save();
+                for (var o of this.objects.filter(e => e.lavaCutout)) {
+                    if (o.alpha === 0) continue;
+                    if (!o.animation) continue;
+                    var s = easeInOut(o.animation.a / o.animation.max);
+                    if (!s) continue;
+                    ctx.beginPath();
+                    ctx.rect(-100000, -100000, 200000, 200000);
+                    var turn = o.turn || 90;
+                    var turnAngle = turn * s;
+                    var speed = o.speed || 1;
+                    var angle = o.angle || 0;
+                    if (!o.animation.current) turnAngle = turn + turn * (1 - s);
+                    ctx.save();
+                    ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
+                    ctx.scale(s, s);
+                    ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
+
+                    ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
+
+                    ctx.restore();
+                    ctx.clip("evenodd");
+                }
                 ctx.beginPath();
                 for (var o of this.objects.filter(e => e.cutout3)) {
                     if (o.alpha === 0) continue;
-                    if (o.drawType == "phase in out ornament") {
-                        if (!o.animation) continue;
-                        var s = easeInOut(o.animation.a / o.animation.max);
-                        if (!s) continue;
-                        var turn = o.turn || 90;
-                        var turnAngle = turn * s;
-                        var speed = o.speed || 1;
-                        var angle = o.angle || 0;
-                        if (!o.animation.current) turnAngle = turn + turn * (1 - s);
-                        ctx.save();
-                        ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
-                        ctx.scale(s, s);
-                        ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
+                    if (!o.animation) continue;
+                    var s = easeInOut(o.animation.a / o.animation.max);
+                    if (!s) continue;
+                    var turn = o.turn || 90;
+                    var turnAngle = turn * s;
+                    var speed = o.speed || 1;
+                    var angle = o.angle || 0;
+                    if (!o.animation.current) turnAngle = turn + turn * (1 - s);
+                    ctx.save();
+                    ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
+                    ctx.scale(s, s);
+                    ctx.rotate((angle + speed * game.level.levelAnimationTime + turnAngle) * Math.PI / 180);
 
-                        ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
+                    ctx.rect(-o.w / 2, -o.h / 2, o.w, o.h);
 
-                        ctx.restore();
-
-                    }
+                    ctx.restore();
                 }
                 ctx.clip("evenodd");
                 for (var o of this.objects.filter(e => e.cutout3)) {
@@ -805,6 +820,7 @@ var game = {
                 ctx.restore();
             }
             for (var o of this.objects) {
+                if (game.level.level === 9 && o.lavaCutout) continue;
                 if (game.level.level === 9 && o.cutoutEligible) continue;
                 if (game.level.level === 9 && o.cutout3) continue;
                 if (game.level.level === 3 && o.blue && o.type != "clue") continue;
@@ -2637,14 +2653,19 @@ var game = {
                     if (game.level.level === 7 && game.level.triggers.tripped("ultra shortcut")) level8JumpMultiplier = 5;
                     if (o.type == "platform") {
                         if (axis == "y") {
-                            if (player.ymove > 0 && player.y + player.h < o.y + o.h && !game.input.down) {
+                            if (player.ymove > 0 && player.y + player.h - player.ymove < o.y + o.h && !game.input.down) {
                                 player[axis] = o[axis] - player[dim];
                                 player[`against${directions[n][1]}`].current = true;
                                 player.ymove = 0;
                             } else {
                                 if (game.input.up) {
-                                    player.ymove = -9 * game.level.playerJumpMultiplier * level8JumpMultiplier;
-                                    if (player.y + player.ymove + player.h < o.y) game.soundEffects.jump();
+                                    if (!o.noDoubleJump) {
+                                        player.ymove = -9 * game.level.playerJumpMultiplier * level8JumpMultiplier;
+                                        if (player.y + player.ymove + player.h < o.y) game.soundEffects.jump();
+                                    } else if (player.y == o.y - player.h) {
+                                        player.ymove = -9 * game.level.playerJumpMultiplier * level8JumpMultiplier;
+                                        game.soundEffects.jump();
+                                    }
                                 }
                                 player[`against${directions[n][1]}`].current = true;
                             }
@@ -2975,6 +2996,7 @@ var game = {
             ctx.restore();
         },
         updateObject: function (o, player) {
+            if (!o.drawType) o.drawType = o.type;
             if (o.bossObject) return updateBossObject(o, player);
             if (o.type == "bart") {
                 updateBart(o, player);
@@ -3077,7 +3099,7 @@ var game = {
                     var changeRange = o.period.changeRange === undefined ? 20 : o.period.changeRange;
                     var a = (game.level.levelAnimationTime + offset) % time;
                     if ((a > changeRange + offTime && a < time - changeRange || o.period.alwaysOn) && !o.period.alwaysOff) {
-                        if(!o.deactivated) o.animation.current = true;
+                        if (!o.deactivated) o.animation.current = true;
                     } else {
                         o.animation.current = false;
                     }
@@ -3337,6 +3359,7 @@ var game = {
             }
         },
         drawObject: function (o, player) {
+            if (!o.drawType) o.drawType = o.type;
             if (o.bossObject) return drawBossObject(o, player);
             if (o.type == "bart") {
                 drawBart(o, player);
@@ -3373,7 +3396,6 @@ var game = {
                 var a = Math.min(1, Math.max(0, 1.1 - o.lastTouchedTime / 100)) * 0.2;
                 ctx.globalAlpha = a;
             }
-            if (!o.drawType) o.drawType = o.type;
             if (o.drawType == "clue") {
                 var color = { r: 30, g: 30, b: 30, a: 1 };
                 if (o.lava) {
@@ -4027,7 +4049,7 @@ var game = {
                 if (o.reverse) a = 1 - a;
                 var scale = easeInOut(a);
                 var angle = easeInOut(a) * turn;
-                if(o.period && !o.animation.current) angle = easeInOut(a) * -turn;
+                if (o.period && !o.animation.current) angle = easeInOut(a) * -turn;
                 ctx.translate(o.w / 2, o.h / 2);
                 ctx.rotate(angle * Math.PI / 180);
                 ctx.scale(scale, scale);
