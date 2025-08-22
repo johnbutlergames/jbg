@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Every Way To Die</title>
+</head>
+
+<body>
+    <video id="video" src="assets/intro.mp4" style="display:none;" playsinline></video>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        @font-face {
+            font-family: pressstart;
+            src: url(assets/PressStart2P-Regular.ttf);
+        }
+    </style>
+
+    <canvas id="canvas"></canvas>
+    <script src="menu.js"></script>
+    <script src="input.js"></script>
+    <script src="assets.js"></script>
+    <script src="camera.js"></script>
+    <script src="objects.js"></script>
+    <script src="player.js"></script>
+    <script src="environment.js"></script>
+    <script src="game.js"></script>
+    <script src="background.js"></script>
+    <script src="particles.js"></script>
+    <script src="level.js"></script>
+    <script src="util.js"></script>
+    <script src="collisions.js"></script>
+    <script src="ui.js"></script>
+    <script src="saveData.js"></script>
+
+    <script src="levels/tutorial.js"></script>
+    <script src="levels/level1.js"></script>
+    <script src="levels/level2.js"></script>
+    <script src="levels/level3.js"></script>
+
+    <script>
+        let loaded = false;
+        //loaded = true;
+        let intro = 0;
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        ctx.roundRect = (x, y, w, h, r, b) => {
+            if (!b) ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.arc(x + w - r, y + r, r, 1.5 * Math.PI, 2 * Math.PI);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.arc(x + w - r, y + h - r, r, 0 * Math.PI, 0.5 * Math.PI);
+            ctx.lineTo(x + r, y + h);
+            ctx.arc(x + r, y + h - r, r, 0.5 * Math.PI, Math.PI);
+            ctx.lineTo(x, y + r);
+            ctx.arc(x + r, y + r, r, Math.PI, 1.5 * Math.PI);
+        }
+
+        function main() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (intro) {
+                let introVideo = document.getElementById("video");
+                if (intro === 1) introVideo.play();
+                if (!introVideo.paused) intro++;
+
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                let width = 1280;
+                let height = 720;
+                let widthRatio = canvas.width / width;
+                let heightRatio = canvas.height / height;
+                let minRatio = Math.min(widthRatio, heightRatio);
+                let scale = Math.min(minRatio, 1);
+                ctx.scale(scale, scale);
+                ctx.drawImage(introVideo, -width / 2, -height / 2, width, height);
+                ctx.restore();
+
+                if (introVideo.ended) intro = 0;
+            } else if (!loaded) {
+                if (loads == Object.keys(images).length + Object.keys(audios).length) {
+                    loaded = true;
+                    intro = 1;
+                }
+                ctx.save();
+                ctx.font = "20px Trebuchet MS";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                let percent = loads / (Object.keys(images).length + Object.keys(audios).length);
+                ctx.fillStyle = "rgb(50,50,50)";
+                ctx.fillText("Loading...", 0, -20);
+                ctx.fillRect(-200, 0, 400, 3);
+                ctx.fillStyle = "rgb(200,200,200)";
+                ctx.fillRect(-200, 0, 400 * percent, 3);
+                ctx.restore();
+            } else {
+                if (page == "menu") {
+                    menu.tick();
+                } else if (page == "game") {
+                    game.tick();
+                }
+                ui.tick();
+            }
+
+            Keys.down = {};
+            Keys.up = {};
+            Mouse.downStart = false;
+            Mouse.click = false;
+            Mouse.xmove = 0;
+            Mouse.ymove = 0;
+        }
+        window.setInterval(main, 10);
+
+        window.onresize = resize;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+
+        menu.init();
+
+        let page = "menu";
+        //page = "game";
+        //game.init();
+        //game.level.load(levels[3]);
+    </script>
+</body>
+
+</html>

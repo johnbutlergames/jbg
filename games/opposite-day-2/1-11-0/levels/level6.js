@@ -146,9 +146,9 @@ levels[5] = {
                 for (var id of ids) {
                     var o = game.objects.objects.find(e => e.id == id);
                     o.drawType = "image";
-                    o.w = 100;
-                    o.h = 100 * 1.12;
-                    o.x -= 50;
+                    o.w = 120;
+                    o.h = 120;
+                    o.x -= 60;
                     o.y -= 70;
                     o.image = "skull";
                 }

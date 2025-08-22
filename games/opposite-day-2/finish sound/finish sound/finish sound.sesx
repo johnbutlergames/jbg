@@ -2,7 +2,7 @@
 <!DOCTYPE sesx>
 <sesx version="1.9">
 
-  <session appBuild="24.6.3.2" appVersion="24.6" audioChannelType="stereo" bitDepth="32" duration="1440000" sampleRate="48000">
+  <session appBuild="24.6.7.3" appVersion="24.6" audioChannelType="stereo" bitDepth="32" duration="1440000" sampleRate="48000">
     <tracks>
       <audioTrack automationLaneOpenState="false" id="10001" index="1" select="false" visible="true">
         <trackParameters trackHeight="81" trackHue="160" trackMinimized="false">
@@ -17,7 +17,7 @@
           </component>
           <component componentGuid="bd337c90-4de2-48fc-96a0-78c402b60824" componentID="Audition.Mute" id="trackMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
-            <parameter index="1" name="mute" parameterValue="0"/>
+            <parameter index="1" name="mute" parameterValue="1"/>
           </component>
           <component componentGuid="5bbb3a0c-6da7-4089-a9c9-4c092866cee0" componentID="Audition.StereoPanner" id="trackPan" name="StereoPanner" powered="true">
             <parameter index="0" name="Pan" parameterValue="0"/>
@@ -76,7 +76,7 @@
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="3828b9c8-69e0-4bf0-90f2-17fa52ab00f0" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="ba2346bd-77b1-4c97-b48c-2ae4d2846ea8" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -101,7 +101,7 @@
           <trackOutput outputID="10000" type="trackID"/>
           <trackInput inputID="1"/>
           <component componentGuid="d3bfbff4-7f33-459f-ab8c-6c8f39a28769" componentID="Audition.Fader" id="trackFader" name="volume" powered="true">
-            <parameter index="0" name="volume" parameterValue="0.4767086207866668701171875">
+            <parameter index="0" name="volume" parameterValue="1.0000000036274937255387218471014421083964407444000244140625e-15">
               <parameterKeyframes enableSplines="false" readOnly="false">
                 <parameterKeyframe sampleOffset="0" select="false" type="linear" value="0"/>
                 <parameterKeyframe sampleOffset="28513" select="true" type="linear" value="0.4307608902454376220703125"/>
@@ -188,56 +188,56 @@
               <parameter index="3" name="Reset" parameterValue="0"/>
               <parameter index="4" name="EQ Band 1" parameterValue="0.5"/>
               <parameter index="5" name="EQ Band 2" parameterValue="0.5"/>
-              <parameter index="6" name="EQ Band 3" parameterValue="0.488792955875396728515625">
+              <parameter index="6" name="EQ Band 3" parameterValue="0.506556987762451171875">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="4320" select="false" type="linear" value="0.4584418237209320068359375"/>
                   <parameterKeyframe sampleOffset="69123" select="false" type="linear" value="0.50110876560211181640625"/>
                   <parameterKeyframe sampleOffset="106277" select="false" type="linear" value="0.509654521942138671875"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="7" name="EQ Band 4" parameterValue="0.4679906666278839111328125">
+              <parameter index="7" name="EQ Band 4" parameterValue="0.4924880564212799072265625">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="0" select="false" type="linear" value="0.4247469007968902587890625"/>
                   <parameterKeyframe sampleOffset="74308" select="false" type="linear" value="0.488746941089630126953125"/>
                   <parameterKeyframe sampleOffset="112326" select="false" type="linear" value="0.4949831068515777587890625"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="8" name="EQ Band 5" parameterValue="0.43190586566925048828125">
+              <parameter index="8" name="EQ Band 5" parameterValue="0.48587810993194580078125">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="16416" select="false" type="linear" value="0.3727991580963134765625"/>
                   <parameterKeyframe sampleOffset="83812" select="false" type="linear" value="0.48479938507080078125"/>
                   <parameterKeyframe sampleOffset="106277" select="false" type="linear" value="0.487250149250030517578125"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="9" name="EQ Band 6" parameterValue="0.3954599201679229736328125">
+              <parameter index="9" name="EQ Band 6" parameterValue="0.500606358051300048828125">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="37154" select="false" type="linear" value="0.32168233394622802734375"/>
                   <parameterKeyframe sampleOffset="74307" select="false" type="linear" value="0.49234902858734130859375"/>
                   <parameterKeyframe sampleOffset="105413" select="false" type="linear" value="0.506028234958648681640625"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="10" name="EQ Band 7" parameterValue="0.3537093102931976318359375">
+              <parameter index="10" name="EQ Band 7" parameterValue="0.4835645258426666259765625">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="29377" select="false" type="linear" value="0.26592528820037841796875"/>
                   <parameterKeyframe sampleOffset="90726" select="false" type="linear" value="0.4899251461029052734375"/>
                   <parameterKeyframe sampleOffset="108006" select="false" type="linear" value="0.4817344248294830322265625"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="11" name="EQ Band 8" parameterValue="0.3698760569095611572265625">
+              <parameter index="11" name="EQ Band 8" parameterValue="0.52512943744659423828125">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="20737" select="false" type="linear" value="0.226166784763336181640625"/>
                   <parameterKeyframe sampleOffset="91589" select="false" type="linear" value="0.556833922863006591796875"/>
                   <parameterKeyframe sampleOffset="199594" select="false" type="linear" value="0.50711345672607421875"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="12" name="EQ Band 9" parameterValue="0.294208824634552001953125">
+              <parameter index="12" name="EQ Band 9" parameterValue="0.526868045330047607421875">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="30242" select="false" type="linear" value="0.16216655075550079345703125"/>
                   <parameterKeyframe sampleOffset="92453" select="false" type="linear" value="0.5141670703887939453125"/>
                   <parameterKeyframe sampleOffset="127015" select="false" type="linear" value="0.538873493671417236328125"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="13" name="EQ Band 10" parameterValue="0.2561788856983184814453125">
+              <parameter index="13" name="EQ Band 10" parameterValue="0.4892790615558624267578125">
                 <parameterKeyframes enableSplines="true" readOnly="false">
                   <parameterKeyframe sampleOffset="31970" select="false" type="linear" value="0.11950032413005828857421875"/>
                   <parameterKeyframe sampleOffset="89861" select="false" type="linear" value="0.482166945934295654296875"/>
@@ -262,7 +262,7 @@
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="7658443b-3919-4ad0-bb47-e2ae207a4c0b" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="39712168-b380-4a0a-98d5-d3e5480aa3a6" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -279,7 +279,7 @@
           </channelMap>
         </audioClip>
       </audioTrack>
-      <audioTrack automationLaneOpenState="true" id="10003" index="3" select="true" visible="true">
+      <audioTrack automationLaneOpenState="true" id="10003" index="3" select="false" visible="true">
         <trackParameters trackHeight="81" trackHue="51" trackMinimized="false">
           <name>Track 3</name>
         </trackParameters>
@@ -287,7 +287,7 @@
           <trackOutput outputID="10000" type="trackID"/>
           <trackInput inputID="1"/>
           <component componentGuid="6bcbc184-c0b5-4abf-b5fe-b0129e98ba07" componentID="Audition.Fader" id="trackFader" name="volume" powered="true">
-            <parameter index="0" name="volume" parameterValue="0.2513354718685150146484375">
+            <parameter index="0" name="volume" parameterValue="1.0000000036274937255387218471014421083964407444000244140625e-15">
               <parameterKeyframes enableSplines="false" readOnly="false">
                 <parameterKeyframe sampleOffset="31106" select="false" type="linear" value="0.36028993129730224609375"/>
                 <parameterKeyframe sampleOffset="103685" select="false" type="linear" value="0.3081174790859222412109375"/>
@@ -374,43 +374,43 @@
               <parameter index="4" name="EQ Band 1" parameterValue="0.5"/>
               <parameter index="5" name="EQ Band 2" parameterValue="0.5"/>
               <parameter index="6" name="EQ Band 3" parameterValue="0.5"/>
-              <parameter index="7" name="EQ Band 4" parameterValue="0.5">
+              <parameter index="7" name="EQ Band 4" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="95909" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="122694" select="false" type="linear" value="0"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="8" name="EQ Band 5" parameterValue="0.5">
+              <parameter index="8" name="EQ Band 5" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="94181" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="124422" select="false" type="linear" value="0"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="9" name="EQ Band 6" parameterValue="0.5">
+              <parameter index="9" name="EQ Band 6" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="95909" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="126150" select="false" type="linear" value="0"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="10" name="EQ Band 7" parameterValue="0.5">
+              <parameter index="10" name="EQ Band 7" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="92453" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="124422" select="false" type="linear" value="0"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="11" name="EQ Band 8" parameterValue="0.5">
+              <parameter index="11" name="EQ Band 8" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="94181" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="122694" select="false" type="linear" value="0"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="12" name="EQ Band 9" parameterValue="0.5">
+              <parameter index="12" name="EQ Band 9" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="95909" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="126150" select="false" type="linear" value="0"/>
                 </parameterKeyframes>
               </parameter>
-              <parameter index="13" name="EQ Band 10" parameterValue="0.5">
+              <parameter index="13" name="EQ Band 10" parameterValue="0.3286428749561309814453125">
                 <parameterKeyframes enableSplines="false" readOnly="false">
                   <parameterKeyframe sampleOffset="95909" select="false" type="linear" value="0.5"/>
                   <parameterKeyframe sampleOffset="126150" select="false" type="linear" value="0"/>
@@ -428,12 +428,12 @@
         <editParameter parameterIndex="11" slotIndex="0"/>
         <editParameter parameterIndex="12" slotIndex="0"/>
         <editParameter parameterIndex="13" slotIndex="0"/>
-        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="240204" fileID="3" hue="-1" id="0" lockedInTime="false" looped="false" name="2025-04-11 14-37-09" offline="false" select="false" sourceInPoint="175401" sourceOutPoint="386546" startPoint="29059" zOrder="0">
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="125286" fileID="2" hue="-1" id="0" lockedInTime="false" looped="false" name="2025-04-11 14-37-09" offline="false" select="false" sourceInPoint="175401" sourceOutPoint="271628" startPoint="29059" zOrder="0">
           <component componentGuid="ade81b85-53b0-462f-b8c6-1ec5d1e90a81" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="9123edbd-d3d9-4ed1-82f9-9672c0ef180d" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="d1f430f2-814f-40d1-a300-695034b012f4" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -441,7 +441,28 @@
             <parameter index="0" name="Pan" parameterValue="0"/>
           </component>
           <fadeIn crossFadeLinkType="linkedAsymmetric" endPoint="0" shape="19" startPoint="0" type="log"/>
-          <fadeOut crossFadeLinkType="linkedAsymmetric" endPoint="211145" shape="19" startPoint="211145" type="log"/>
+          <fadeOut crossFadeLinkType="linkedAsymmetric" endPoint="96227" shape="19" startPoint="96227" type="log"/>
+          <editParameter parameterIndex="0" slotIndex="4294967280"/>
+          <editParameter parameterIndex="0" slotIndex="4294967281"/>
+          <channelMap>
+            <channel index="0" sourceIndex="0"/>
+            <channel index="1" sourceIndex="1"/>
+          </channelMap>
+        </audioClip>
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="240204" fileID="2" hue="-1" id="1" lockedInTime="false" looped="false" name="2025-04-11 14-37-09" offline="false" select="false" sourceInPoint="271628" sourceOutPoint="386546" startPoint="125286" zOrder="0">
+          <component componentGuid="d99ca197-8041-4ed6-86fc-947bd5070cfb" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
+            <parameter index="0" name="volume" parameterValue="1"/>
+            <parameter index="1" name="static gain" parameterValue="1"/>
+          </component>
+          <component componentGuid="cedc08a9-59c7-4f9e-a139-06ac2a251fba" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+            <parameter index="0" parameterValue="0"/>
+            <parameter index="1" name="mute" parameterValue="0"/>
+          </component>
+          <component componentGuid="3adfc176-e559-4d3e-a3a5-cf6f9de589ea" componentID="Audition.StereoPanner" id="clipPan" name="StereoPanner" powered="true">
+            <parameter index="0" name="Pan" parameterValue="0"/>
+          </component>
+          <fadeIn crossFadeLinkType="linkedAsymmetric" endPoint="0" shape="19" startPoint="0" type="log"/>
+          <fadeOut crossFadeLinkType="linkedAsymmetric" endPoint="114918" shape="19" startPoint="114918" type="log"/>
           <editParameter parameterIndex="0" slotIndex="4294967280"/>
           <editParameter parameterIndex="0" slotIndex="4294967281"/>
           <channelMap>
@@ -517,12 +538,12 @@
           </component>
         </trackAudioParameters>
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
-        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="118860" fileID="5" hue="-1" id="0" lockedInTime="false" looped="false" name="2025-04-11 15-51-17" offline="false" select="false" sourceInPoint="108870" sourceOutPoint="227730" startPoint="0" zOrder="0">
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="118860" fileID="3" hue="-1" id="0" lockedInTime="false" looped="false" name="2025-04-11 15-51-17" offline="false" select="false" sourceInPoint="108870" sourceOutPoint="227730" startPoint="0" zOrder="0">
           <component componentGuid="15cfc767-c6bf-426a-be85-7b9241d32b24" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="d605ad6a-6959-40ca-b5e0-cb24ef7c2742" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="082f0eb8-5ad5-4443-a020-75e235672bf8" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -539,7 +560,7 @@
           </channelMap>
         </audioClip>
       </audioTrack>
-      <audioTrack automationLaneOpenState="false" id="10005" index="5" select="false" visible="true">
+      <audioTrack automationLaneOpenState="false" id="10005" index="5" select="true" visible="true">
         <trackParameters trackHeight="81" trackHue="294" trackMinimized="false">
           <name>Track 5</name>
         </trackParameters>
@@ -552,7 +573,7 @@
           </component>
           <component componentGuid="14981e90-ce00-4f68-9142-5ec303503de8" componentID="Audition.Mute" id="trackMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
-            <parameter index="1" name="mute" parameterValue="0"/>
+            <parameter index="1" name="mute" parameterValue="1"/>
           </component>
           <component componentGuid="7a41e49f-7037-4655-9e7f-4c2052bec27f" componentID="Audition.StereoPanner" id="trackPan" name="StereoPanner" powered="true">
             <parameter index="0" name="Pan" parameterValue="0"/>
@@ -606,12 +627,12 @@
           </component>
         </trackAudioParameters>
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
-        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="240000" fileID="6" hue="-1" id="0" lockedInTime="false" looped="false" name="finish (7)" offline="false" select="false" sourceInPoint="0" sourceOutPoint="219582" startPoint="20418" zOrder="1">
+        <audioClip clipAutoCrossfade="true" crossFadeHeadClipID="-1" crossFadeTailClipID="-1" endPoint="240000" fileID="4" hue="-1" id="0" lockedInTime="false" looped="false" name="finish (7)" offline="false" select="false" sourceInPoint="0" sourceOutPoint="219582" startPoint="20418" zOrder="1">
           <component componentGuid="80f9e0e1-7eee-45fd-9c95-5a82ee2fa3f2" componentID="Audition.Fader" id="clipGain" name="volume" powered="true">
             <parameter index="0" name="volume" parameterValue="1"/>
             <parameter index="1" name="static gain" parameterValue="1"/>
           </component>
-          <component componentGuid="119e28a2-ce67-4841-a03e-78f2ff440a28" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
+          <component componentGuid="094337c5-528d-425a-81c7-fada972d4c78" componentID="Audition.Mute" id="clipMute" name="Mute" powered="true">
             <parameter index="0" parameterValue="0"/>
             <parameter index="1" name="mute" parameterValue="0"/>
           </component>
@@ -765,8 +786,8 @@
         <editParameter parameterIndex="0" slotIndex="4294967280"/>
       </masterTrack>
     </tracks>
-    <sessionState ctiPosition="34725" smpteStart="0">
-      <selectionState selectionDuration="0" selectionStart="34725"/>
+    <sessionState ctiPosition="157981" smpteStart="0">
+      <selectionState selectionDuration="0" selectionStart="157981"/>
       <viewState horizontalViewDuration="476952" horizontalViewStart="0" trackControlsWidth="224" verticalScrollOffset="0"/>
       <timeFormatState beatsPerBar="4" beatsPerMinute="120" customFrameRate="12" linkToDefaultTimeSettings="true" noteLength="4" subdivisions="16" timeCodeDropFrame="false" timeCodeFrameRate="30" timeCodeNTSC="false" timeFormat="timeFormatDecimal"/>
       <mixingOptionState defaultPanModeLogarithmic="false" panPower="-3" playOverlappingClips="false"/>
@@ -783,9 +804,9 @@
             xmlns:xmpDM="http://ns.adobe.com/xmp/1.0/DynamicMedia/">
          <xmp:CreatorTool>Adobe Audition 24.6 (Windows)</xmp:CreatorTool>
          <xmp:CreateDate>2025-04-11T13:54:30-07:00</xmp:CreateDate>
-         <xmp:MetadataDate>2025-04-11T16:02:41-07:00</xmp:MetadataDate>
-         <xmp:ModifyDate>2025-04-11T16:02:41-07:00</xmp:ModifyDate>
-         <xmpMM:InstanceID>xmp.iid:2871f86f-4e00-564a-af6b-b5a9a7e85e3e</xmpMM:InstanceID>
+         <xmp:MetadataDate>2025-07-21T13:04:32-07:00</xmp:MetadataDate>
+         <xmp:ModifyDate>2025-07-21T13:04:32-07:00</xmp:ModifyDate>
+         <xmpMM:InstanceID>xmp.iid:f7b9fbbd-f3f4-8446-9131-e67439ff6bb0</xmpMM:InstanceID>
          <xmpMM:DocumentID>xmp.did:1c5b9cae-f2d7-ed48-ad25-7b87d3080e53</xmpMM:DocumentID>
          <xmpMM:OriginalDocumentID>xmp.did:1c5b9cae-f2d7-ed48-ad25-7b87d3080e53</xmpMM:OriginalDocumentID>
          <xmpMM:History>
@@ -920,6 +941,20 @@
                   <stEvt:action>saved</stEvt:action>
                   <stEvt:instanceID>xmp.iid:2871f86f-4e00-564a-af6b-b5a9a7e85e3e</stEvt:instanceID>
                   <stEvt:when>2025-04-11T16:02:41-07:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 24.6 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:f18b1664-71f6-cb4f-80bb-e1d835b1652d</stEvt:instanceID>
+                  <stEvt:when>2025-07-21T13:04:32-07:00</stEvt:when>
+                  <stEvt:softwareAgent>Adobe Audition 24.6 (Windows)</stEvt:softwareAgent>
+                  <stEvt:changed>/metadata</stEvt:changed>
+               </rdf:li>
+               <rdf:li rdf:parseType="Resource">
+                  <stEvt:action>saved</stEvt:action>
+                  <stEvt:instanceID>xmp.iid:f7b9fbbd-f3f4-8446-9131-e67439ff6bb0</stEvt:instanceID>
+                  <stEvt:when>2025-07-21T13:04:32-07:00</stEvt:when>
                   <stEvt:softwareAgent>Adobe Audition 24.6 (Windows)</stEvt:softwareAgent>
                   <stEvt:changed>/</stEvt:changed>
                </rdf:li>
@@ -1084,13 +1119,11 @@
   </session>
 
   <files>
-    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Conformed Files\reverse-whoosh 48000 1.wav" id="0" mediaHandler="AmioWav" relativePath="Conformed Files/reverse-whoosh 48000 1.wav"/>
+    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Conformed Files\reverse-whoosh 48000 1.wav" id="0" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Conformed Files/reverse-whoosh 48000 1.wav"/>
     <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\Untitled 3.wav" id="1" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Imported Files/Untitled 3.wav"/>
-    <file absolutePath="C:\Users\johnb\Videos\2025-04-11 14-37-09.mov" id="2" mediaHandler="ImporterHost" relativePath="../../../../../../../Videos/2025-04-11 14-37-09.mov"/>
-    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\2025-04-11 14-37-09.wav" id="3" mediaHandler="AmioWav" relativePath="Imported Files/2025-04-11 14-37-09.wav"/>
-    <file absolutePath="C:\Users\johnb\Videos\2025-04-11 15-51-17.mov" id="4" mediaHandler="ImporterHost" relativePath="../../../../../../../Videos/2025-04-11 15-51-17.mov"/>
-    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\2025-04-11 15-51-17.wav" id="5" mediaHandler="AmioWav" relativePath="Imported Files/2025-04-11 15-51-17.wav"/>
-    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\finish (7).wav" id="6" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Imported Files/finish (7).wav"/>
+    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\2025-04-11 14-37-09.wav" id="2" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Imported Files/2025-04-11 14-37-09.wav"/>
+    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\2025-04-11 15-51-17.wav" id="3" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Imported Files/2025-04-11 15-51-17.wav"/>
+    <file absolutePath="C:\Users\johnb\OneDrive\Desktop\Johnbutlergames\games\opposite-day-2\finish sound\finish sound\Imported Files\finish (7).wav" id="4" importerPrivateSettings="Compression:0:0;LargeFileSupport:0:0;SampleType:0:1;" mediaHandler="AmioWav" relativePath="Imported Files/finish (7).wav"/>
   </files>
 
   <audioDevice inputID="22222222-2222-2222-2222-22222222" outputID="11111111-1111-1111-1111-11111111">
@@ -1099,10 +1132,10 @@
     <inputPort id="3" name="[02M] System Default - Microphone Array (Realtek(R) Audio) 2"/>
     <inputPort id="4" name="[01S] System Default - Microphone Array (Realtek(R) Audio) 1"/>
     <outputPort id="1" name="Default Output"/>
-    <outputPort id="2" name="[01M] System Default - Headphones (Realtek(R) Audio) 1"/>
-    <outputPort id="3" name="[02M] System Default - Headphones (Realtek(R) Audio) 2"/>
+    <outputPort id="2" name="[01M] System Default - Speakers (Realtek(R) Audio) 1"/>
+    <outputPort id="3" name="[02M] System Default - Speakers (Realtek(R) Audio) 2"/>
     <outputPort id="4" name="Default Stereo Output"/>
-    <outputPort id="5" name="[01S] System Default - Headphones (Realtek(R) Audio) 1"/>
+    <outputPort id="5" name="[01S] System Default - Speakers (Realtek(R) Audio) 1"/>
     <outputPort id="6" name="Default Surround Output"/>
   </audioDevice>
 

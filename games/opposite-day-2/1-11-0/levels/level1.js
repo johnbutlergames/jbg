@@ -182,6 +182,7 @@ levels[0] = {
                 o.alpha = 1;
                 o.decay = 0;
                 o.activated = true;
+                return
                 var player = game.objects.objects.find(e => e.type == "player");
                 player.x = o.x - player.w / 2;
                 var o = game.objects.objects.find(e => e.id == "blue cube ultra change direction clue");
@@ -205,6 +206,7 @@ levels[0] = {
                 }
             },
             passive: function () {
+                return;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return;
                 player.ymove = -30;

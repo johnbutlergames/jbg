@@ -67,7 +67,8 @@ games = [
     "Battle Blocks",
     "Opposite Day 2",
     "Sorting Algorithms",
-    "Day"
+    "Day",
+    "Every Way To Die"
 ]
 popularity = [
     "Opposite Day 2",
@@ -75,6 +76,7 @@ popularity = [
     "Snowman Builder",
     "Unscramble",
     "Gift Match",
+    "Every Way To Die",
     "Escape The Horde",
     "Coin Dash",
     "Blasty Ball",
@@ -604,6 +606,13 @@ tags = {
         "jbg-cube",
         "levels"
     ],
+    "every-way-to-die": [
+        "single-player",
+        "skill",
+        "platformer",
+        "scrolling",
+        "levels"
+    ]
 }
 playlists = {
     "Single Player": [
@@ -671,7 +680,8 @@ playlists = {
         "Battle Blocks",
         "Opposite Day 2",
         "Sorting Algorithms",
-        "Day"
+        "Day",
+        "Every Way To Die"
     ],
     "Multiplayer": [
         "Chess",
@@ -750,7 +760,8 @@ playlists = {
         "Gift Match",
         "Battle Blocks",
         "Opposite Day 2",
-        "Day"
+        "Day",
+        "Every Way To Die"
     ],
     "Strategy": [
         "Chess",
@@ -873,7 +884,8 @@ descriptions = {
     "battle-blocks": "Place down blocks to defeat the enemies!",
     "opposite-day-2": "It's Opposite Day, again!",
     "sorting-algorithms": "Which one sorts the fastest?",
-    "day": "It's Day!"
+    "day": "It's Day!",
+    "every-way-to-die": "Can you find all the ways to die?"
 }
 versions = {
     "2048": [
@@ -1803,6 +1815,13 @@ versions = {
             "version": "1.0.0",
             "date": "4-1-2025",
             "title": "Initial Release"
+        }
+    ],
+    "every-way-to-die": [
+        {
+            "version": "b1.0.0",
+            "date": "8-8-2025",
+            "title": "Initial Game Jam Version"
         }
     ]
 }

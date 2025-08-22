@@ -3,9 +3,11 @@
 
 <body>
     <canvas id="canvas"></canvas>
+
     <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+
     <script src="menu.js"></script>
-    <script src="game.js"></script>
+
     <script src="levels/level1.js"></script>
     <script src="levels/level2.js"></script>
     <script src="levels/level3.js"></script>
@@ -17,7 +19,24 @@
     <script src="levels/level9.js"></script>
     <script src="levels/level10.js"></script>
     <script src="bart.js"></script>
+
     <script src="tas.js"></script>
+    <script src="utilities.js"></script>
+    <script src="beta-testers.js"></script>
+    <script src="save-data.js"></script>
+    <script src="assets.js"></script>
+
+    <script src="game/game.js"></script>
+    <script src="game/background.js"></script>
+    <script src="game/cam.js"></script>
+    <script src="game/input.js"></script>
+    <script src="game/level.js"></script>
+    <script src="game/music.js"></script>
+    <script src="game/objects.js"></script>
+    <script src="game/particles.js"></script>
+    <script src="game/sound-effects.js"></script>
+    <script src="game/ui.js"></script>
+
     <style>
         @font-face {
             font-family: rubik;
@@ -42,159 +61,12 @@
     <script>
         var title = "Opposite Day 2";
         var dimensions = { width: 1000, height: 1000 };
-        var images = {
-            "demon": "images/demon.png",
-            "skull": "images/skull.png",
-            "botBody": "images/bot-body.png",
-            "gravitySwitcher3": "images/gravity-switcher3.png",
-            "gravitySwitcher2": "images/gravity-switcher2.png",
-            "gravitySwitcher": "images/gravity-switcher.png",
-            "gravitySwitch2": "images/gravity-switch2.png",
-            "gravitySwitch": "images/gravity-switch.png",
-            "coinDashBackground": "images/coin-dash-background.png",
-            "circlesBackground": "images/circles-background.png",
-            "pingPongBackground": "images/ping-pong-background.png",
-            "snakeBackground": "images/snake-background.png",
-            "sokobanBackground": "images/sokoban-background.png",
-            "sokobanCubeBackground": "images/sokoban-cube-background.png",
-            "pacmanBackground": "images/pacman-background.png",
-            "pacmanRedCubeBackground": "images/pacman-red-cube-background.png",
-            "pacmanRedCubeWonBackground": "images/pacman-red-cube-won-background.png",
-            "ghostSpritesheet": "images/ghost-spritesheet.png",
-            "pacmanDeath": "images/pacman-death.png",
-            "sokobanBox": "images/sokoban-box.png",
-            "sokobanBlueBox": "images/sokoban-blue-box.png",
-            "sokobanBlueBoxLit": "images/sokoban-blue-box-lit.png",
-            "jumpEnemy": "images/jump-enemy.png",
-            "greenSparkle": "images/green-sparkle.png",
-            "arrows": "images/keys-arrows.png",
-            "wasd": "images/keys-wasd.png",
-            "circuitRed": "images/circuit-red.png",
-            "circuitBlack": "images/circuit-black.png",
-            "circuitPurple": "images/circuit-purple.png",
-            "bossSpritesheet": "images/boss-spritesheet.png",
-            "heartsSpritesheet": "images/hearts-spritesheet.png",
-            "checkmark": "images/checkmark.png",
-            "shortcutDiscovered": "images/shortcut-discovered.png",
-            "shortcutTaken": "images/shortcut-taken.png",
-            "redCube": "images/red-cube.png",
-            "blueCube": "images/blue-cube.png",
-            "ultraBlueCube": "images/ultra-blue-cube.png",
-            "ultraRedCube": "images/ultra-red-cube.png",
-            "uncollectedCube": "images/uncollected-cube.png",
-            "lock": "images/lock.png",
-            "level1": "images/level1.png",
-            "level2": "images/level2.png",
-            "level3": "images/level3.png",
-            "level4": "images/level4.png",
-            "level5": "images/level5.png",
-            "level6": "images/level6.png",
-            "level7": "images/level7.png",
-            "level8": "images/level8.png",
-            "level9": "images/level9.png",
-            "level10": "images/level10.png",
-            "gear": "images/gear.png",
-            "exit": "images/exit.png",
-            "restart": "images/restart.png",
-            "volume": "images/volume.png",
-            "volumeMuted": "images/volume-muted.png",
-            "arrowsSquare": "images/arrows-square.png",
-            "fullRestart": "images/full-restart.png",
-            "plus": "images/plus.png",
-            "warning": "images/warning.png",
-            "bossPartTrail": "images/boss-part-trail.png",
-            "bartPhase0Spritesheet": "images/bart-phase0-spritesheet.png",
-            "bartPhase1TransformationSpritesheet": "images/bart-phase1-transformation-spritesheet.png",
-            "bartPhase1Spritesheet": "images/bart-phase1-spritesheet.png",
-            "bartPhase1WeaponsSpritesheet": "images/bart-phase1-weapons-spritesheet.png",
-            "magentaSparkle": "images/magenta-sparkle.png",
-            "ultraShortcutTaken": "images/ultra-shortcut-taken.png",
-            "ultraShortcutDiscovered": "images/ultra-shortcut-discovered.png",
-            "ultraCheckmark": "images/ultra-checkmark.png",
-            "ultraCubeDiscovered": "images/ultra-cube-discovered.png",
-            "ultraCubeTaken": "images/ultra-cube-taken.png",
-            "shortcutDiscoveredAlertIcon": "images/shortcut-discovered-alert-icon.png",
-            "shortcutTakenAlertIcon": "images/shortcut-taken-alert-icon.png",
-            "ultraShortcutDiscoveredAlertIcon": "images/ultra-shortcut-discovered-alert-icon.png",
-            "ultraShortcutTakenAlertIcon": "images/ultra-shortcut-taken-alert-icon.png",
-        };
-        var audios = {
-            "collectBlueCube": "sound-effects/collect-blue-cube.mp3",
-            "recollectBlueCube": "sound-effects/recollect-blue-cube.mp3",
-            "blueCubeClue": "sound-effects/blue-cube-clue.mp3",
-            "blueCubePreClue": "sound-effects/blue-cube-pre-clue.mp3",
-            "shortcut": "sound-effects/shortcut.mp3",
-            "preShortcut": "sound-effects/pre-shortcut.mp3",
-            "collectRedCube": "sound-effects/collect-red-cube.mp3",
-            "recollectRedCube": "sound-effects/recollect-red-cube.mp3",
-            "redCubeClue": "sound-effects/red-cube-clue.mp3",
-            "redCubePreClue": "sound-effects/red-cube-pre-clue.mp3",
-            "sokobanBox1": "sound-effects/sokoban-box-1.mp3",
-            "sokobanBox2": "sound-effects/sokoban-box-2.mp3",
-            "sokobanBox3": "sound-effects/sokoban-box-3.mp3",
-            "sokobanBox4": "sound-effects/sokoban-box-4.mp3",
-            "sokobanBox5": "sound-effects/sokoban-box-5.mp3",
-            "sokobanBox6": "sound-effects/sokoban-box-6.mp3",
-            "sokobanBox7": "sound-effects/sokoban-box-7.mp3",
-            "sokobanBox8": "sound-effects/sokoban-box-8.mp3",
-            "pressButton": "sound-effects/press-button.mp3",
-            "doorSlam": "sound-effects/door-slam.mp3",
-            "gravitySwitch": "sound-effects/gravity-switch.mp3",
-            "buzzer": "sound-effects/buzzer.mp3",
-            "eatDot1": "sound-effects/eat-dot1.mp3",
-            "eatDot2": "sound-effects/eat-dot2.mp3",
-            "collectCoin": "sound-effects/collect-coin.mp3",
-            "death": "sound-effects/death.mp3",
-            "pacmanDeath": "sound-effects/pacman-death.mp3",
-            "jump1": "sound-effects/jump1.mp3",
-            "jump2": "sound-effects/jump2.mp3",
-            "jump3": "sound-effects/jump3.mp3",
-            "wallJump": "sound-effects/wall-jump.mp3",
-            "land1": "sound-effects/land1.mp3",
-            "land2": "sound-effects/land2.mp3",
-            "land3": "sound-effects/land3.mp3",
-            "wallHit": "sound-effects/wall-hit.mp3",
-            "heavyLand": "sound-effects/heavy-land.mp3",
-            "heaviestLand": "sound-effects/heaviest-land.mp3",
-            "whoosh": "sound-effects/whoosh.mp3",
-            "reverseWhoosh": "sound-effects/reverse-whoosh.mp3",
-            "bubblesStart": "sound-effects/bubbles-start.mp3",
-            "bubbles": "sound-effects/bubbles.mp3",
-            "killJumpEnemy": "sound-effects/kill-jump-enemy.mp3",
-            "pingPongHit": "sound-effects/ping-pong-hit.mp3",
-            "bossFireballExplosion": "sound-effects/boss-fireball-explosion.mp3",
-            "bossShootFireball": "sound-effects/boss-shoot-fireball.mp3",
-            "bossHurt": "sound-effects/boss-hurt.mp3",
-            "landGlass1": "sound-effects/land-glass1.mp3",
-            "landGlass2": "sound-effects/land-glass2.mp3",
-            "landGlass3": "sound-effects/land-glass3.mp3",
-            "platformMove": "sound-effects/platform-move.mp3",
-            "bossDeathSlam": "sound-effects/boss-death-slam.mp3",
-            "levelSelect": "sound-effects/level-select.mp3",
-            "levelSelectInvalid": "sound-effects/level-select-invalid.mp3",
-            "menuClick": "sound-effects/menu-click.mp3",
-            "eatApple": "sound-effects/eat-apple.mp3",
-            "ultra": "sound-effects/ultra.mp3",
-            "finish": "sound-effects/finish.mp3",
-            "ultraFinish": "sound-effects/ultra-finish.mp3",
-            "blobStart": "sound-effects/blob-start.mp3",
-            "blobEnd": "sound-effects/blob-end.mp3",
-            "shortcutCompleted": "sound-effects/shortcut-completed.mp3",
-            "oppositeDayTheme": "music/opposite-day-theme.mp3",
-            "incompletionTheme": "music/incompletion-theme.mp3",
-            "notTheRealBossfight": "music/not-the-real-bossfight.mp3",
-        };
+
         window.addEventListener("keydown", function (e) {
             if (!menu.acceptingKeybindInput) return;
             menu.keybindInput = { name: e.key, key: e.keyCode };
             e.preventDefault();
         });
-
-        var musicAudios = [
-            "oppositeDayTheme",
-            "incompletionTheme",
-            "notTheRealBossfight",
-        ];
 
         var defaultKeybinds = [
             { name: "left", title: "Not Left", keys: [{ name: "ArrowLeft", key: 37 }, { name: "a", key: 65 }] },
@@ -273,399 +145,50 @@
             t++;
         }
 
-        function easeOut(n) {
-            return Math.min(Math.max(n, 0), 1) ** 4;
+        function initializeSound() {
+            game.music.updateVolume(menu.settings.musicVolume * (menu.settings.musicMuted ? 0 : 1));
+            game.soundEffects.updateSoundEffectsVolume(menu.settings.soundEffectsVolume * (menu.settings.soundEffectsMuted ? 0 : 1));
         }
 
-        function easeOutPartialIn(a) {
-            a = 1.02 / (1 + 2.76 ** (-10 * (a - 0.6))) - 0.0026;
-            return Math.min(Math.max(a, 0), 1);
-        }
-
-        function drawRotatingCube(data) {
-            var s = data.size || 30;
-            var vertices = [
-                { x: -s, y: -s, z: -s },
-                { x: s, y: -s, z: -s },
-                { x: s, y: s, z: -s },
-                { x: -s, y: s, z: -s },
-                { x: -s, y: -s, z: s },
-                { x: s, y: -s, z: s },
-                { x: s, y: s, z: s },
-                { x: -s, y: s, z: s }
-            ];
-            var angle = data.zAngle || 0;
-            for (var o of vertices) {
-                var x = o.x * Math.cos(angle) - o.y * Math.sin(angle);
-                var y = o.x * Math.sin(angle) + o.y * Math.cos(angle);
-                o.x = x;
-                o.y = y;
-            }
-            var angle = data.xAngle || 0;
-            for (var o of vertices) {
-                var y = o.y * Math.cos(angle) - o.z * Math.sin(angle);
-                var z = o.y * Math.sin(angle) + o.z * Math.cos(angle);
-                o.y = y;
-                o.z = z;
-            }
-            var angle = data.yAngle || 0;
-            for (var o of vertices) {
-                var x = o.z * Math.sin(angle) + o.x * Math.cos(angle);
-                var z = o.z * Math.cos(angle) - o.x * Math.sin(angle);
-                o.x = x;
-                o.z = z;
-            }
-            var edges = [
-                [0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]
-            ];
-            var faces = [
-                [0, 1, 2, 3], [4, 5, 6, 7], [2, 3, 7, 6], [0, 1, 5, 4], [1, 2, 6, 5], [0, 3, 7, 4]
-            ];
-            var faceCoordinates = [];
-            var faceZValues = [];
-            for (var face of faces) {
-                var point1 = vertices[face[0]];
-                var point2 = vertices[face[1]];
-                var point3 = vertices[face[2]];
-                var point4 = vertices[face[3]];
-                var avgX = (point1.x + point2.x + point3.x + point4.x) / 4;
-                var avgY = (point1.y + point2.y + point3.y + point4.y) / 4;
-                var avgZ = (point1.z + point2.z + point3.z + point4.z) / 4;
-                faceZValues.push(avgZ);
-                faceCoordinates.push({ x: avgX, y: avgY, z: avgZ });
-            }
-            var sortedZValues = [...faceZValues].sort((a, b) => b - a);
-            var faceOrder = [];
-            for (var n = 0; n < faceZValues.length; n++) {
-                var e = faceZValues[n];
-                var order = sortedZValues.indexOf(e);
-                while (faceOrder.includes(order)) order++;
-                faceOrder.push(order);
-            }
-            ctx.strokeStyle = "black";
-            if (data.grey) {
-                if (data.red) {
-                    ctx.strokeStyle = "rgb(220,130,130)";
-                } else {
-                    ctx.strokeStyle = "rgb(150,150,255)";
-                }
-            }
-            ctx.lineWidth = 8;
-            ctx.lineCap = "round";
-
-            for (var edge of edges) {
-                if (data.border === false) break;
-                ctx.beginPath();
-                ctx.moveTo(vertices[edge[0]].x, vertices[edge[0]].y);
-                ctx.lineTo(vertices[edge[1]].x, vertices[edge[1]].y);
-                if (data.dashedBorder) {
-                    ctx.lineWidth = 4;
-                    var dist = distTo(vertices[edge[0]].x, vertices[edge[0]].y, vertices[edge[1]].x, vertices[edge[1]].y);
-                    ctx.setLineDash([dist * 0.2, dist * 0.6]);
-                }
-                ctx.stroke();
-            }
-            if (data.grey) {
-                ctx.globalAlpha = 0.3;
-            }
-            for (var n = faceOrder.length - 3; n < faceOrder.length; n++) {
-                var index = faceOrder.indexOf(n);
-                var face = faces[index];
-                var position = faceCoordinates[index];
-                var x = (position.x + 50) / 100;
-                var y = (position.y + 50) / 100;
-                var z = (position.z + 50) / 100;
-                ctx.fillStyle = data.colorFunction(x, y, z, n);
-                ctx.beginPath();
-                ctx.moveTo(vertices[face[0]].x, vertices[face[0]].y);
-                ctx.lineTo(vertices[face[1]].x, vertices[face[1]].y);
-                ctx.lineTo(vertices[face[2]].x, vertices[face[2]].y);
-                ctx.lineTo(vertices[face[3]].x, vertices[face[3]].y);
-                ctx.fill();
-            }
-        }
-
-        var noise = function (x, y, z) {
-            function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-            function lerp(t, a, b) { return a + t * (b - a); }
-            function grad(hash, x, y, z) {
-                var h = hash & 15;
-                var u = h < 8 ? x : y,
-                    v = h < 4 ? y : h == 12 || h == 14 ? x : z;
-                return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
-            }
-            function scale(n) { return (1 + n) / 2; }
-
-            var p = new Array(512)
-            var permutation = [151, 160, 137, 91, 90, 15,
-                131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
-                190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
-                88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
-                77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
-                102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
-                135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
-                5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
-                223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
-                129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
-                251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
-                49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
-                138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
-            ];
-            for (var i = 0; i < 256; i++)
-                p[256 + i] = p[i] = permutation[i];
-
-            var X = Math.floor(x) & 255,
-                Y = Math.floor(y) & 255,
-                Z = Math.floor(z) & 255;
-            x -= Math.floor(x);
-            y -= Math.floor(y);
-            z -= Math.floor(z);
-            var u = fade(x),
-                v = fade(y),
-                w = fade(z);
-            var A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z,
-                B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
-
-            return scale(lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z),
-                grad(p[BA], x - 1, y, z)),
-                lerp(u, grad(p[AB], x, y - 1, z),
-                    grad(p[BB], x - 1, y - 1, z))),
-                lerp(v, lerp(u, grad(p[AA + 1], x, y, z - 1),
-                    grad(p[BA + 1], x - 1, y, z - 1)),
-                    lerp(u, grad(p[AB + 1], x, y - 1, z - 1),
-                        grad(p[BB + 1], x - 1, y - 1, z - 1)))));
-        }
-
-        function createTimeText(time) {
-            var milliseconds = time % 100 + "";
-            if (milliseconds.length < 2) milliseconds = "0" + milliseconds;
-            var seconds = Math.floor(time / 100) % 60 + "";
-            if (seconds.length < 2 && time >= 6000) seconds = "0" + seconds;
-            if (time < 6000) return `${seconds}.${milliseconds}`;
-            var minutes = Math.floor(time / 6000) % 60 + "";
-            if (minutes.length < 2 && time >= 360000) minutes = "0" + minutes;
-            if (time < 360000) return `${minutes}:${seconds}.${milliseconds}`;
-            var hours = Math.floor(time / 360000);
-            return `${hours}:${minutes}:${seconds}.${milliseconds}`;
-        }
-
-        function pointInBox(x, y, box) {
-            return x >= box.x && y >= box.y && x <= box.x + box.w && y <= box.y + box.h;
-        }
-
-        function segmentsIntersect(a, b, c, d, p, q, r, s) {
-            var det, gamma, lambda;
-            det = (c - a) * (s - q) - (r - p) * (d - b);
-            if (det === 0) {
-                return false;
-            } else {
-                lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
-                gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
-                return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
-            }
-        }
-
-        function pointInPolygon(x, y, o) {
-            var response = false;
-            var crossCount = 0;
-            for (var n = 0; n < o.length; n++) {
-                var line = o[n];
-                var intersection = linesIntersection(x, y, x + 1, y, line.p1.x, line.p1.y, line.p2.x, line.p2.y);
-                if (!intersection) continue;
-                if (intersection === true) continue;
-                if (intersection.x < x) continue;
-                if (intersection.y < Math.min(line.p1.y, line.p2.y)) continue;
-                if (intersection.y > Math.max(line.p1.y, line.p2.y)) continue;
-                crossCount++;
-            }
-            return crossCount % 2 === 1;
-        }
-
-        function linesIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
-            if (x1 === x3 && y1 === y3 && x2 === x4 && y2 === y4) return true;
-            var m1 = (y2 - y1) / (x2 - x1);
-            var b1 = y1 - x1 * m1;
-            var m2 = (y4 - y3) / (x4 - x3);
-            var b2 = y3 - x3 * m2;
-
-            if ((!isFinite(m1) && !isFinite(m2))) {
-                if (x1 === x3) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-            if (m1 === m2) {
-                if (b1 === b2) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-            if (!isFinite(m1)) {
-                return { x: x1, y: m2 * x1 + b2 };
-            }
-            if (!isFinite(m2)) {
-                return { x: x3, y: m1 * x3 + b1 };
-            }
-            return { x: (b1 - b2) / (m2 - m1), y: m1 * (b1 - b2) / (m2 - m1) + b1 };
+        function initializeFonts() {
+            ctx.save();
+            ctx.globalAlpha = 0;
+            ctx.font = "1px rubik";
+            ctx.fillText("0", 0, 0);
+            ctx.font = "1px rubikbold";
+            ctx.fillText("0", 0, 0);
+            ctx.font = "1px rubikitalic";
+            ctx.fillText("0", 0, 0);
+            ctx.font = "1px rubikbolditalic";
+            ctx.fillText("0", 0, 0);
+            ctx.restore();
         }
 
         var saveData = false;
         var saveDataStored = false;
-        if (localStorage.getItem("oppositeday2savedata") !== null) {
-            saveData = JSON.parse(localStorage.getItem("oppositeday2savedata"));
-            saveData.redCubesCollected = saveData.redCubesCollected || [];
-            saveData.redCubesDiscovered = saveData.redCubesDiscovered || [];
-            saveData.ultraRedCubesDiscovered = saveData.ultraRedCubesDiscovered || [];
-            saveData.ultraRedCubesTaken = saveData.ultraRedCubesTaken || [];
-            saveData.shortcutsDiscovered = saveData.shortcutsDiscovered || [];
-            saveData.shortcutsTaken = saveData.shortcutsTaken || [];
-            saveData.ultraShortcutsDiscovered = saveData.ultraShortcutsDiscovered || [];
-            saveData.ultraShortcutsTaken = saveData.ultraShortcutsTaken || [];
-            saveData.blueCubesDiscovered = saveData.blueCubesDiscovered || [];
-            saveData.blueCubesCollected = saveData.blueCubesCollected || [];
-            saveData.ultraBlueCubesDiscovered = saveData.ultraBlueCubesDiscovered || [];
-            saveData.ultraBlueCubesTaken = saveData.ultraBlueCubesTaken || [];
-            saveData.levelsBeaten = saveData.levelsBeaten || 0;
-            saveData.time = saveData.time || 0;
-            saveData.bestLevelSplits = saveData.bestLevelSplits || [];
-            game.ui.timer.gameTime = saveData.time;
-            saveDataStored = true;
-            if (saveData.johnbutlergames) johnbutlergames = true;
-            if (saveData.notobiv) notobiv = true;
-            if (saveData.ppougjgaming) ppougjgaming = true;
-            if (saveData.kribit) kribit = true;
-        }
-        if (localStorage.getItem("oppositeday2settingsdata") !== null) {
-            var defaultSettings = structuredClone(menu.settings);
-            menu.settings = JSON.parse(localStorage.getItem("oppositeday2settingsdata"));
-            for (var key of Object.keys(defaultSettings)) {
-                if (menu.settings[key] === undefined) menu.settings[key] = defaultSettings[key];
-            }
-            game.input.updateKeybinds();
-        } else {
-            menu.settings.keybinds = structuredClone(defaultKeybinds);
-            game.input.updateKeybinds();
-        }
-        game.music.updateVolume(menu.settings.musicVolume * (menu.settings.musicMuted ? 0 : 1));
-        game.soundEffects.updateSoundEffectsVolume(menu.settings.soundEffectsVolume * (menu.settings.soundEffectsMuted ? 0 : 1));
 
-        function updateSaveData() {
-            saveData.time = game.ui.timer.gameTime;
-            saveData.johnbutlergames = johnbutlergames;
-            saveData.ppougjgaming = ppougjgaming;
-            saveData.notobiv = notobiv;
-            saveData.kribit = kribit;
-            saveData.larrythehamster = larrythehamster;
-            localStorage.setItem("oppositeday2savedata", JSON.stringify(saveData));
-            saveDataStored = true;
-        }
+        initializeSaveData();
+        initializeSettingsData();
+        initializeSound();
+        initializeFonts();
 
-        function deleteSaveData() {
-            localStorage.removeItem("oppositeday2savedata");
-            saveDataStored = false;
-        }
-
-        function updateSettingsData() {
-            localStorage.setItem("oppositeday2settingsdata", JSON.stringify(menu.settings));
-        }
-
-        ctx.save();
-        ctx.globalAlpha = 0;
-        ctx.font = "1px rubik";
-        ctx.fillText("0", 0, 0);
-        ctx.font = "1px rubikbold";
-        ctx.fillText("0", 0, 0);
-        ctx.font = "1px rubikitalic";
-        ctx.fillText("0", 0, 0);
-        ctx.font = "1px rubikbolditalic";
-        ctx.fillText("0", 0, 0);
-        ctx.restore();
-
-        var betaTesters = [
-            "Notobiv",
-            "Thomas Butler",
-            "Kribit",
-            "Kate Butler",
-            "Oliver Butler",
-            "Simon Butler",
-            "Haven Wenzel",
-            "ppougj Gaming",
-            "God NTSC Player",
-            "Ty Cirino",
-            "Braxton McFarland",
-            "Smooshymemes",
-            "Pompelo",
-            "Annoying Dog",
-            "Larry the Hamster",
-            "Matt Quinn",
-            "Josiah Sage",
-            "James Butler",
-            "CarsonPlay2",
-            "Sharon Butler",
-            "William Butler",
-            "Dakota Reinikka",
-            "Adrian Falcon",
-            "Matthew Ritchey",
-            "Okman241",
-            "Mosh",
-            "Qatt",
-            "Jakem",
-            "Arctic",
-            "Dxtr",
-            "Brain Washed",
-            "GHY",
-            "Kabez",
-            "Jbg Goat"
-        ];
-
-        //menu.titleScreen = 0;
-        //menu.titleScreenAnimation = 0;
-        //game.newGame();
-        //game.level.load(9);
+        menu.titleScreen = 0;
+        menu.titleScreenAnimation = 0;
+        game.newGame();
+        //game.level.load(8);
         //game.level.playerInvincible = true;
         //game.level.playerFlightMode = true;
         //game.level.showWireframes = true;
         //game.level.showViewBox = true;
         //game.cam.zoom = 0.5;
         //game.level.lockedPlayerCamera = true;
-        //Loading.intro = false;
-        //Loading.loaded = true;
+        Loading.intro = false;
+        Loading.loaded = true;
         //frameRate = 10;
 
-        /*
-        To Do:
-        Red cube level 9
-        Ultra shortcut level 9
-        Ultra blue cube level 5
-        Ultra blue cube level 6
-        Ultra blue cube level 7
-        Ultra blue cube level 8
-        Ultra blue cube level 9
-        Ultra blue cube level 10
-        Ultra red cube level 4
-        Ultra red cube level 5
-        Ultra red cube level 6
-        Ultra red cube level 7
-        Ultra red cube level 8
-        Ultra red cube level 9
-        Ultra red cube level 10
-
-        Music:
-        Main Theme
-
-        Sound Effects:
-        Lvl 9 red cube entrance
-
-        Mb Later:
-        Stats page
-
-        Music:
-        Shortcut Theme
-        Red Cube Theme
-        Blue Cube Theme
-        */
+        game.objects.objects.unshift({ type: "cube", x: 0, y: -100 });
+        game.level.triggers.triggered.push("blue cube ultra");
+        game.level.triggers.triggerChecks.find(e => e.name == "blue cube ultra").trip();
 
         var movementRecord = "";
         bot = false;
