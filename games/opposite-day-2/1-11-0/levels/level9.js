@@ -55,9 +55,12 @@ levels[8] = {
         { type: "spike", x: -3265, y: 60, w: 40, h: 40, alpha: 0, collide: false, id: "shortcut spike" },
         { type: "spike", x: -3350, y: 60, w: 40, h: 40, alpha: 0, collide: false, id: "shortcut spike" },
         { type: "spike", x: -3435, y: 60, w: 40, h: 40, alpha: 0, collide: false, id: "shortcut spike" },
-        { type: "block", x: -2000, y: -2000, w: 4000, h: 4000, collide: false, alpha: 0, b: true, noCollide: true, show: true },
+        { type: "block", x: -2000, y: -2000, w: 4000, h: 4000, collide: false, alpha: 0, b: true, noCollide: true, show: true, id: "bossfight black background" },
+        { type: "star layer", collide: false, id: "bossfight star layer", bossObject: true, b: true },
+        //
         { type: "block", x: -1500, y: -2000, w: 1000, h: 4000, collide: false, alpha: 0, b: true, slippery: true, show: true, id: "bossfight left wall" },
         { type: "block", x: 500, y: -2000, w: 1000, h: 4000, collide: false, alpha: 0, b: true, slippery: true, show: true, id: "bossfight right wall" },
+        //
         { type: "boss part", x: 0, y: 0, b: true, alpha: 0, id: "boss part 1" },
         { type: "boss part", x: 0, y: 0, b: true, alpha: 0, id: "boss part 2" },
         { type: "boss part", x: 0, y: 0, b: true, alpha: 0, id: "boss part 3" },
@@ -67,7 +70,7 @@ levels[8] = {
         { type: "boss part", x: 0, y: 0, b: true, alpha: 0, id: "boss part 7" },
         { type: "boss part", x: 0, y: 0, b: true, alpha: 0, id: "boss part 8" },
         { type: "boss part", x: 0, y: 0, b: true, alpha: 0, id: "boss part 9" },
-        { type: "block", color: "white", x: -2000, y: 100, w: 4000, h: 4000, collide: false, alpha: 0, b: true, show: true },
+        { type: "block", color: "white", x: -2000, y: 100, w: 4000, h: 4000, collide: false, alpha: 0, b: true, show: true, id: "bossfight white floor" },
         { type: "text", content: "johnbutlergames", x: 0, y: -300, font: "60px rubik", color: "white", id: "text0", alpha: 0, b: true },
         { type: "text", content: "-  unpresents  -", x: 0, y: -220, font: "40px rubik", color: "white", id: "text1", alpha: 0, b: true },
         { type: "text", content: "Not The Real Bossfight", x: 0, y: -280, font: "bold 60px rubik", color: "white", id: "text2", alpha: 0, b: true }
@@ -76,6 +79,9 @@ levels[8] = {
         {
             name: "text 1",
             check: function () {
+                //
+                //return false;
+                //
                 if (game.level.triggers.tripped("red cube")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
@@ -639,7 +645,6 @@ levels[8] = {
             name: "reload pre red cube",
             check: function () {
                 if (game.level.triggers.tripped("red cube")) return false;
-                //return true;
                 if (game.level.triggers.tripped("text 1")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return true;
@@ -664,7 +669,9 @@ levels[8] = {
         {
             name: "pre red cube phase 2",
             check: function () {
+                //
                 //return true;
+                //
                 if (game.level.triggers.tripped("red cube")) return false;
                 if (game.level.triggers.tripped("text 1")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -677,7 +684,9 @@ levels[8] = {
                 return player.y == 60;
             },
             trip: function () {
+                //
                 //return;
+                //
                 var o = game.objects.objects.find(e => e.id == "red cube block");
                 o.alpha = 0;
                 o.decay = -0.1;
@@ -686,7 +695,9 @@ levels[8] = {
         {
             name: "red cube",
             check: function () {
+                //
                 //return true;
+                //
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 var o = game.objects.objects.find(e => e.id == "red cube clue");
@@ -695,6 +706,9 @@ levels[8] = {
                 return game.input.upStart < 10 && game.input.up;
             },
             trip: function () {
+                //
+                game.level.playerInvincible = true;
+                //
                 game.background.effect.start("red", false, true);
                 game.level.discoverRedCube();
                 var o = game.objects.objects.find(e => e.id == "red cube clue");
@@ -711,13 +725,16 @@ levels[8] = {
                 game.level.levelAnimationTime = 0;
             },
             passive: function () {
+                if (game.level.levelAnimationTime === 75 && !game.level.triggers.tripped("red cube animation")) {
+                    game.soundEffects.reverseWhoosh();
+                }
                 if (game.level.triggers.tripped("red cube teleport")) return;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (player.y > 40) {
                     if (player.ymove > 1) {
                         player.ymove += 0.125;
-                    } else if (player.ymove > 0) {
-                        player.ymove += 0.05;
+                    } else if (player.ymove > 0.5) {
+                        player.ymove += 0.13;
                     } else if (player.ymove < -1) {
                         player.ymove -= 0.05;
                     }
@@ -739,6 +756,9 @@ levels[8] = {
         {
             name: "red cube animation",
             check: function () {
+                //
+                //return true;
+                //
                 if (!game.level.triggers.tripped("red cube")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
@@ -760,6 +780,7 @@ levels[8] = {
                         player.eyeAngleTarget = 180;
                         o.drawType = "wave";
                         o.animation = 0;
+                        game.soundEffects.switchDimension();
                     }
                     o.animation++;
                 }
@@ -768,6 +789,9 @@ levels[8] = {
         {
             name: "red cube teleport",
             check: function () {
+                //
+                //return true;
+                //
                 if (!game.level.triggers.tripped("red cube animation")) return false;
                 if (game.level.levelAnimationTime > 150) return true;
             },
@@ -787,6 +811,12 @@ levels[8] = {
                     o.y = oldPlayerY + player.h / 2 - (o.y - oldPlayerY - player.h / 2);
                     o.y += offset;
                 }
+
+                //
+                //player.y = -200;
+                //player.x = 0;
+                //
+
                 for (var o of game.objects.objects) {
                     if (o.type == "player") continue;
                     if (o.b) {
@@ -819,10 +849,11 @@ levels[8] = {
                 return player.y > 0;
             },
             trip: function () {
-                audios.notTheRealBossfight.currentTime = 0;
-                audios.notTheRealBossfight.play();
                 game.level.playerControlDelay = 0;
                 game.level.levelAnimationTime = 0;
+                //
+                //game.level.levelAnimationTime = 1200 + 300 + 500 + 300;
+                //
 
                 var angles = [30, 64, 70, 33, 10, -10, 300, 200, 150];
                 var n = 0;
@@ -833,8 +864,12 @@ levels[8] = {
                 }
             },
             passive: function () {
+                if (game.level.playerRespawnTime && game.level.playerRespawnTime <= 60) return;
                 var player = game.objects.objects.find(e => e.type == "player");
-                var a = game.level.levelAnimationTime;// + 700 + 1200 + 300;
+                var a = game.level.levelAnimationTime;
+                //
+                //a += 1200 + 300 + 500;
+                //
                 if (a >= 2300) return;
                 var alpha = easeInOut(a / 20) - easeInOut((a - 280) / 80);
                 var scale = easeInOut(a / 20) + easeInBack((Math.min(a, 300) - 100) % 100 / 20) * 0.03 + Math.max(a - 300, 0) / 180 + a / 2000;
@@ -854,6 +889,15 @@ levels[8] = {
 
                 game.cam.zoom = 1 - 0.5 * easeInOut((a - 300) / 30);
                 game.cam.y = -200 - 400 * easeInOut((a - 300) / 30);
+                if (a > 1600) {
+                    let n = Math.min(Math.floor((a - 1600) / 50), 4);
+                    let targetZoom = 0.5 + 0.03 * (n + 1);
+                    let pastZoom = 0.5 + 0.03 * n;
+                    let percent = easeInOut(((a - 1600) % 50) / 10);
+                    if (a > 1600 + 200) percent = 1;
+                    game.cam.zoom = targetZoom * percent + pastZoom * (1 - percent);
+                }
+
                 if (a == 300) {
                     var o = game.objects.objects.find(e => e.id == "bossfight right wall");
                     o.x += 500;
@@ -862,6 +906,9 @@ levels[8] = {
                 }
 
                 a -= 400;
+                let impactSpikeSprites = [1, 2, 2, 0, 2, 0, 1, 0, 1];
+                let impactSpikeXOffsets = [0, -15, -20, 25, 10, 20, -25, -10, 10];
+                let impactSpikeWidths = [180, 170, 145, 150, 170, 145, 150, 160, 180];
                 var spins = [-0.13, -0.04, 0.07, 0.1, -0.11, -0.08, 0.12, -0.14, 0.02];
                 var delays = [0, 200, 300, 400, 600, 700, 800, 1000, 1100];
                 var fallTime = 30;
@@ -955,12 +1002,31 @@ levels[8] = {
                     var a2 = Math.min(Math.max(a + fallTime - delays[n], 0) / fallTime, 1);
                     var o = game.objects.objects.find(e => e.id == ("boss part " + (n + 1)));
                     var path = paths[n];
+                    if (o.falling && a2 >= 1) {
+                        let width = impactSpikeWidths[n];
+                        let xOffset = impactSpikeXOffsets[n];
+                        let spriteNumber = impactSpikeSprites[n];
+                        let o2 = {
+                            id: "boss part impact spikes " + n,
+                            type: "bart part impact spikes",
+                            x: o.x - width / 2 + xOffset,
+                            y: o.y + 25,
+                            w: width,
+                            h: 50,
+                            bossObject: true,
+                            collide: false,
+                            spriteNumber: spriteNumber
+                        }
+                        game.objects.objects.push(o2);
+                    }
                     if (a2 > 0 && a2 < 1) {
                         o.falling = true;
                         o.fallOpacity = 1;
+                        o.heatOpacity = 1;
                         o.fallAngle = dirTo(path.x1, path.y1, path.x2, path.y2);
                     } else {
                         o.fallOpacity -= 0.05;
+                        o.heatOpacity -= 0.005;
                         o.falling = false;
                     }
                     o.x = path.x1 * (1 - a2) + path.x2 * a2;
@@ -991,6 +1057,12 @@ levels[8] = {
                     if (i > 0) {
                         var last = positions[Math.floor(Math.min(i, 4))];
                         var next = positions[Math.floor(Math.min(i, 4) + 1)];
+                        if (next.y != positions[0].y) {
+                            let spikes = game.objects.objects.find(e => e.id == "boss part impact spikes " + n);
+                            if (spikes && !spikes.deleteAnimation) {
+                                spikes.deleteAnimation = 1;
+                            }
+                        }
                         var drift = 0;
                         var spin = spins[n];
                         if (n === 0) {
@@ -1018,7 +1090,7 @@ levels[8] = {
                         o.x = last.x * (1 - a2) + next.x * a2;
                         o.y = last.y * (1 - a2) + next.y * a2 - drift + drift2;
                     }
-                    if (player) {
+                    if (player && !(o.y == 100 && a !== delays[n])) {
                         var distToPlayer = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
                         if (distToPlayer < killDist && !game.level.playerInvincible) {
                             game.soundEffects.death();
@@ -1030,25 +1102,48 @@ levels[8] = {
         },
         {
             name: "phase 1",
+            noDoublePassive: true,
             check: function () {
                 return game.level.triggers.tripped("phase 0") && game.level.levelAnimationTime/* + 700 + 1200 + 300/**/ >= 2300;
             },
             trip: function () {
-                //audios.notTheRealBossfight.currentTime = 23;
+                //
+                //audios.notTheRealBossfight.currentTime = 51.1;
                 //audios.notTheRealBossfight.play();
+                //
                 var innerPart = game.objects.objects.find(e => e.id == "boss part 1");
                 var o = {
                     type: "bart",
                     x: innerPart.x,
                     y: innerPart.y,
-                    phase: 0
+                    phase: 0,
+                    angle: 0
                 }
                 game.objects.objects.push(o);
                 game.objects.objects = game.objects.objects.filter(e => e.type != "boss part");
             },
             passive: function () {
-                game.cam.zoom = 0.5;
+                if(game.level.levelAnimationTime < 2305) {
+                    game.cam.zoom = 0.65;
+                } else if (game.level.levelAnimationTime <= 2338) {
+                    game.cam.zoom = 0.57;
+                } else {
+                    game.cam.zoom = 0.5;
+                }
                 game.cam.y = -600;
+
+                if (game.level.levelAnimationTime == 2300 || game.level.levelAnimationTime === 2340) {
+                    let o = game.objects.objects.find(e => e.type == "bart");
+                    let o2 = {
+                        type: "bart formation lightning",
+                        angle: game.level.levelAnimationTime == 2300 ? 18 : 0,
+                        x: o.x,
+                        y: o.y,
+                        bossObject: true,
+                        collide: false
+                    }
+                    game.objects.objects.splice(2, 0, o2);
+                }
             }
         }
     ],
@@ -1086,6 +1181,42 @@ levels[8] = {
         if (game.level.triggers.tripped("player dead animation completed")) return;
         game.cam.zoom = 0.88;
         game.cam.x = -2100;
+    },
+    checkForManualRespawn: function () {
+        return game.level.triggers.tripped("red cube");
+    },
+    beforeManualRespawn: function () {
+        if (this.playerRespawnTime === 199) {
+            game.objects.objects.push({ type: "block", x: -2000, y: -2000, w: 4000, h: 2100, collide: false, alpha: 0, id: "bossfight death fade" });
+        }
+        if (this.playerRespawnTime == 60) {
+            game.objects.objects = [];
+            game.particles.objects = [];
+            game.objects.objects.push({ type: "block", x: -6000, y: 100, w: 12680, h: 2000 });
+        }
+        if (this.playerRespawnTime > 60) {
+            let a = 1 - easeInOut(this.playerRespawnTime / 120);
+            game.cam.angle = 180 * a;
+            game.cam.zoom = game.cam.zoom * (1 - a) + 1 * a;
+            let a2 = 1 - easeInOut((this.playerRespawnTime - 60) / 60);
+            game.cam.y = game.cam.y * (1 - a2) + 200 * a2;
+            game.cam.offset.y = game.cam.offset.y * (1 - a2);
+            let a3 = 1 - easeInOut((this.playerRespawnTime - 60) / 30);
+            let o = game.objects.objects.find(e => e.id == "bossfight death fade");
+            o.alpha = a3;
+        } else {
+            game.backgroundOpacity = 1 - easeInOut(this.playerRespawnTime / 60);
+
+            let a = 1 - easeInOut(this.playerRespawnTime / 120);
+            game.cam.angle = -180 * (1 - a);
+            game.cam.zoom = game.cam.zoom * (1 - a) + 1 * a;
+
+            let a2 = 1 - easeInOut(this.playerRespawnTime / 60);
+            game.cam.y = 0 * (1 - a2) - 200 * a2;
+        }
+    },
+    manualRespawn: function () {
+        this.reload(8);
     },
     levelComplete: function () {
         var player = game.objects.objects.find(e => e.type == "player");

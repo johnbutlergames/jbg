@@ -3,6 +3,8 @@ game.level = {
     tookShortcutLastLevel: false,
     levelAnimationTime: 0,
     playerControlDelay: 0,
+    ultraCubeCollectPause: 0,
+    ultraCubeCollecting: null,
     playerInPortal: false,
     portalNumber: false,
     playerExitingPortal: false,
@@ -20,6 +22,7 @@ game.level = {
     levelCompleteFunction: false,
     playerDeadFunction: false,
     manualRespawn: false,
+
     autoSkipCutscenes: false,
     lockedCamera: false,
     lockedPlayerCamera: false,
@@ -34,6 +37,18 @@ game.level = {
     playerFallMultiplier: 1,
     playerFlightMode: false,
     update: function () {
+        if (this.ultraCubeCollectPause) {
+            this.ultraCubeCollectPause--;
+            let player = game.objects.objects.find(e => e.type == "player");
+            if (player) {
+                let targetX = this.ultraCubeCollecting.x - player.w / 2;
+                let targetY = this.ultraCubeCollecting.y - player.h / 2;
+                player.x = player.x * 0.9 + targetX * 0.1;
+                player.y = player.y * 0.9 + targetY * 0.1;
+            }
+            return;
+        }
+
         this.levelAnimationTime++;
 
         if (this.playerControlDelay) this.playerControlDelay--;
@@ -92,7 +107,7 @@ game.level = {
             if (this.triggers.tripped("ultra shortcut")) {
                 this.tookShortcutLastLevel = true;
                 this.takeUltraShortcut();
-                game.soundEffects.shortcutCompleted();
+                game.soundEffects.ultraShortcutCompleted();
             } else if (this.triggers.tripped("shortcut")) {
                 this.tookShortcutLastLevel = true;
                 this.takeShortcut();
@@ -134,6 +149,7 @@ game.level = {
                 game.cam.x = game.cam.x * (1 - p0) + game.cam.origin.x * p0;
                 game.cam.y = game.cam.y * (1 - p0) + game.cam.origin.y * p0;
                 game.cam.zoom = game.cam.zoom * (1 - p) + 1 * p;
+                game.cam.angle = game.cam.angle * (1 - p);
                 var xOffset = 0;
                 var yOffset = 0;
                 if (this.originalBackgroundOffset) {
@@ -266,8 +282,40 @@ game.level = {
         }
         updateSaveData();
     },
-    collectBlueCube: function () {
+    collectCube: function (o) {
+        o.collectedAnimation = 20;
+        o.collected = true;
+        game.particles.createEffect("collect cube", o);
+
+        if (o.red) {
+            game.level.collectRedCube(o);
+            if (game.level.triggers.tripped("red cube ultra")) {
+                game.soundEffects.collectCubeUltra();
+            } else {
+                if (o.grey) {
+                    game.soundEffects.recollectCube();
+                } else {
+                    game.soundEffects.collectCube();
+                }
+            }
+        } else {
+            game.level.collectBlueCube(o);
+            if (game.level.triggers.tripped("blue cube ultra")) {
+                game.soundEffects.collectCubeUltra();
+            } else {
+                if (o.grey) {
+                    game.soundEffects.recollectCube();
+                } else {
+                    game.soundEffects.collectCube();
+                }
+            }
+        }
+    },
+    collectBlueCube: function (o) {
         if (game.level.triggers.tripped("blue cube ultra")) {
+            this.ultraCubeCollectPause = 30;
+            this.ultraCubeCollecting = o;
+            game.cam.screenshake = 50;
             saveData.blueCubesCollected[this.level] = true;
             if (!saveData.ultraBlueCubesTaken[this.level]) {
                 saveData.ultraBlueCubesTaken[this.level] = true;
@@ -288,8 +336,11 @@ game.level = {
         }
         updateSaveData();
     },
-    collectRedCube: function () {
+    collectRedCube: function (o) {
         if (game.level.triggers.tripped("red cube ultra")) {
+            this.ultraCubeCollectPause = 30;
+            this.ultraCubeCollecting = o;
+            game.cam.screenshake = 50;
             saveData.redCubesCollected[this.level] = true;
             if (!saveData.ultraRedCubesTaken[this.level]) {
                 saveData.ultraRedCubesTaken[this.level] = true;
@@ -384,17 +435,17 @@ game.level = {
         this.levelAnimationTime = 0;
         game.objects.objects = structuredClone(levels[level].objects);
         game.particles.objects = [];
-        if (saveData.blueCubesCollected[this.level]) {
-            var cube = game.objects.objects.find(e => e.type == "cube");
-            if (cube) {
-                cube.color = "blue";
+        var cube = game.objects.objects.find(e => e.type == "cube");
+        if (cube) {
+            cube.color = "blue";
+            if (saveData.blueCubesCollected[this.level]) {
                 cube.grey = true;
             }
         }
-        if (saveData.redCubesCollected[this.level]) {
-            var cube = game.objects.objects.find(e => e.type == "cube" && e.red);
-            if (cube) {
-                cube.color = "red";
+        var cube = game.objects.objects.find(e => e.type == "cube" && e.red);
+        if (cube) {
+            cube.color = "red";
+            if (saveData.redCubesCollected[this.level]) {
                 cube.grey = true;
             }
         }
@@ -472,6 +523,7 @@ game.level = {
         this.levelCompleteFunction = levels[level].levelComplete;
         this.levelComplete = false;
         game.background.effect.end("all");
+        this.triggers.update();
     },
     reload: function (level, hidePeekedUltras) {
         var peekedUltraIds = game.objects.objects.filter(e => e.ultra && e.peeked).map(e => e.id);
@@ -504,7 +556,7 @@ game.level = {
             var untrip = [];
             for (var trigger of this.triggerChecks) {
                 if (this.triggered.includes(trigger.name)) {
-                    if (trigger.passive) trigger.passive();
+                    if (trigger.passive && !trigger.noDoublePassive) trigger.passive();
                     if (trigger.stop && trigger.stop()) {
                         if (trigger.untrip) trigger.untrip();
                         untrip.push(trigger.name);
@@ -519,7 +571,6 @@ game.level = {
             this.triggered = this.triggered.filter(e => !untrip.includes(e));
             for (var trigger of this.triggerChecks) {
                 if (this.triggered.includes(trigger.name)) {
-                    if (trigger.noDoublePassive) continue;
                     if (trigger.passive) trigger.passive();
                 }
             }

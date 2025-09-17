@@ -7,6 +7,10 @@ function easeOutPartialIn(a) {
     return Math.min(Math.max(a, 0), 1);
 }
 
+function clamp(n) {
+    return Math.min(Math.max(n, 0), 1);
+}
+
 function drawRotatingCube(data) {
     var s = data.size || 30;
     var vertices = [
@@ -75,7 +79,7 @@ function drawRotatingCube(data) {
             ctx.strokeStyle = "rgb(150,150,255)";
         }
     }
-    if (game.background.effect.active("magenta")) {
+    if (game.background.effect.active("magenta") && !menu.creditsScreen) {
         ctx.strokeStyle = "rgb(255,0,200)"
     }
     ctx.lineWidth = 8;

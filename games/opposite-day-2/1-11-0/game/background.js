@@ -1,7 +1,7 @@
 game.background = {
     effect: {
         effects: [],
-        start: function (type, origin, noBackground) {
+        start: function (type, origin, noBackground, noSoundEffect) {
             var effect = {};
             effect.type = type;
             effect.active = true;
@@ -9,16 +9,16 @@ game.background = {
             effect.time = 0;
             var color = type;
             if (color == "blue") {
-                game.soundEffects.blueCubeClue();
+                if(!noSoundEffect) game.soundEffects.blueCubeClue();
                 color = "rgba(50,120,255,0.3)";
             } else if (color == "red") {
-                game.soundEffects.redCubeClue();
+                if(!noSoundEffect) game.soundEffects.redCubeClue();
                 color = "rgba(255,100,100,0.4)";
             } else if (color == "green") {
-                game.soundEffects.shortcut();
+                if(!noSoundEffect) game.soundEffects.shortcut();
                 color = "rgba(0,200,50,0.3)";
             } else if (color == "magenta") {
-                game.soundEffects.ultra();
+                if(!noSoundEffect) game.soundEffects.ultra();
                 color = "rgba(255,80,200,0.5)";
             }
             effect.color = color;
@@ -58,7 +58,11 @@ game.background = {
     update: function () {
         for (var effect of this.effect.effects) {
             if (effect.active) {
-                effect.radius *= 1.1;
+                if (effect.type == "magenta") {
+                    effect.radius *= 1.3;
+                } else {
+                    effect.radius *= 1.1;
+                }
                 effect.radius = Math.min(effect.radius, 5000);
                 effect.alpha -= 0.02;
                 effect.alpha = Math.max(effect.alpha, 0);
@@ -96,6 +100,27 @@ game.background = {
         ctx.translate(-tileCount / 2 * tileSize, -tileCount / 2 * tileSize);
         ctx.globalAlpha = game.backgroundOpacity;
 
+        let greenActive = this.effect.active("green");
+        let redActive = this.effect.active("red");
+        let blueActive = this.effect.active("blue");
+        let magentaActive = this.effect.active("magenta");
+        let effectActive = greenActive || redActive || blueActive || magentaActive;
+        let topEffect = null;
+        if (greenActive) topEffect = "green";
+        if (blueActive) topEffect = "blue";
+        if (redActive) topEffect = "red";
+        if (magentaActive) topEffect = "magenta";
+        let maxTime = Math.max(this.effect.time("green"), this.effect.time("red"), this.effect.time("blue"), this.effect.time("magenta"));
+        let effectColor = null;
+        if (topEffect == "green") {
+            effectColor = "rgba(0,255,0,0.4)";
+        } else if (topEffect == "blue") {
+            effectColor = "rgba(0,80,255,0.4)";
+        } else if (topEffect == "red") {
+            effectColor = "rgba(255,0,0,0.4)";
+        } else if (topEffect == "magenta") {
+            effectColor = "rgb(255,0,200)";
+        }
         for (var x = -2; x < tileCount + 2; x++) {
             for (var y = -2; y < tileCount + 2; y++) {
                 var xCor = x + xOffsetDigit * 2;
@@ -116,121 +141,41 @@ game.background = {
                         if ((x2 + y2) % 2 == 0) {
                             ctx.scale(0.4, 0.4);
                             ctx.rotate(45 * Math.PI / 180);
-                            if (this.effect.active("red")) {
-                                var animateIn = easeInOut(this.effect.time("red") / 40);
-                                var time = t + (noise((1000 + xCor + x2 / 2) / 1.05, (1000 + yCor + y2 / 2) / 1.05, 0) - 0.2) * 7 * 600;
-                                var s = Math.max((Math.sin((time / 600) % (Math.PI / 2)) - 0.975) * 40, 0);
-                                s *= animateIn;
-                                ctx.rotate(90 * Math.PI / 180 * s);
-                            }
                             ctx.fillRect(-tileSize / 2.5, -tileSize / 2.5, tileSize / 1.25, tileSize / 1.25);
-                            if (this.effect.active("red")) {
-                                var animateIn = easeInOut(this.effect.time("red") / 40);
-                                var time = t + (noise((1000 + xCor + x2 / 2) / 1.05, (1000 + yCor + y2 / 2) / 1.05, 0) - 0.2) * 7 * 600;
-                                var s = Math.max((Math.sin((time / 600) % (Math.PI / 2)) - 0.975) * 40, 0);
-                                s *= animateIn;
-                                ctx.globalAlpha = easeInBack(s);
-                                if (!this.effect.active("magenta")) ctx.fillStyle = "rgba(255,100,100,0.4)";
-                                ctx.fillRect(-tileSize / 2.5, -tileSize / 2.5, tileSize / 1.25, tileSize / 1.25);
-                                ctx.globalAlpha = 1;
-                                ctx.fillStyle = "black";
-                                ctx.font = "50px Arial";
-                            }
-                            if (this.effect.active("green")) {
-                                var animateIn = easeInOut(this.effect.time("green") / 40);
+                            if (effectActive) {
+                                var animateIn = easeInOut(maxTime / 40);
                                 var time = t + x2 * 56 + y2 * 78 + Math.floor(Math.sin(xCor / 3) * 100) + Math.floor(Math.sin(yCor / 3) * 150);
                                 var a = Math.min(Math.max(Math.sin(time / 30) - 0.6, 0) * 1.5, 1);
                                 a *= animateIn;
                                 ctx.globalAlpha *= a;
                                 ctx.lineWidth = 20;
-                                ctx.strokeStyle = "rgba(0,255,0,0.4)";
-                                if (this.effect.active("magenta")) {
-                                    ctx.strokeStyle = "rgb(255,0,200)";
-                                }
+                                ctx.strokeStyle = effectColor;
                                 ctx.strokeRect(-tileSize / 2.5 - 10, -tileSize / 2.5 - 10, tileSize / 1.25 + 20, tileSize / 1.25 + 20);
-                            }
-                            if (this.effect.active("blue")) {
-                                var animateIn = easeInOut(this.effect.time("blue") / 40);
-                                var time = t + x2 * 30 + y2 * 10 + xCor * 60 + yCor * 20;
-                                var a = Math.min(Math.max(Math.sin(time / 60) - 0.8, 0) * 5, 1);
-                                a *= animateIn;
-                                ctx.globalAlpha *= a;
-                                ctx.lineWidth = 20;
-                                ctx.strokeStyle = "rgba(0,50,255,0.5)";
-                                if (this.effect.active("magenta")) {
-                                    ctx.strokeStyle = "rgb(255,0,200)";
-                                }
-                                ctx.strokeRect(-tileSize / 2.5 - 10, -tileSize / 2.5 - 10, tileSize / 1.25 + 20, tileSize / 1.25 + 20);
-                                ctx.fillStyle = "rgba(0,50,255,0.1)";
-                                if (this.effect.active("magenta")) {
-                                    ctx.fillStyle = "rgba(255,0,200,0.1)";
-                                }
-                                ctx.fillRect(-tileSize / 2.5, -tileSize / 2.5, tileSize / 1.25, tileSize / 1.25);
                             }
                         } else {
                             ctx.scale(0.3, 0.3);
-                            if (this.effect.active("red")) {
-                                var animateIn = easeInOut(this.effect.time("red") / 40);
-                                var time = t + (noise((xCor + x2 / 2) / 1.05, (yCor + y2 / 2) / 1.05, 0) - 0.2) * 7 * 600;
-                                var s = Math.max((Math.sin((time / 600) % (Math.PI / 2)) - 0.975) * 40, 0);
-                                s *= animateIn;
-                                ctx.rotate(-90 * Math.PI / 180 * s);
-                            }
                             ctx.fillRect(-tileSize / 2, -tileSize / 2, tileSize, tileSize);
-                            if (this.effect.active("red")) {
-                                var animateIn = easeInOut(this.effect.time("red") / 40);
-                                var time = t + (noise((xCor + x2 / 2) / 1.05, (yCor + y2 / 2) / 1.05, 0) - 0.2) * 7 * 600;
-                                var s = Math.max((Math.sin((time / 600) % (Math.PI / 2)) - 0.975) * 40, 0);
-                                s *= animateIn;
-                                ctx.globalAlpha = easeInBack(s);
-                                if (!this.effect.active("magenta")) ctx.fillStyle = "rgba(255,100,100,0.4)";
-                                ctx.fillRect(-tileSize / 2, -tileSize / 2, tileSize, tileSize);
-                            }
-                            if (this.effect.active("green")) {
-                                var animateIn = easeInOut(this.effect.time("green") / 40);
+                            if (effectActive) {
+                                var animateIn = easeInOut(maxTime / 40);
                                 var time = t + x2 * 56 + y2 * 78 + Math.floor(Math.sin(xCor / 3) * 100) + Math.floor(Math.sin(yCor / 3) * 150);
                                 var a = Math.min(Math.max(Math.sin(time / 30) - 0.6, 0) * 1.5, 1);
                                 a *= animateIn;
                                 ctx.globalAlpha *= a;
                                 ctx.lineWidth = 25;
-                                ctx.strokeStyle = "rgba(0,255,0,0.4)";
-                                if (this.effect.active("magenta")) {
-                                    ctx.strokeStyle = "rgb(255,0,200)";
-                                }
+                                ctx.strokeStyle = effectColor;
                                 ctx.strokeRect(-tileSize / 2 - 12.5, -tileSize / 2 - 12.5, tileSize + 25, tileSize + 25);
-                            }
-                            if (this.effect.active("blue")) {
-                                var animateIn = easeInOut(this.effect.time("blue") / 40);
-                                var time = t + x2 * 30 + y2 * 10 + xCor * 60 + yCor * 20 + 200;
-                                var a = Math.min(Math.max(Math.sin(time / 60) - 0.8, 0) * 5, 1);
-                                a *= animateIn;
-                                ctx.globalAlpha *= a;
-                                ctx.lineWidth = 25;
-                                ctx.strokeStyle = "rgba(0,50,255,0.5)";
-                                if (this.effect.active("magenta")) {
-                                    ctx.strokeStyle = "rgb(255,0,200)";
-                                }
-                                ctx.strokeRect(-tileSize / 2 - 12.5, -tileSize / 2 - 12.5, tileSize + 25, tileSize + 25);
-                                ctx.fillStyle = "rgba(0,50,255,0.1)";
-                                if (this.effect.active("magenta")) {
-                                    ctx.fillStyle = "rgba(255,0,200,0.1)";
-                                }
-                                ctx.fillRect(-tileSize / 2, -tileSize / 2, tileSize, tileSize);
                             }
                         }
                         ctx.restore();
                     }
                 }
 
-                if (this.effect.active("green")) {
+                if (effectActive) {
                     for (var n = 0; n < 4; n++) {
                         var x3 = n % 2;
                         var y3 = Math.floor(n / 2);
-                        ctx.fillStyle = "rgba(0,255,0,0.4)";
-                        if (this.effect.active("magenta")) {
-                            ctx.fillStyle = "rgb(255,0,200)";
-                        }
-                        var animateIn = easeInOut(this.effect.time("green") / 40);
+                        ctx.fillStyle = effectColor;
+                        var animateIn = easeInOut(maxTime / 40);
                         var time = t + x3 * 56 + y3 * 78 + Math.floor(Math.sin(xCor / 3) * 100) + Math.floor(Math.sin(yCor / 3) * 150);
                         var s = 0.7 + Math.max(Math.sin(time / 10) - 0.6, 0) * 1.5;
                         s *= animateIn;

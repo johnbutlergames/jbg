@@ -2,6 +2,7 @@ game.music = {
     volume: 1,
     musicVolumes: [
         { name: "oppositeDayTheme", volume: 0 },
+        { name: "blueSquareTheme", volume: 0 },
         { name: "incompletionTheme", volume: 0 },
         { name: "notTheRealBossfight", volume: 0 }
     ],
@@ -9,12 +10,21 @@ game.music = {
         this.volume = v;
     },
     update: function () {
+        //return;
         var musicPlaying = [];
         if (menu.titleScreen) {
             musicPlaying.push("oppositeDayTheme");
         } else if (menu.creditsScreen) {
             musicPlaying.push("incompletionTheme");
         } else {
+            if (game.level.level == 8 && game.level.triggers.tripped("phase 0")) {
+                let player = game.objects.objects.find(e => e.type == "player");
+                if (player) {
+                    musicPlaying.push("notTheRealBossfight");
+                }
+            } else {
+                musicPlaying.push("blueSquareTheme");
+            }
         }
         for (var o of this.musicVolumes) {
             if (musicPlaying.includes(o.name)) {
@@ -33,7 +43,7 @@ game.music = {
             if (o.volume === 0 && !audios[o.name].paused) {
                 audios[o.name].pause();
                 audios[o.name].currentTime = 0;
-            } else if(o.volume) {
+            } else if (o.volume) {
                 audios[o.name].volume = o.volume * this.volume;
                 audios[o.name].play();
             }

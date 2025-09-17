@@ -3,14 +3,16 @@ game.objects = {
     spawnObjects: [],
     ghostNodes: [],
     update: function () {
+        if (game.level.ultraCubeCollectPause) return;
+
         var player = this.objects.find(e => e.type == "player");
         for (var o of this.objects) {
             if (o.type == "player") {
-                this.updatePlayer(o);
                 continue;
             }
             this.updateObject(o, player);
         }
+        if (player) this.updatePlayer(player);
         while (this.spawnObjects.length) {
             var o = this.spawnObjects.pop();
             this.objects.splice(o.location, 0, o.object);
@@ -254,7 +256,6 @@ game.objects = {
         if (game.level.levelComplete) return;
         game.soundEffects.switchGravity();
         for (var o of game.objects.objects) {
-            if (o.type != "gravity switcher") continue;
             o.targetAngle = angle;
         }
         var player = game.objects.objects.find(e => e.type == "player");
@@ -650,24 +651,8 @@ game.objects = {
             if (o.noCollect === true) continue;
             var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
             if (dist > 50) continue;
-            o.collectedAnimation = 20;
-            o.collected = true;
-            game.particles.createEffect("collect cube", o);
-            if (o.red) {
-                game.level.collectRedCube();
-                if (o.grey) {
-                    game.soundEffects.recollectRedCube();
-                } else {
-                    game.soundEffects.collectRedCube();
-                }
-            } else {
-                game.level.collectBlueCube();
-                if (o.grey) {
-                    game.soundEffects.recollectBlueCube();
-                } else {
-                    game.soundEffects.collectBlueCube();
-                }
-            }
+
+            game.level.collectCube(o);
         }
     },
     updateOldPlayer: function (o) {
@@ -1122,12 +1107,7 @@ game.objects = {
             if (o2.type == "cube" && o2.red && !o2.collected) {
                 var dist = distTo(o.x + o.w / 2, o.y + o.h / 2, o2.x, o2.y);
                 if (dist < 70) {
-                    o2.collectedAnimation = 20;
-                    o2.collected = true;
-                    game.particles.createEffect("collect cube", o2);
-                    saveData.redCubesCollected[game.level.level] = true;
-                    game.soundEffects.collectRedCube();
-                    updateSaveData();
+                    game.level.collectCube(o2);
                 }
             }
             if (!o2.pacmanCollide) continue;
@@ -1434,15 +1414,7 @@ game.objects = {
             if (o.collected) continue;
             var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
             if (dist > 50) continue;
-            o.collectedAnimation = 20;
-            o.collected = true;
-            game.particles.createEffect("collect cube", o);
-            game.level.collectBlueCube();
-            if (o.grey) {
-                game.soundEffects.recollectBlueCube();
-            } else {
-                game.soundEffects.collectBlueCube();
-            }
+            game.level.collectCube(o);
         }
     },
     updatePlayer: function (o) {
@@ -2104,25 +2076,7 @@ game.objects = {
             if (o.noCollect === true) continue;
             var dist = distTo(o.x, o.y, player.x + player.w / 2, player.y + player.h / 2);
             if (dist > 70) continue;
-            o.collectedAnimation = 20;
-            o.collected = true;
-            game.particles.createEffect("collect cube", o);
-            if (o.red) {
-                if (o.grey) {
-                    game.soundEffects.recollectRedCube();
-                } else {
-                    game.soundEffects.collectRedCube();
-                }
-                game.level.collectRedCube();
-            } else {
-                if (o.grey) {
-                    game.soundEffects.recollectBlueCube();
-                } else {
-                    game.soundEffects.collectBlueCube();
-                }
-                game.level.collectBlueCube();
-            }
-            updateSaveData();
+            game.level.collectCube(o);
         }
     },
     drawPlayerExplosion: function (o) {
@@ -2607,12 +2561,6 @@ game.objects = {
             o.alpha = easeInBack(o.animation / 30) * 0.3;
             if (o.animation == 30) o.delete = true;
         }
-        if (o.type == "gravity switcher") {
-            if (!o.innerAngle) o.innerAngle = 0;
-            if (!o.targetAngle) o.targetAngle = 0;
-            var t = turn(o.innerAngle, o.targetAngle);
-            o.innerAngle += t / 10;
-        }
         if (o.type == "pacman dot") {
             if (o.redTime) {
                 o.redTime--;
@@ -2933,24 +2881,6 @@ game.objects = {
             ctx.textAlign = o.textAlign || "center";
             ctx.textBaseline = o.textBaseline || "middle";
             ctx.fillText(o.content, 0, 0);
-        } else if (o.drawType == "gravity switcher") {
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, 0, o.w, o.h);
-            ctx.clip();
-            ctx.translate(o.w / 2, o.h / 2);
-            ctx.rotate(o.innerAngle * Math.PI / 180);
-            ctx.drawImage(images.gravitySwitcher, -o.w, -o.h, o.w * 2, o.h * 2);
-            ctx.restore();
-            ctx.drawImage(images.gravitySwitcher3, 0, 0, o.w, o.h);
-            ctx.save();
-            ctx.translate(o.w / 2, o.h / 2);
-            ctx.rotate(o.innerAngle * Math.PI / 180);
-            var targetDistance = Math.abs(turn(o.innerAngle, o.targetAngle));
-            var s = 1 + Math.min(1, targetDistance / 90) * 0.4;
-            ctx.scale(s, s);
-            ctx.drawImage(images.gravitySwitcher2, -o.w, -o.h, o.w * 2, o.h * 2);
-            ctx.restore();
         } else if (o.drawType == "image") {
             ctx.drawImage(images[o.image], 0, 0, o.w, o.h);
         } else if (o.drawType == "jump enemy") {
@@ -3455,10 +3385,17 @@ game.objects = {
                 ctx.rotate(-o.angle * Math.PI / 180);
                 ctx.rotate(o.fallAngle * Math.PI / 180);
                 ctx.fillStyle = "white";
-                ctx.drawImage(images.bossPartTrail, frame * 160, 0, 160, 800, -100, -100, 200, 1000);
+                ctx.drawImage(images.bartPartTrail, frame * 160, 0, 160, 800, -100, -100, 200, 1000);
                 ctx.restore();
             }
             ctx.drawImage(images.bartPhase0Spritesheet, x, y, 800 / 3, 800 / 3, -75, -75, 150, 150);
+
+            if (o.heatOpacity > 0) {
+                ctx.save();
+                ctx.globalAlpha = 0.5 * o.heatOpacity;
+                ctx.drawImage(images.bartPhase0Spritesheet, x + 800, y, 800 / 3, 800 / 3, -75, -75, 150, 150);
+                ctx.restore();
+            }
         }
         ctx.restore();
     }

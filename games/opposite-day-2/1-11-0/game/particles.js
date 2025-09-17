@@ -27,6 +27,12 @@ game.particles = {
         if (o.type == "boss fireball explosion particle") {
             o.ymove += 0.1;
         }
+        if (o.type == "bart fireball explosion circle") {
+            o.r += 4;
+        }
+        if (o.type == "bart fireball explosion particle") {
+            o.ymove += 0.1;
+        }
         if (o.type == "heart particle") {
             o.ymove += 0.05;
         }
@@ -78,44 +84,22 @@ game.particles = {
             o.xmove *= 0.95;
         }
         if (o.type == "cube collect ultra lightning") {
-            if (!o.strikes) {
-                o.strikes = [];
-                let colors = [
-                    "rgb(255,0,200)",
-                    "rgb(255,0,200)",
-                    "rgb(255,255,255)",
-                    "rgb(255,0,200)",
-                    "rgb(255,255,255)",
-                    "rgb(255,0,200)",
-                    "rgb(255,0,200)",
-                    "rgb(255,255,255)",
-                    "rgb(255,0,200)",
-                    "rgb(255,255,255)"
-                ]
-                let timeOffsets = [];
-                for (let n = 0; n < 10; n++) {
-                    timeOffsets.push(n * -1.5);
-                }
-                timeOffsets = shuffleArray(timeOffsets);
-                let offset = Math.random() * 360;
-                for (let n = 0; n < 10; n++) {
-                    let animation = timeOffsets[n];
-                    let points = [];
-                    let angle = n / 10 * 360 + offset + Math.random() * 20 - 10;
-                    let color = colors[n];
-                    let stepDist = distToMove(50, angle);
-                    for (let n2 = 0; n2 < 40; n2++) {
-                        let point = { x: o.x + stepDist.x * n2, y: o.y + stepDist.y * n2 };
-                        if (n2 !== 0) point.x += Math.random() * 80 - 40;
-                        if (n2 !== 0) point.y += Math.random() * 80 - 40;
-                        points.push(point);
-                    }
-                    o.strikes.push({ points, color, animation });
-                }
-            }
             for (let strike of o.strikes) strike.animation++;
             o.animation++;
             if (o.strikes.every(e => e.animation > 20)) o.delete = true;
+        }
+        if (o.type == "boss part hollow impact aura") {
+            o.r *= 1.02;
+            o.r += 5;
+        }
+        if (o.type == "bart bomb explosion particle") {
+            o.color = "rgb(220,32,32)";
+            if (o.t % 17 < 5) {
+                o.color = "rgb(220,180,180)";
+            }
+            o.t++;
+            o.r -= 0.15;
+            if (o.r <= 0) o.delete = true;
         }
         if (o.rotate) {
             o.angle += o.rotate;
@@ -190,15 +174,25 @@ game.particles = {
             ctx.arc(0, 0, 200, 1 * Math.PI, 2 * Math.PI);
             ctx.fill();
         }
-        if (o.drawType == "cube collect ultra lightning" && o.strikes) {
+        if (o.drawType == "boss part hollow impact aura") {
+            ctx.translate(o.x, o.y);
+            ctx.strokeStyle = "rgba(255,255,255,0.4)";
+            ctx.lineWidth = 2 * o.alpha;
+            ctx.beginPath();
+            ctx.arc(0, 0, o.r * 0.5, 1 * Math.PI, 2 * Math.PI);
+            ctx.arc(0, 0, o.r * 0.75, 1 * Math.PI, 2 * Math.PI);
+            ctx.arc(0, 0, o.r, 1 * Math.PI, 2 * Math.PI);
+            ctx.stroke();
+        }
+        if (o.drawType == "cube collect ultra lightning") {
+            let a = 1 - easeInOut((o.animation - 20) / 20);
             ctx.globalAlpha = a;
             for (let strike of o.strikes) {
                 if (strike.animation < 0) continue;
-                let a = 1 - easeInOut(strike.animation / 20);
                 if (a === 0) continue;
                 ctx.save();
                 ctx.strokeStyle = strike.color;
-                ctx.lineWidth = 10 * a;
+                ctx.lineWidth = 15 * a;
                 ctx.lineJoin = "miter";
                 ctx.beginPath();
                 for (let n = 0; n < strike.points.length; n++) {
@@ -210,9 +204,41 @@ game.particles = {
                 ctx.restore();
             }
         }
+        if (o.drawType == "bart bomb explosion circle") {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(-1000, -1000, 2000, 1100);
+            ctx.clip();
+            ctx.fillStyle = o.color;
+            ctx.beginPath();
+            ctx.arc(o.x, o.y, o.r, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+        }
         ctx.restore();
     },
     create: function (o) {
+        if (o.type == "bart bomb explosion particle") {
+            o.drawType = "circle";
+            o.r = 5 + Math.random() * 5;
+            o.damping = 0.995;
+            o.t = Math.random() * 17;
+            o.color = "rgb(220,32,32)";
+        }
+        if (o.type == "bart bomb explosion circle") {
+            o.drawType = "bart bomb explosion circle";
+            o.alpha = 1.5;
+            o.decay = 0.05;
+            o.r = 150;
+            o.color = "rgba(255,150,150,0.5)";
+        }
+        if (o.type == "boss fireball trail particle") {
+            o.alpha = 1;
+            o.decay = 0.1;
+            o.drawType = "circle";
+            o.r = 16;
+            o.color = "rgba(255,0,0,0.5)";
+        }
         if (o.type == "blob particle") {
             o.color = "rgb(50,50,255)";
             o.drawType = "circle";
@@ -222,7 +248,7 @@ game.particles = {
             o.alpha = 2;
             o.decay = 0.02;
             o.drawType = "circle";
-            o.r = Math.random() * 3 + 5;
+            o.r = Math.random() * 5 + 3;
             o.color = "rgba(255,255,255,0.5)";
             var move = distToMove(Math.random() * 5 + 5, o.angle);
             o.xmove = move.x;
@@ -235,6 +261,12 @@ game.particles = {
             o.alpha = 1;
             o.decay = 0.05;
             o.drawType = "boss part impact aura";
+        }
+        if (o.type == "boss part hollow impact aura") {
+            o.alpha = 1.5;
+            o.decay = 0.03;
+            o.r = 100;
+            o.drawType = "boss part hollow impact aura";
         }
         if (o.type == "boss part impact warning particle") {
             o.animation = 0;
@@ -422,6 +454,39 @@ game.particles = {
         if (o.type == "cube collect ultra lightning") {
             o.drawType = "cube collect ultra lightning";
             o.animation = 0;
+            o.strikes = [];
+            let colors = [
+                "rgb(255,0,200)",
+                "rgb(255,0,200)",
+                "rgb(255,255,255)",
+                "rgb(255,0,200)",
+                o.red ? "rgb(255,0,0)" : "rgb(0,0,255)",
+                "rgb(255,0,200)",
+                "rgb(255,0,200)",
+                "rgb(255,255,255)",
+                "rgb(255,0,200)",
+                o.red ? "rgb(255,0,0)" : "rgb(0,0,255)"
+            ]
+            let timeOffsets = [];
+            for (let n = 0; n < 10; n++) {
+                timeOffsets.push(n * -2);
+            }
+            timeOffsets = shuffleArray(timeOffsets);
+            let offset = Math.random() * 360;
+            for (let n = 0; n < 10; n++) {
+                let animation = timeOffsets[n];
+                let points = [];
+                let angle = n / 10 * 360 + offset + Math.random() * 20 - 10;
+                let color = colors[n];
+                let stepDist = distToMove(50, angle);
+                for (let n2 = 0; n2 < 40; n2++) {
+                    let point = { x: o.x + stepDist.x * n2, y: o.y + stepDist.y * n2 };
+                    if (n2 !== 0) point.x += Math.random() * 80 - 40;
+                    if (n2 !== 0) point.y += Math.random() * 80 - 40;
+                    points.push(point);
+                }
+                o.strikes.push({ points, color, animation });
+            }
         }
         if (o.type == "jump enemy death particle") {
             o.drawType = "square";
@@ -452,6 +517,21 @@ game.particles = {
             o.drawType = "circle";
             o.r = 10;
             o.color = "rgba(255,0,0,0.3)";
+            o.alpha = 1.5;
+            o.decay = 0.05;
+        }
+        if (o.type == "bart fireball explosion particle") {
+            o.drawType = "circle";
+            o.r = 4 + Math.random() * 4;
+            o.damping = 0.995;
+            o.color = "rgba(255,0,0,0.8)";
+            o.alpha = 2 + Math.random() * 2;
+            o.decay = 0.05;
+        }
+        if (o.type == "bart fireball explosion circle") {
+            o.drawType = "circle";
+            o.r = 10;
+            o.color = "rgba(255,0,0,0.5)";
             o.alpha = 1.5;
             o.decay = 0.05;
         }
@@ -623,6 +703,7 @@ game.particles = {
                 var o = {};
                 o.x = data.x;
                 o.y = data.y;
+                o.red = data.red;
                 o.type = "cube collect ultra lightning";
                 this.create(o);
             }
@@ -667,6 +748,55 @@ game.particles = {
             o.type = "boss fireball explosion circle";
             o.y = data.y - 15;
             o.x = data.x;
+            this.create(o);
+        }
+        if (effect == "bart fireball explosion") {
+            var count = 6;
+            for (var n = 0; n < count; n++) {
+                var o = {};
+                o.type = "bart fireball explosion particle";
+                o.y = data.y - 15;
+                o.x = data.x;
+                var dir = Math.random() * 200 - 100;
+                var speed = 3 + Math.random() * 3;
+                var move = distToMove(speed, dir);
+                o.xmove = move.x;
+                o.ymove = move.y - 2;
+                this.create(o);
+            }
+            var o = {};
+            o.type = "bart fireball explosion circle";
+            o.y = data.y - 15;
+            o.x = data.x;
+            this.create(o);
+        }
+        if (effect == "bart bomb explosion") {
+            let count = 6;
+            for (let n = 0; n < count; n++) {
+                let o = {};
+                o.type = "bart bomb explosion particle";
+                o.y = data.y - 15;
+                o.x = data.x;
+                let dir = Math.random() * 200 - 100;
+                let speed = 5 + Math.random() * 10;
+                let move = distToMove(speed, dir);
+                o.xmove = move.x;
+                o.ymove = move.y - 2;
+                this.create(o);
+            }
+            let o = {};
+            o.type = "bart bomb explosion circle";
+            o.y = data.y;
+            o.x = data.x;
+            this.create(o);
+        }
+        if (effect == "boss fireball trail") {
+            let o = {};
+            o.type = "boss fireball trail particle";
+            o.x = data.x;
+            o.y = data.y;
+            o.x += data.xmove * 0.1 + 5;
+            o.angle = data.angle;
             this.create(o);
         }
         if (effect == "lose heart") {
@@ -714,6 +844,12 @@ game.particles = {
             o.x = data.x;
             o.y = data.y;
             this.create(o);
+            var o = {
+                type: "boss part hollow impact aura"
+            }
+            o.x = data.x;
+            o.y = data.y;
+            this.create(o);
             var count = 7 + Math.random() * 4;
             for (var n = 0; n < count; n++) {
                 var o = {};
@@ -723,12 +859,6 @@ game.particles = {
                 o.angle = n / count * 180 - 85 + Math.random() * 10 - 5;
                 this.create(o);
             }
-            var o = {
-                type: "boss part impact animation"
-            }
-            o.x = data.x;
-            o.y = data.y;
-            this.create(o);
         }
         if (effect == "blob state start") {
             for (var n = 0; n < 1 + Math.random() * 2; n++) {

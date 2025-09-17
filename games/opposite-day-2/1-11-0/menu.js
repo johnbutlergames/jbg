@@ -1731,8 +1731,9 @@ var menu = {
                 ctx.drawImage(images.shortcutDiscovered, 60, -40, 40, 40);
             }
 
+            let cubeDiscoverCount = (saveData.redCubesDiscovered[n] ? 1 : 0) + (saveData.blueCubesDiscovered[n] ? 1 : 0);
             if (saveData.levelsBeaten > n - 1) {
-                if (saveData.redCubesCollected[n] || saveData.redCubesDiscovered[n]) {
+                if (cubeDiscoverCount == 2) {
                     if (saveData.redCubesCollected[n]) {
                         if (saveData.ultraRedCubesTaken[n]) {
                             ctx.drawImage(images.ultraRedCube, 55, 110, 45, 45);
@@ -1761,19 +1762,30 @@ var menu = {
                     } else if (saveData.ultraBlueCubesDiscovered[n]) {
                         ctx.drawImage(images.ultraCubeDiscovered, -17.5, 90, 45, 45);
                     }
-                } else {
+                } else if (cubeDiscoverCount == 1) {
+                    let cubeImage, ultraCubeImage;
                     if (saveData.blueCubesCollected[n]) {
-                        if (saveData.ultraBlueCubesTaken[n]) {
-                            ctx.drawImage(images.ultraBlueCube, 27.5, 110, 45, 45);
+                        cubeImage = images.blueCube;
+                        ultraCubeImage = images.ultraBlueCube;
+                    } else {
+                        cubeImage = images.redCube;
+                        ultraCubeImage = images.ultraRedCube;
+                    }
+                    let collected = saveData.blueCubesCollected[n] || saveData.redCubesCollected[n];
+                    let ultraTaken = saveData.ultraBlueCubesTaken[n] || saveData.ultraRedCubesTaken[n];
+                    let ultraDiscovered = saveData.ultraBlueCubesDiscovered[n] || saveData.ultraRedCubesDiscovered[n];
+                    if (collected) {
+                        if (ultraTaken) {
+                            ctx.drawImage(ultraCubeImage, 27.5, 110, 45, 45);
                         } else {
-                            ctx.drawImage(images.blueCube, 27.5, 110, 45, 45);
+                            ctx.drawImage(cubeImage, 27.5, 110, 45, 45);
                         }
                     } else {
                         ctx.drawImage(images.uncollectedCube, 27.5, 110, 45, 45);
                     }
-                    if (saveData.ultraBlueCubesTaken[n]) {
+                    if (ultraTaken) {
                         ctx.drawImage(images.ultraCubeTaken, 5, 90, 45, 45);
-                    } else if (saveData.ultraBlueCubesDiscovered[n]) {
+                    } else if (ultraDiscovered) {
                         ctx.drawImage(images.ultraCubeDiscovered, 5, 90, 45, 45);
                     }
                 }

@@ -98,6 +98,7 @@ levels[0] = {
         {
             name: "blue cube",
             check: function () {
+                if (game.level.triggers.tripped("stop blue cube passage")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 if (player.x > 500 && player.x < 700 && player.y > 200) return true;
@@ -112,7 +113,6 @@ levels[0] = {
             },
             trip: function () {
                 game.level.discoverBlueCube();
-                game.background.effect.start("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube");
                 o.alpha = 1;
                 o.decay = 0.1;
@@ -140,7 +140,6 @@ levels[0] = {
                 }
             },
             untrip: function () {
-                game.background.effect.end("blue");
                 var o = game.objects.objects.find(e => e.id == "blue cube");
                 o.alpha = 0;
                 o.decay = -0.1;
@@ -153,6 +152,49 @@ levels[0] = {
                 o.collide = true;
                 var o = game.objects.objects.find(e => e.id == "blue cube clue");
                 o.activated = false;
+            }
+        },
+        {
+            name: "stop blue cube passage",
+            check: function () {
+                let cube = game.objects.objects.find(e => e.type == "cube" && !e.red);
+                if (cube.collected) return true;
+                return false;
+            },
+            trip: function () {
+                let clue = game.objects.objects.find(e => e.id == "blue cube clue");
+                clue.alpha = 1;
+                clue.decay = 0.1;
+                for (let id of ["blue cube", "blue cube 2", "blue cube 3"]) {
+                    let o = game.objects.objects.find(e => e.id == id);
+                    o.collide = true;
+                }
+            }
+        },
+        {
+            name: "blue cube background",
+            check: function () {
+                if (!game.level.triggers.tripped("blue cube")) return false;
+                let cube = game.objects.objects.find(e => e.type == "cube" && !e.red);
+                if (cube.collected) return false;
+                return true;
+            },
+            stop: function () {
+                let cube = game.objects.objects.find(e => e.type == "cube" && !e.red);
+                if (cube.collected) return true;
+                let player = game.objects.objects.find(e => e.type == "player");
+                if (player) {
+                    if (player.x < 1260 && player.y <= 60) return true;
+                } else {
+                    return true;
+                }
+                return false;
+            },
+            trip: function () {
+                game.background.effect.start("blue");
+            },
+            untrip: function () {
+                game.background.effect.end("blue");
             }
         },
         {
@@ -182,7 +224,6 @@ levels[0] = {
                 o.alpha = 1;
                 o.decay = 0;
                 o.activated = true;
-                return
                 var player = game.objects.objects.find(e => e.type == "player");
                 player.x = o.x - player.w / 2;
                 var o = game.objects.objects.find(e => e.id == "blue cube ultra change direction clue");
@@ -206,7 +247,6 @@ levels[0] = {
                 }
             },
             passive: function () {
-                return;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return;
                 player.ymove = -30;
@@ -415,6 +455,7 @@ levels[0] = {
             },
             stop: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return false;
                 if (!player) return true;
                 if (player.y >= 50) return true;
                 return false;
@@ -457,6 +498,19 @@ levels[0] = {
             }
         },
         {
+            name: "hide red cube clue",
+            check: function () {
+                let cube = game.objects.objects.find(e => e.type == "cube" && e.color == "red");
+                if (cube.collected) return true;
+                return false;
+            },
+            trip: function () {
+                let clue = game.objects.objects.find(e => e.id == "red cube clue");
+                clue.alpha = 0;
+                clue.decay = 0.1;
+            }
+        },
+        {
             name: "red cube ultra",
             check: function () {
                 var player = game.objects.objects.find(e => e.type == "player");
@@ -464,7 +518,7 @@ levels[0] = {
                 var o = game.objects.objects.find(e => e.id == "red cube ultra clue");
                 var dist = distTo(player.x + player.w / 2, player.y + player.h / 2, o.x, o.y);
                 if (dist > 30) return false;
-                if(game.input.rightStart > 10 || !game.input.right) return false;
+                if (game.input.rightStart > 10 || !game.input.right) return false;
                 return true;
             },
             stop: function () {
@@ -503,22 +557,38 @@ levels[0] = {
         },
         {
             name: "stop red cube ultra background",
-            check: function() {
-                if(!game.level.triggers.tripped("red cube ultra")) return false;
+            check: function () {
+                if (!game.level.triggers.tripped("red cube ultra")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return true;
                 if (player.xmove < 0) return true;
                 return false;
             },
-            trip: function() {
+            trip: function () {
                 game.background.effect.end("magenta");
             },
-            stop: function() {
+            stop: function () {
                 return true;
             }
         }
     ],
     viewportBoundary: { x: -1300, y: -10000, w: 2300, h: 20000 },
+    checkForManualRespawn: function () {
+        return game.level.triggers.tripped("red cube");
+    },
+    beforeManualRespawn: function () {
+        var a = Math.min(Math.max((50 - this.playerRespawnTime) / 100, 0), 1);
+        var p0 = easeInOut(a);
+        game.cam.x = game.cam.x * (1 - p0) + (-1300) * p0;
+        game.cam.y = game.cam.y * (1 - p0) + (-200) * p0;
+        game.level.playerRespawnTime = Math.min(game.level.playerRespawnTime, 50);
+    },
+    manualRespawn: function () {
+        let player = game.level.createPlayer(-1470, 0);
+        player.spawnTime = 150;
+        player.spawnAnimation = 20;
+        game.objects.objects.push(player);
+    },
     camFunction: function () {
         var player = game.objects.objects.find(e => e.type == "player");
         if (!player) return;

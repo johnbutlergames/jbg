@@ -15,13 +15,17 @@ game.soundEffects = {
         }
     },
     landNumber: 0,
-    collectBlueCube: function () {
-        audios.collectBlueCube.currentTime = 0;
-        audios.collectBlueCube.play();
+    collectCube: function () {
+        audios.collectCube.currentTime = 0;
+        audios.collectCube.play();
     },
-    recollectBlueCube: function () {
-        audios.recollectBlueCube.currentTime = 0;
-        audios.recollectBlueCube.play();
+    collectCubeUltra: function () {
+        audios.collectCubeUltra.currentTime = 0;
+        audios.collectCubeUltra.play();
+    },
+    recollectCube: function () {
+        audios.recollectCube.currentTime = 0;
+        audios.recollectCube.play();
     },
     blueCubeClue: function () {
         audios.blueCubeClue.currentTime = 0;
@@ -38,14 +42,6 @@ game.soundEffects = {
     preShortcut: function () {
         audios.preShortcut.currentTime = 0;
         audios.preShortcut.play();
-    },
-    collectRedCube: function () {
-        audios.collectRedCube.currentTime = 0;
-        audios.collectRedCube.play();
-    },
-    recollectRedCube: function () {
-        audios.recollectRedCube.currentTime = 0;
-        audios.recollectRedCube.play();
     },
     redCubeClue: function () {
         audios.redCubeClue.currentTime = 0;
@@ -218,5 +214,13 @@ game.soundEffects = {
     shortcutCompleted: function () {
         audios.shortcutCompleted.currentTime = 0;
         audios.shortcutCompleted.play();
+    },
+    ultraShortcutCompleted: function () {
+        audios.ultraShortcutCompleted.currentTime = 0;
+        audios.ultraShortcutCompleted.play();
+    },
+    switchDimension: function () {
+        audios.switchDimension.currentTime = 0;
+        audios.switchDimension.play();
     }
 };

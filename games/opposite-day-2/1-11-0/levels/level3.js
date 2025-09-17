@@ -176,7 +176,7 @@ levels[2] = {
                 game.backgroundOffset.y += 100 * 0.8;
                 var o = game.objects.objects.find(e => e.id == "motivational message");
                 var o2 = game.objects.objects.find(e => e.id == "motivational message 2");
-                var texts = ["You can do it.", "I believe in you.", "Almost there.", "Keep going.", "Don't give up.", "So close.", "You can do it.", "I believe in you.", "Almost there.", "Keep going.", "Don't give up.", "So close.", "There aren't"];
+                var texts = ["You can do it.", "I believe in you.", "Almost there.", "Keep going.", "Don't give up.", "So close.", "There aren't"];
                 o.x += 100;
                 o.y += 100;
                 o2.x += 100;
@@ -199,10 +199,10 @@ levels[2] = {
                 }
                 if (o.jumps % 20 == 19) {
                     o.text++;
-                    o.content = texts[o.text % 12];
+                    o.content = texts[o.text % 13];
                 }
                 if (o.content.startsWith("There aren't")) {
-                    o.content = `There aren't ${10000 - o.jumps - 7}`;
+                    o.content = `There aren't ${100 + o.jumps}`;
                     o2.content = "steps left.";
                 } else {
                     o2.content = "";
@@ -360,6 +360,8 @@ levels[2] = {
         {
             name: "cube",
             check: function () {
+                var cube = game.objects.objects.find(e => e.type == "cube" && !e.red);
+                if (cube.collected) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 if (!game.level.triggers.tripped("first mountain illusion")) return false;

@@ -6,23 +6,23 @@ levels[9] = {
         { type: "clue", x: -1250, y: -1750, id: "ultra shortcut clue 1", proximity: 1, radius: 1, ultra: true, air: true, angle: 180, alpha: 0 },
         { type: "block", x: 500, y: -500, w: 2000, h: 1000, slippery: true },
         { type: "block", x: -4100, y: 100, w: 5000, h: 1000, illusion3Push: { y: 1 } },
-        { type: "lava", x: -1100, y: -2800, w: 2100, h: 2000 },
+        { type: "lava", x: -1100, y: -2600, w: 2100, h: 1800 },
         { type: "lava", x: -1300, y: -1300, w: 100, h: 100 },
         { type: "lava", x: -1400, y: -1800, w: 100, h: 100 },
         { type: "lava", x: -1200, y: -1800, w: 100, h: 100 },
         { type: "lava", x: -1300, y: -2300, w: 100, h: 100 },
-        { type: "lava", x: -3500, y: -2800, w: 2100, h: 2000 },
+        { type: "lava", x: -3500, y: -2600, w: 2100, h: 1800 },
         { type: "block", x: -1200, y: -800, w: 2050, h: 200 },
         { type: "block", x: -1200, y: -700, w: 100, h: 1000, slippery: true },
         { type: "block", x: -1400, y: -1000, w: 100, h: 300, slippery: true, notIllusion1: true, alpha: 0 },
-        { type: "block", x: -1400, y: -700, w: 100, h: 700, slippery: true, notIllusion1: true },
+        { type: "block", x: -1400, y: -750, w: 100, h: 750, slippery: true, notIllusion1: true },
         { type: "block", x: -2700, y: -100, w: 1200, h: 100, changeToSlippery: true, illusion3Push: { h: 1 } },
         { type: "block", x: -1600, y: -100, w: 300, h: 100, notIllusion1: true },
         { type: "block", x: -1600, y: -1000, w: 100, h: 300, slippery: true, notIllusion1: true, alpha: 0 },
-        { type: "block", x: -1600, y: -700, w: 100, h: 500, slippery: true, notIllusion1: true },
+        { type: "block", x: -1600, y: -750, w: 100, h: 550, slippery: true, notIllusion1: true },
         { type: "block", x: -1600, y: -200, w: 100, h: 100, slippery: true, notIllusion1: true, id: "stop jump block", alpha: 0, collide: false },
         { type: "block", x: -1800, y: -1000, w: 100, h: 300, slippery: true, notIllusion1: true, alpha: 0 },
-        { type: "block", x: -1800, y: -700, w: 100, h: 700, slippery: true, notIllusion1: true },
+        { type: "block", x: -1800, y: -750, w: 100, h: 750, slippery: true, notIllusion1: true },
         { type: "block", x: -1800, y: -800, w: 500, h: 100.1, collide: false, notIllusion1: true },
         { type: "block", x: -3900, y: -1000, w: 2000, h: 800, slippery: true, illusion3Push: { y: -1 } },
         { type: "block", x: -3800, y: -500, w: 1000, h: 900, changeToSlippery: true, illusion3Push: { x: -1 } },
@@ -299,7 +299,7 @@ levels[9] = {
                 if (!game.level.triggers.tripped("show shortcut clue")) return false;
                 if (game.level.triggers.tripped("shortcut")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
-                if (!player) return true;
+                if (!player) return false;
                 return player.y == 60;
             },
             trip: function () {
@@ -320,6 +320,11 @@ levels[9] = {
                 var dist = Math.abs(player.y + player.h / 2 - o.y);
                 if (dist > 40) return false;
                 return game.input.up && game.input.upHold < 20;
+            },
+            stop: function () {
+                let player = game.objects.objects.find(e => e.type == "player");
+                if (!player) return true;
+                return false;
             },
             trip: function () {
                 game.level.discoverShortcut();
@@ -346,6 +351,9 @@ levels[9] = {
                 }
 
                 game.cam.viewportBoundary = false;
+            },
+            untrip: function () {
+                game.background.effect.end("green");
             }
         },
         {
@@ -379,8 +387,8 @@ levels[9] = {
                         o.collide = true;
                         if (o.noCollide) o.collide = false;
                     } else {
-                        o.delete = true;
-                        o.alpha = 0;
+                        //o.delete = true;
+                        //o.alpha = 0;
                     }
                 }
                 game.cam.y += 35;
@@ -774,6 +782,7 @@ levels[9] = {
         {
             name: "teleport up",
             check: function () {
+                if (game.level.triggers.tripped("fall in long pipes")) return false;
                 if (!game.level.triggers.tripped("illusion 3")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
@@ -1400,7 +1409,7 @@ levels[9] = {
         {
             name: "red cube",
             check: function () {
-                if(!game.level.triggers.tripped("teleport 6")) return false;
+                if (!game.level.triggers.tripped("teleport 6")) return false;
                 var player = game.objects.objects.find(e => e.type == "player");
                 if (!player) return false;
                 var o = game.objects.objects.find(e => e.id == "red cube clue");
@@ -1501,8 +1510,8 @@ levels[9] = {
                 var o = game.objects.objects.find(e => e.id == "red cube");
                 o.alpha = 0;
 
-                var player = game.objects.objects.find(e=>e.type=="player");
-                if(player && player.y > 400) {
+                var player = game.objects.objects.find(e => e.type == "player");
+                if (player && player.y > 400) {
                     game.cam.followX = 0.1;
                     game.cam.followY = 0.1;
                 }
@@ -2291,6 +2300,7 @@ levels[9] = {
     ],
     viewportBoundary: { x: -1000, y: -200, w: 1000, h: 0 },
     camFunction: function () {
+        //game.level.playerInvincible = true;
         var player = game.objects.objects.find(e => e.type == "player");
         if (!player) return;
         if (game.level.triggers.tripped("shortcut teleport")) {
@@ -2443,6 +2453,39 @@ levels[9] = {
             game.cam.x = game.cam.x * (1 - p0) + -2780 * p0;
             game.cam.y = game.cam.y * (1 - p0) + 200 * p0;
             if (this.playerRespawnTime < 60) this.playerRespawnTime = 0;
+        } else {
+            if (this.playerRespawnTime == 199 && game.level.triggers.tripped("shortcut teleport")) {
+                game.cam.x += 1860;
+                game.cam.y -= 5465;
+                game.cam.y -= 35;
+                game.backgroundOffset.x -= -80;
+                game.backgroundOffset.y -= 200;
+                for (let particle of game.particles.objects) {
+                    particle.x += 1860;
+                    particle.y -= 5465;
+                    particle.y -= 35;
+                }
+                for (let o of game.objects.objects.filter(e => e.id && e.id.includes("layer"))) {
+                    o.x += 1860;
+                    o.y -= 5465;
+                    o.y -= 35;
+                    if(o.rotate) {
+                        o.rotate.x += 1860;
+                        o.rotate.y -= 5465;
+                        o.rotate.y -= 35;
+                    }
+                }
+                let o = game.objects.objects.find(e => e.id == "wall");
+                o.alpha = 0;
+            }
+            var a = Math.min(Math.max((120 - this.playerRespawnTime) / 120, 0), 1);
+            var p0 = easeInOut(a);
+            game.cam.x = game.cam.x * (1 - p0) + 0 * p0;
+            game.cam.y = game.cam.y * (1 - p0) - 200 * p0;
+            game.cam.zoom = game.cam.zoom * (1 - p0) + 1 * p0;
+            game.cam.angle = game.cam.angle * (1 - p0);
+            game.backgroundOffset.x = game.backgroundOffset.x * (1 - p0);
+            game.backgroundOffset.y = game.backgroundOffset.y * (1 - p0);
         }
     },
     manualRespawn: function () {

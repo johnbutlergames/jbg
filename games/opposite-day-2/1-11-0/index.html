@@ -4,7 +4,7 @@
 <body>
     <canvas id="canvas"></canvas>
 
-    <script src="https://johnbutlergames.w3spaces.com/game-setup.js"></script>
+    <script src="game-setup.js"></script>
 
     <script src="menu.js"></script>
 
@@ -18,7 +18,15 @@
     <script src="levels/level8.js"></script>
     <script src="levels/level9.js"></script>
     <script src="levels/level10.js"></script>
-    <script src="bart.js"></script>
+
+    <script src="bart/bart.js"></script>
+    <script src="bart/phase0.js"></script>
+    <script src="bart/phase1.js"></script>
+    <script src="bart/phase2.js"></script>
+    <script src="bart/phase3.js"></script>
+    <script src="bart/phase4.js"></script>
+    <script src="bart/phase5.js"></script>
+    <script src="bart/stars.js"></script>
 
     <script src="tas.js"></script>
     <script src="utilities.js"></script>
@@ -175,7 +183,7 @@
         menu.titleScreen = 0;
         menu.titleScreenAnimation = 0;
         game.newGame();
-        //game.level.load(8);
+        game.level.reload(8);
         //game.level.playerInvincible = true;
         //game.level.playerFlightMode = true;
         //game.level.showWireframes = true;
@@ -186,9 +194,9 @@
         Loading.loaded = true;
         //frameRate = 10;
 
-        game.objects.objects.unshift({ type: "cube", x: 0, y: -100 });
-        game.level.triggers.triggered.push("blue cube ultra");
-        game.level.triggers.triggerChecks.find(e => e.name == "blue cube ultra").trip();
+        //game.objects.objects.unshift({ type: "cube", x: 0, y: -100 });
+        //game.level.triggers.triggered.push("blue cube ultra");
+        //game.level.triggers.triggerChecks.find(e => e.name == "blue cube ultra").trip();
 
         var movementRecord = "";
         bot = false;
